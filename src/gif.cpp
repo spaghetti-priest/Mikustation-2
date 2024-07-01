@@ -26,29 +26,6 @@ gif_process_path3 (u128 data)
 	gif_unpack_tag(data);
 }
 
-u32 
-gif_unpack_tag (u128 pack)
-{
-	GIF_Tag gif_tag;
-	gif_tag.NLOOP 	=  pack.lo & 0x7fff; 
-	gif_tag.EOP 	= (pack.lo >> 15) & 0x1;   
-	gif_tag.PRE 	= (pack.lo >> 46) & 0x1;   
-	gif_tag.PRIM 	= (pack.lo >> 47) & 0x7ff;  
-	gif_tag.FLG 	= (pack.lo >> 58) & 0x3;   
-	gif_tag.NREGS 	= (pack.lo >> 60) & 0x7;  
-	gif_tag.REGS 	= pack.hi;
-
-	if (gif_tag.NREGS == 0) gif_tag.NREGS = 16;
-	gif_tag.is_tag = true;
-
-	//if (gif_tag->PRE == 0) 
-		/*Insert Idle cycle here */
-	
-	//When this function exists 
-	gs_set_q(1.0); 
-	return 0;
-}
-
 enum Data_Modes : u8 {
 	PACKED 	= 0b00,
 	REGLIST = 0b01,
@@ -57,7 +34,7 @@ enum Data_Modes : u8 {
 };
 
 void 
-gif_process_packed (GIF *gif, u128 data) 
+gif_process_packed (GIF_tag *tag, u128 data) 
 {
 	u32 NLOOP = gif->tag[0].NLOOP;
 	/* When NREGS * NLOOP is odd, the last doubleword in a primitive is discarded.*/
@@ -158,23 +135,59 @@ gif_process_packed (GIF *gif, u128 data)
 	}
 
 }
-void gif_process_reglist (GIF *gif) {}
-void gif_process_image (GIF *gif) {}
-void gif_process_disable (GIF *gif) {}
 
-void 
-gif_select_mode (GIF *gif)
+u32 
+gif_unpack_tag (u128 pack)
 {
-	u16 mode = gif->tag[0].FLG;
-	u128 garbage;
-	garbage.lo = 0xDEAD;
-	garbage.hi = 0xBEEF;
+	GIF_Tag gif_tag;
+	gif_tag.NLOOP 	=  pack.lo & 0x7fff; 
+	gif_tag.EOP 	= (pack.lo >> 15) & 0x1;   
+	gif_tag.PRE 	= (pack.lo >> 46) & 0x1;   
+	gif_tag.PRIM 	= (pack.lo >> 47) & 0x7ff;  
+	gif_tag.FLG 	= (pack.lo >> 58) & 0x3;   
+	gif_tag.NREGS 	= (pack.lo >> 60) & 0x7;  
+	gif_tag.REGS 	= pack.hi;
+
+	if (gif_tag.NREGS == 0) gif_tag.NREGS = 16;
+	gif_tag.is_tag = true;
+
+	gif_tag.reg_left = gif_tag.NREGS;
+	gif_tag.data_left = gif_tag.NLOOP;
+	//if (gif_tag->PRE == 0) 
+		/*Insert Idle cycle here */
+	
+	//When this function exists 
+	gs_set_q(1.0); 
+
+	if (gif_tag.PRE) {
+		gs_write64_internal(0, gif_tag.PRIM)
+	} 
+
+	gif_select_mode(current_tag, data);
+}
+
+void gif_process_reglist(GIF_tag *current_tag) {}
+void gif_process_image(GIF_tag *current_tag) {}
+void gif_process_disable(GIF_tag *current_tag) {}
+	
+void 
+gif_select_mode (GIF_tag *current_tag, u128 data)
+{
+	u16 mode = current_tag.FLG;
 	switch (mode) 
 	{
-		case PACKED: 	gif_process_packed(gif, garbage);
-		case REGLIST: 	gif_process_reglist(gif);
-		case IMAGE: 	gif_process_image(gif);
-		case DISABLE: 	gif_process_disable(gif);
+		case PACKED: 	
+			{
+				gif_process_packed(current_tag, data);
+				current_tag.regs_left -= 1;
+				if (current_tag.regs_left == 0) {
+					current_tag.regs_left -= current_tag.NREGS;
+					current_tag.data_left -= 1;
+				}
+			} break;
+		case REGLIST: 	gif_process_reglist(current_tag);
+		case IMAGE: 	gif_process_image(current_tag);
+		case DISABLE: 	gif_process_disable(current_tag);
 	};
 }
 

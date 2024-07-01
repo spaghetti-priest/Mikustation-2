@@ -16,6 +16,9 @@ typedef struct _GIFTag_ {
 	u8 		NREGS : 4;  	// Number of Register descriptors
 	u64 	REGS;   	// Register descriptor 
 
+	u32 reg_left;
+	u32 data_left;
+	
 	bool is_tag;
 } GIF_Tag;
 

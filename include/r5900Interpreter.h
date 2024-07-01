@@ -17,16 +17,6 @@
 
 #include "ps2types.h"
 
-// @@Debug: Careful not to use these too much during early development
-#if 0
-#define RT              (ee.current_instruction >> 16 & 0x1F)
-#define RS              (ee.current_instruction >> 21 & 0x1F)
-#define RD              (ee.current_instruction >> 11 & 0x1F)
-#define IMM             (ee.current_instruction & 0xFFFF)
-#define SIGN_IMM   (s16)(ee.current_instruction & 0xFFFF)
-#define OFFSET          (ee.current_instruction & 0xFFFF)
-#define SIGN_OFFSET     (ee.current_instruction & 0xFFFF)
-#endif
 
 typedef struct Range {
     u32 start;

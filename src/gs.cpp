@@ -20,9 +20,9 @@ void
 gs_set_rgbaq (u32 r, u32 g, u32 b, u32 a)
 {
     gs.rgbaq.r = r;
-    gs.rgbaq.r = g;
-    gs.rgbaq.r = b;
-    gs.rgbaq.r = a;
+    gs.rgbaq.g = g;
+    gs.rgbaq.b = b;
+    gs.rgbaq.a = a;
 }
 
 void 
