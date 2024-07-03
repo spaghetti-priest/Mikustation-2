@@ -172,6 +172,8 @@ ee_store_8 (u32 address, u8 value)
     if (address == 0x1000f180) {
         console << (char)value;
         console.flush();
+        if ((char)value == '#') printf("\n");
+        printf("%c", (char)value);
         return;
     };
   
@@ -188,6 +190,8 @@ ee_store_16 (u32 address, u16 value)
     if (address == 0x1000f180) {
         console << (char)value;
         console.flush();
+        if ((char)value == '#') printf("\n");
+        printf("%c", (char)value);
         return;
     };
     
@@ -205,6 +209,8 @@ ee_store_32 (u32 address, u32 value)
         {
             console << (char)value;
             console.flush();
+            if ((char)value == '#') printf("\n");
+            printf("%c", (char)value);
         } break;
 
         case 0x1000f430:
@@ -404,7 +410,7 @@ main (int argc, char **argv)
     dmac_reset();
     gs_reset();
     gif_reset(&gif);
-    printf("\n=========================\nInintializing System\n=========================\n");
+    printf("\n=========================\nInitializing System\n=========================");
 
     // @@Note: Testing this file not loading it
     //load_elf(&ee, elf_filename);
@@ -440,9 +446,9 @@ main (int argc, char **argv)
         /* Step Through Playstation 2 Pipeline */
         r5900_cycle(&ee);
         dmac_cycle();
-
+#if 0
         /* Emulator Step Through*/
-        SDL_UpdateTexture(texture, NULL, backbuffer.pixels, backbuffer.pitch);
+        //SDL_UpdateTexture(texture, NULL, backbuffer.pixels, backbuffer.pitch);
         SDL_WaitEvent(&event);
         switch (event.type)
         {
@@ -467,6 +473,7 @@ main (int argc, char **argv)
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
         SDL_RenderPresent(renderer);
+#endif
     }
 
     r5900_shutdown();

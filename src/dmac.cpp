@@ -4,6 +4,8 @@
  */
 
 #include "../include/dmac.h"
+#include "../include/gif.h"
+#include "../include/ps2.h"
 #include <iostream>
 
 DMAC dmac = {0};
@@ -106,7 +108,7 @@ process_source_chain()
 */
 
 void
-dmac_cycle  ()
+dmac_cycle ()
 {
     u128 data; 
     bool stop_dma_transfer = ~0x100;
@@ -117,28 +119,39 @@ dmac_cycle  ()
         if (!dmac.channels[2].quadword_count.value) {
             if (dmac.channels[2].tag_end) 
                 dmac.channels[2].control.start &= stop_dma_transfer;
-
-            data.lo = ee_load_64(dmac.channels[2].address * i)
-            data.hi = ee_load_64(dmac.channels[2].address + 8 * i)
+            for (int i = 0; i < dmac.channels[2].quadword_count.value; i++) {
+                data.lo = ee_load_64(dmac.channels[2].address * i);
+                data.hi = ee_load_64(dmac.channels[2].address + 8 * i);
+            }
             dmac.channels[2].address += 16;
             dmac.channels[2].quadword_count.value -= 1;
 
-            int mode = (dmac.channels[2].control >> 2) & 0x3;
+            //u8 mode = (dmac.channels[2].control.mode >> 2) & 0x3;
+            u8 mode = dmac.channels[2].control.mode;
             switch(mode)
             {
-                case 0x0: {} break; /* Normal */
-                case 0x1: {} break; /* Chain */
-                case 0x2: {} break; /* Interleave */
+                /* Normal */
+                case 0x0: {
+                    printf("Normal DMAC Transfer\n");
+                } break; 
+                /* Chain */
+                case 0x1: {
+                    printf("Chain DMAC Transfer\n");
+                } break; 
+                /* Interleave */
+                case 0x2: {
+                    printf("Interleave DMAC Transfer\n");
+                } break; 
             }
+            
+            /* GIF Cycle */
+            gif_send_path3(data);
+
+            // @Incomplete: Transfers channels when they eventually exist:
+            //vu1_send_path1()
+            //vif_send_path2()
         }
     }
-
-    /* GIF Cycle */
-    gif_send_path3(data);
-
-    // @Incomplete: Transfers channels when they eventually exist:
-    //vu1_send_path1()
-    //vif_send_path2()
 }
 
 void 
@@ -266,7 +279,6 @@ dmac_write_32 (u32 address, u32 value)
                 printf("WRITE: GIF_TADR, value: [%#08x]\n", value);
                 return;
             }
-            //gif_send_path3();
         } break;
         case DMA_IPU_FROM:
         {

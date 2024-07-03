@@ -704,7 +704,9 @@ u64 gs_read_64_priviledged(u32 address);
 void gs_write_32_priviledged(u32 address, u32 value);
 void gs_write_64_priviledged(u32 address, u64 value);
 
-void gs_set_primitive(u16 prim_register);
+void gs_write_64_internal(u32 address, u64 value);
+
+void gs_set_primitive(u64 prim_register);
 void gs_set_q (f32 value);
 void gs_set_rgbaq (u32 r, u32 g, u32 b, u32 a);
 void gs_set_st (f32 s, f32 t);

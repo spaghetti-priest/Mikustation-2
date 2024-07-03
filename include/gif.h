@@ -13,10 +13,10 @@ typedef struct _GIFTag_ {
 	bool 	PRE;   		// PRIM field enable
 	u16 	PRIM : 11;  // data sent to prim of GS
 	u8 		FLG : 2;   	// Data format
-	u8 		NREGS : 4;  	// Number of Register descriptors
+	u8 		NREGS;  	// Number of Register descriptors
 	u64 	REGS;   	// Register descriptor 
 
-	u32 reg_left;
+	u32 regs_left;
 	u32 data_left;
 	
 	bool is_tag;
@@ -132,5 +132,6 @@ typedef struct _GIF_ {
 void gif_reset(GIF *gif);
 u32 gif_read_32 (GIF *gif, u32 address);
 void gif_write_32 (GIF *gif, u32 address, u32 value);
+void gif_send_path3(u128 data);
 
 #endif

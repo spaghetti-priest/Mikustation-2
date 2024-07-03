@@ -14,18 +14,6 @@ gif_reset (GIF *gif)
 	memset(gif, 0, sizeof(gif));
 }
 
-void 
-send_path3 (u128 data) 
-{
-	gif_process_path3(data);
-}
-
-void
-gif_process_path3 (u128 data) 
-{
-	gif_unpack_tag(data);
-}
-
 enum Data_Modes : u8 {
 	PACKED 	= 0b00,
 	REGLIST = 0b01,
@@ -34,14 +22,14 @@ enum Data_Modes : u8 {
 };
 
 void 
-gif_process_packed (GIF_tag *tag, u128 data) 
+gif_process_packed (GIF_Tag *tag, u128 data)
 {
-	u32 NLOOP = gif->tag[0].NLOOP;
+	u32 NLOOP = tag[0].NLOOP;
 	/* When NREGS * NLOOP is odd, the last doubleword in a primitive is discarded.*/
-	u32 total_data_in_gif = gif->tag[0].NLOOP * gif->tag[0].NREGS;
-	u8 destination = gif->tag[0].REGS & 0xF;
-	if (gif->tag[0].PRE == 1) {
-		gs_set_primitive(gif->tag[0].PRIM);
+	u32 total_data_in_gif = tag[0].NLOOP * tag[0].NREGS;
+	u8 destination = tag[0].REGS & 0xF;
+	if (tag[0].PRE == 1) {
+		gs_set_primitive(tag[0].PRIM);
 	} else {
 		/* Idle Cylcle Here */
 	}
@@ -103,9 +91,9 @@ gif_process_packed (GIF_tag *tag, u128 data)
 				s16 x, y;
 				u32 z;
 				bool ADC;
-				x = data.lo & 0xFFFF;
-				y = (data.lo >> 32) & 0xFFFF;
-				z = (data.hi >> 4) & 0xFFFFFFFF;
+				x 	= data.lo & 0xFFFF;
+				y 	= (data.lo >> 32) & 0xFFFF;
+				z 	= (data.hi >> 4) & 0xFFFFFFFF;
 				ADC = (data.hi >> 47) & 0x1;
 
 				if (ADC == 0)	gs_set_xyz2(x, y, z);
@@ -136,59 +124,75 @@ gif_process_packed (GIF_tag *tag, u128 data)
 
 }
 
-u32 
-gif_unpack_tag (u128 pack)
+void gif_process_reglist(GIF_Tag *current_tag) {}
+void gif_process_image(GIF_Tag *current_tag) {}
+void gif_process_disable(GIF_Tag *current_tag) {}
+
+void
+gif_select_mode (GIF_Tag *current_tag, u128 data)
 {
-	GIF_Tag gif_tag;
-	gif_tag.NLOOP 	=  pack.lo & 0x7fff; 
-	gif_tag.EOP 	= (pack.lo >> 15) & 0x1;   
-	gif_tag.PRE 	= (pack.lo >> 46) & 0x1;   
-	gif_tag.PRIM 	= (pack.lo >> 47) & 0x7ff;  
-	gif_tag.FLG 	= (pack.lo >> 58) & 0x3;   
-	gif_tag.NREGS 	= (pack.lo >> 60) & 0x7;  
-	gif_tag.REGS 	= pack.hi;
-
-	if (gif_tag.NREGS == 0) gif_tag.NREGS = 16;
-	gif_tag.is_tag = true;
-
-	gif_tag.reg_left = gif_tag.NREGS;
-	gif_tag.data_left = gif_tag.NLOOP;
-	//if (gif_tag->PRE == 0) 
-		/*Insert Idle cycle here */
-	
-	//When this function exists 
-	gs_set_q(1.0); 
-
-	if (gif_tag.PRE) {
-		gs_write64_internal(0, gif_tag.PRIM)
-	} 
-
-	gif_select_mode(current_tag, data);
-}
-
-void gif_process_reglist(GIF_tag *current_tag) {}
-void gif_process_image(GIF_tag *current_tag) {}
-void gif_process_disable(GIF_tag *current_tag) {}
-	
-void 
-gif_select_mode (GIF_tag *current_tag, u128 data)
-{
-	u16 mode = current_tag.FLG;
-	switch (mode) 
+	u16 mode = current_tag->FLG;
+	switch (mode)
 	{
-		case PACKED: 	
-			{
-				gif_process_packed(current_tag, data);
-				current_tag.regs_left -= 1;
-				if (current_tag.regs_left == 0) {
-					current_tag.regs_left -= current_tag.NREGS;
-					current_tag.data_left -= 1;
-				}
-			} break;
+		case PACKED:
+		{
+			gif_process_packed(current_tag, data);
+			current_tag->regs_left -= 1;
+			if (current_tag->regs_left == 0) {
+				current_tag->regs_left = current_tag->NREGS;
+				current_tag->data_left -= 1;
+			}
+		} break;
 		case REGLIST: 	gif_process_reglist(current_tag);
 		case IMAGE: 	gif_process_image(current_tag);
 		case DISABLE: 	gif_process_disable(current_tag);
 	};
+}
+
+// @@Temporary @@Hack: Global Variables Bad. i think....
+GIF_Tag gif_tag = {};
+//u32
+void
+gif_unpack_tag (u128 pack)
+{
+	if (!gif_tag.data_left) {
+		gif_tag.NLOOP 	=  pack.lo & 0x7fff; 
+		gif_tag.EOP 	= (pack.lo >> 15) & 0x1;   
+		if (gif_tag.NLOOP == 0) return;
+		gif_tag.PRE 	= (pack.lo >> 46) & 0x1;   
+		gif_tag.PRIM 	= (pack.lo >> 47) & 0x7ff;  
+		gif_tag.FLG 	= (pack.lo >> 58) & 0x3;   
+		gif_tag.NREGS 	= (pack.lo >> 60) & 0x7;  
+		gif_tag.REGS 	= pack.hi;
+		if (gif_tag.NREGS == 0)  gif_tag.NREGS = 16;
+		gif_tag.is_tag = true;
+
+		gif_tag.regs_left = gif_tag.NREGS;
+		gif_tag.data_left = gif_tag.NLOOP;
+		//if (gif_tag->PRE == 0) 
+			/*Insert Idle cycle here */
+		
+		//When this function exists 
+		gs_set_q(1.0); 
+
+		if (gif_tag.PRE) {
+			gs_write_64_internal(0, gif_tag.PRIM);
+		} 
+	}
+
+	gif_select_mode(&gif_tag, pack);
+}
+
+static void
+gif_process_path3 (u128 data) 
+{
+	gif_unpack_tag(data);
+}
+
+void
+gif_send_path3 (u128 data)
+{
+	gif_process_path3(data);
 }
 
 u32 

@@ -33,17 +33,17 @@ static u8 *_dcache_;
 
 static u8 *_scratchpad_ = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
-// @@Debug: Careful not to use these too much during early development
+// @@Refactor: Replace all of the instruction decoding in each function with these macros
 #if 0
-#define RD              (ee.current_instruction >> 11 & 0x1F)
-#define RT              (ee.current_instruction >> 16 & 0x1F)
-#define RS              (ee.current_instruction >> 21 & 0x1F)
-#define BASE            (ee.current_instruction >> 21 & 0x1F)
+#define RD              (ee->current_instruction >> 11) & 0x1F
+#define RT              (ee->current_instruction >> 16) & 0x1F
+#define RS              (ee->current_instruction >> 21) & 0x1F
+#define BASE            (ee->current_instruction >> 21) & 0x1F
 
-#define IMM             (ee.current_instruction & 0xFFFF)
-#define SIGN_IMM   (s16)(ee.current_instruction & 0xFFFF)
-#define OFFSET          (ee.current_instruction & 0xFFFF)
-#define SIGN_OFFSET (s16)(ee.current_instruction & 0xFFFF)
+#define IMM             (ee->current_instruction & 0xFFFF)
+#define SIGN_IMM   (s16)(ee->current_instruction & 0xFFFF)
+#define OFFSET          (ee->current_instruction & 0xFFFF)
+#define SIGN_OFFSET (s16)(ee->current_instruction & 0xFFFF)
 #endif
 
 /*******************************************
@@ -1327,7 +1327,7 @@ r5900_reset(R5900_Core ee)
 void 
 r5900_cycle(R5900_Core *ee) 
 {
-    while(ee->pc) {
+ //   while(ee->pc) {
         // @@Implemetation: Figure out the amount of CPU cycles per instruction
         if (ee->delay_slot > 0) ee->delay_slot -= 1;
         if (ee->is_branching) {
@@ -1344,7 +1344,7 @@ r5900_cycle(R5900_Core *ee)
         ee->reg.r[0].SD[0] = 0;
         set_cop0_status(&ee->cop0.status, ee->cop0.regs[12]);
         set_cop0_cause(&ee->cop0.cause, ee->cop0.regs[13]);
-    }
+   // }
 }
 
 void 

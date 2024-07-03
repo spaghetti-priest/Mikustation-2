@@ -8,6 +8,13 @@
 
 alignas(16) GraphicsSynthesizer gs = {0};
 
+void 
+gs_reset ()
+{
+    printf("Resetting Graphics Synthesizer\n");
+    gs.vram = (u16*)malloc(sizeof(u16) * MEGABYTES(4));
+}
+
 //gs_initialize_q (GraphicsSynthesizer *gs)
 void
 gs_set_q (f32 value)
@@ -46,7 +53,7 @@ gs_set_fog (u8 fog)
 }
 
 void 
-gs_set_xyzf2(s16 x, s16 y, u32 z, u8 f)
+gs_set_xyzf2 (s16 x, s16 y, u32 z, u8 f)
 {
     gs.xyzf2.x = x;
     gs.xyzf2.y = y;
@@ -58,7 +65,7 @@ gs_set_xyzf2(s16 x, s16 y, u32 z, u8 f)
 }
 
 void 
-gs_set_xyzf3(s16 x, s16 y, u32 z, u8 f)
+gs_set_xyzf3 (s16 x, s16 y, u32 z, u8 f)
 {
     gs.xyzf3.x = x;
     gs.xyzf3.y = y;
@@ -67,7 +74,7 @@ gs_set_xyzf3(s16 x, s16 y, u32 z, u8 f)
 }
 
 void 
-gs_set_xyz2(s16 x, s16 y, u32 z)
+gs_set_xyz2 (s16 x, s16 y, u32 z)
 {
     gs.xyz2.x = x;
     gs.xyz2.y = y;
@@ -78,18 +85,11 @@ gs_set_xyz2(s16 x, s16 y, u32 z)
 }
 
 void 
-gs_set_xyz3(s16 x, s16 y, u32 z)
+gs_set_xyz3 (s16 x, s16 y, u32 z)
 {
     gs.xyz3.x = x;
     gs.xyz3.y = y;
     gs.xyz3.z = z;
-}
-
-void 
-gs_reset ()
-{
-	printf("Resetting Graphics Synthesizer\n");
-	gs.vram = (u16*)malloc(sizeof(u16) * MEGABYTES(4));
 }
 
 u32 
@@ -301,7 +301,7 @@ gs_write_64_priviledged (u32 address, u64 value)
 }
 
 void 
-gs_set_primitive (u16 value) 
+gs_set_primitive (u64 value) 
 {
     gs.prim.primative_type          = (value) & 0x7;
     gs.prim.shading_method          = (value >> 3) & 0x1;
@@ -312,7 +312,7 @@ gs_set_primitive (u16 value)
     gs.prim.mapping_method          = (value >> 8) & 0x1;
     gs.prim.context                 = (value >> 9) & 0x1;
     gs.prim.fragment_value_control  = (value >> 10) & 0x1;
-    gs.prim.value                   = (u64)value;
+    gs.prim.value                   = value;
 }
 
 void 

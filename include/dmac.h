@@ -29,7 +29,7 @@ enum DMARegisters {
 union Dn_CHCR {
     struct {
         bool    dir;
-        u16     mode : 2;
+        u8      mode : 2;
         u16     stack_pointer : 2;
         bool    tag_transfer;
         bool    tag_interrupt;
@@ -191,7 +191,8 @@ typedef struct _DMAController_ {
 void dmac_reset();
 void dmac_write_32(u32 address, u32 value);
 u32 dmac_read_32(u32 address);
-void dmac_cycle(DMAC *dmac);
+void dmac_cycle();
+
 /*
     if (address >= 0x11000000 && address < 0x11001000) {
         printf("WRITE: write into VU0 code memory");
