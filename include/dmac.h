@@ -5,11 +5,6 @@
 
 #include "ps2types.h"
 
-enum Timers {
-    TIMER_1 = 0x10000000, TIMER_2 = 0x10000800,
-    TIMER_3 = 0x10001000, TIMER_4 = 0x10001800
-};
-
 #define DMAC_CHANNEL_COUNT 10
 enum Channels {
     DMA_VIF0        = 0x10008000, DMA_VIF1        = 0x10009000,

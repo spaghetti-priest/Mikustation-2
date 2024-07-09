@@ -12,9 +12,11 @@
 #include "../include/ps2.h"
 #include "../include/r5900Interpreter.h"
 #include "../include/cop0.h"
-
+#include "../include/cop1.h"
+#include "../include/timer.h"
 std::array<TLB_Entry, 48> TLBS;
 
+// @Incomplete: Make this global within the whole codebase
 #define NDISASM 1
 #ifdef NDISASM
 #define syslog(fmt, ...) (void)0
@@ -398,7 +400,8 @@ SWC1 (R5900_Core *ee, u32 instruction)
         handle_exception_level_1(ee, &exc);
     }
 
-    ee_core_store_32(vaddr, ee->cop1.fprs[ft]);
+    //ee_core_store_32(vaddr, ee->cop1.fprs[ft]);
+    ee_core_store_32(vaddr, cop1_getFPR(ft));
     syslog("SWC1 [{:d}] [{:#x}] [{:d}] \n", ft, offset, base); 
 }
 
@@ -1177,6 +1180,8 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
             }
         } break;
 
+        case COP1: { cop1_decode_and_execute(ee, instruction); } break;
+
         case SPECIAL:
         {
             u32 special = instruction & 0x3F;
@@ -1344,6 +1349,8 @@ r5900_cycle(R5900_Core *ee)
         ee->reg.r[0].SD[0] = 0;
         set_cop0_status(&ee->cop0.status, ee->cop0.regs[12]);
         set_cop0_cause(&ee->cop0.cause, ee->cop0.regs[13]);
+
+        timer_tick();
    // }
 }
 

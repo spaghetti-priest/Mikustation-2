@@ -151,7 +151,7 @@ gif_select_mode (GIF_Tag *current_tag, u128 data)
 
 // @@Temporary @@Hack: Global Variables Bad. i think....
 GIF_Tag gif_tag = {};
-//u32
+
 void
 gif_unpack_tag (u128 pack)
 {
@@ -164,7 +164,7 @@ gif_unpack_tag (u128 pack)
 		gif_tag.FLG 	= (pack.lo >> 58) & 0x3;   
 		gif_tag.NREGS 	= (pack.lo >> 60) & 0x7;  
 		gif_tag.REGS 	= pack.hi;
-		if (gif_tag.NREGS == 0)  gif_tag.NREGS = 16;
+		if (gif_tag.NREGS == 0)  gif_tag.NREGS = 16; 
 		gif_tag.is_tag = true;
 
 		gif_tag.regs_left = gif_tag.NREGS;
@@ -292,4 +292,10 @@ gif_write_32 (GIF *gif, u32 address, u32 value)
 		} break;
 	}
 	return;
+}
+
+void 
+gif_fifo_write (u32 address, u64 data) 
+{
+	printf("WRITE: GIF FIFO\n");
 }

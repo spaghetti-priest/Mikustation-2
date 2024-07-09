@@ -60,16 +60,8 @@ set_kernel_mode (COP0_Registers *cop0, Kernel_modes mode)
     if (ERL || EXL) return;
 
     switch (mode) {
-        case __KERNEL_MODE: 
-            cop0->status.KSU = __KERNEL_MODE;
-        break;
-
-        case __SUPERVISOR_MODE:
-            cop0->status.KSU = __SUPERVISOR_MODE;
-        break;
-
-        case __USER_MODE:
-            cop0->status.KSU = __USER_MODE;
-        break;
+        case __KERNEL_MODE: 		cop0->status.KSU = __KERNEL_MODE; break;
+        case __SUPERVISOR_MODE: 	cop0->status.KSU = __SUPERVISOR_MODE; break;
+        case __USER_MODE: 			cop0->status.KSU = __USER_MODE; break;
     };
 }

@@ -17,6 +17,8 @@
 #include "../include/ps2types.h"
 #include "../include/intc.h"
 #include "../include/cop0.h"
+#include "../include/cop1.h"
+#include "../include/timer.h"
 
 typedef struct SDL_Backbuffer {
     uint32_t w;
@@ -127,13 +129,14 @@ ee_load_32 (u32 address)
     if (address & 0xFF000000 == 0x12000000)
         return gs_read_32_priviledged(address);
 
-    if (address >= 0x10003000 && address <= 0x100030A0)
+    if (address >= 0x10003000 && address <= 0x10006000)
         return gif_read_32(&gif, address);
 
-    if (address >= 0x10000000 && address < 0x1000f000)
+    if (address >= 0x10008000 && address < 0x1000f000)
         return dmac_read_32(address);
 
-
+    if (address >= 0x10000000 && address <= 0x10001840)
+        return timer_read(address);
 
     if (address >= 0x1FC00000 && address < 0x20000000) return *(uint32_t*)&_bios_memory_[address & 0x3FFFFF];
     if (address >= 0x00000000 && address < 0x02000000) return *(uint32_t*)&_rdram_[address];
@@ -248,16 +251,21 @@ ee_store_32 (u32 address, u32 value)
         return;
     }
 
-    if (address >= 0x10000000 && address < 0x1000f000) {
+    if (address >= 0x10008000 && address < 0x1000f000) {
        dmac_write_32(address, value);
        return;
+    }
+
+    if (address >= 0x10000000 && address <= 0x10001840) {
+        timer_write(address, value);
+        return;
     }
 
     if (address <= 0x02000000) {
         *(u32*)&_rdram_[address] = value;
         return;
     }
-//    printf("[ERROR]: Could not write store_memory() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
+    //printf("[ERROR]: Could not write store_memory() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
     //errlog("[ERROR]: Could not write store_memory() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
@@ -265,7 +273,7 @@ void
 ee_store_64 (u32 address, u64 value) 
 {
     if (address >= 0x11000000 && address < 0x11004040) {
-        printf("READ: VU1 read to.....\n");
+        printf("READ: VU1 read address: [%#08x], value: [%#08x]\n", address, value);
         return;
     }
 
@@ -278,7 +286,15 @@ ee_store_64 (u32 address, u64 value)
         gs_write_64_priviledged(address, value);
         return;
     }
- 
+
+    // @@Incomplete: This is a 128 bit write so this should be place within the ee_store_128 function when I 
+    // eventually write a function
+    if (address ==  0x10006000 || address == 0x10006008) {
+        gif_fifo_write(address, value);
+        return;
+    }
+
+    printf("[ERROR]: Could not write store_memory() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
     //errlog("[ERROR]: Could not write store_memory() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
@@ -290,10 +306,9 @@ check_interrupt (bool value)
     if (!value)
         return 0;
 
-    bool interrupt_enable = (ee.cop0.status.IE && ee.cop0.status.EIE);
-    bool check_exception_error_level = ee.cop0.status.ERL && ee.cop0.status.EXL;
-
-    interrupt_enable = interrupt_enable && !check_exception_error_level;
+    bool interrupt_enable               = ee.cop0.status.IE && ee.cop0.status.EIE;
+    bool check_exception_error_level    = ee.cop0.status.ERL && ee.cop0.status.EXL;
+    interrupt_enable                    = interrupt_enable && !check_exception_error_level;
 
     if (!interrupt_enable)
         return 0;
@@ -391,13 +406,12 @@ main (int argc, char **argv)
 
     if (read_bios(filename) != 1) return 0;
 
-    
+    //@@Incomplete: Move this into its own function
     {
         printf("Resetting Emotion Engine Core\n");
         memset(&ee, 0, sizeof(R5900_Core));
         ee = {
             .pc            = 0xbfc00000,
-            .cop1.fcr0     = 0x2e30,
             .current_cycle = 0,
         };
         ee.cop0.regs[15]    = 0x2e20;
@@ -410,7 +424,10 @@ main (int argc, char **argv)
     dmac_reset();
     gs_reset();
     gif_reset(&gif);
-    printf("\n=========================\nInitializing System\n=========================");
+    timer_reset();
+    cop1_reset();
+
+    printf("\n=========================\nInitializing System\n=========================\n");
 
     // @@Note: Testing this file not loading it
     //load_elf(&ee, elf_filename);
@@ -422,7 +439,6 @@ main (int argc, char **argv)
         .pitch          = 640 * sizeof(uint32_t),
         .pixels         = new uint32_t[648 * 480],
     };
-
 
     window = SDL_CreateWindow("Mikustation_2\n",
                               SDL_WINDOWPOS_UNDEFINED, 

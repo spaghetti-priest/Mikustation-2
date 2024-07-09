@@ -118,6 +118,7 @@ enum Cache_Mode : int {
 enum INSTRUCTION_TYPE : int {
     COP0 = 0b010000, SPECIAL = 0b000000,
     MMI  = 0b011100, REGIMM  = 0b000001,
+    COP1 = 0b010001,
 };
 
 union COP0_Cause {
@@ -125,8 +126,8 @@ union COP0_Cause {
         u32 unused          : 2;
         u32 ex_code         : 5; 
         u32 unused1         : 3;
-        u32 int0_pending    : 1;
         u32 int1_pending    : 1;
+        u32 int0_pending    : 1;
         u32 timer_pending   : 1;
         u32 EXC2            : 3;
         u32 unused2         : 9;
@@ -214,6 +215,7 @@ union COP0_Registers {
     }
 };
 
+#if 0
 // @@Rename: Possibly rename this to FPU registers.
 union COP1_Registers {
     struct {
@@ -227,6 +229,7 @@ union COP1_Registers {
     u32 fcr0; // reports implementation and revision of fpu
     u32 fcr31; // control register, stores status flags
 };
+#endif
 
 union VU_Registers {
     struct {
@@ -249,7 +252,7 @@ typedef struct _R5900Core_ {
 
     u64 HI, HI1, LO, LO1;
     COP0_Registers cop0;
-    COP1_Registers cop1;
+    //COP1_Registers cop1;
 
     bool is_branching;
     int delay_slot;

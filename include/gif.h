@@ -133,5 +133,6 @@ void gif_reset(GIF *gif);
 u32 gif_read_32 (GIF *gif, u32 address);
 void gif_write_32 (GIF *gif, u32 address, u32 value);
 void gif_send_path3(u128 data);
+void gif_fifo_write(u32 address, u64 data);
 
 #endif

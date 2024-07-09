@@ -222,26 +222,6 @@ dmac_write_32 (u32 address, u32 value)
         } break;
 
     /******************
-    * EE TIMERS
-    *******************/
-        case TIMER_1:
-        {
-            printf("WRITE: EE Timer 1\n");
-        } break;
-        case TIMER_2:
-        {
-            printf("WRITE: EE Timer 2\n");
-        } break;
-        case TIMER_3:
-        {
-            printf("WRITE: EE Timer 3\n");
-        } break;
-        case TIMER_4:
-        {
-            printf("WRITE: EE Timer 4\n");
-        } break;
-
-    /******************
     * DMA Channels
     *******************/
         case DMA_VIF0:
@@ -287,7 +267,7 @@ dmac_write_32 (u32 address, u32 value)
         } break;
         case DMA_IPU_TO:
         {
-            printf("WRITE: DMAC write to IPU_TO\n");
+            printf("WRITE: DMAC write to IPU_TO \n");
             set_dma_channel_control(&dmac.channels[4], value);
         } break;
         case DMA_SIF0:
@@ -346,33 +326,6 @@ dmac_read_32 (u32 address)
             printf("READ: DMAC interrupt status value: [%#08x]", dmac.interrupt_status.value);
             return dmac.interrupt_status.value;
             //read_dma_interrupt_status(&dmac.interrupt_status);
-        } break;
-        
-    /******************
-    * EE TIMERS
-    *******************/
-        case TIMER_1: 
-        {
-            printf("READ: EE Timer 1\n");
-            return 0;
-        } break;
-
-        case TIMER_2: 
-        {
-            printf("READ: EE Timer 2\n");
-            return 0;
-        } break;
-
-        case TIMER_3: 
-        {
-            printf("READ: EE Timer 3\n");
-            return 0;
-        } break;        
-
-        case TIMER_4: 
-        {
-            printf("READ: EE Timer 4\n");
-            return 0;
         } break;
 
         default:

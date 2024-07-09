@@ -7,7 +7,7 @@
 global_variable u32 INTC_MASK = 0; 
 global_variable u32 INTC_STAT = 0;
 
-enum INTCRequests : int {
+enum INTCRequests : u32 {
 	INT_GS, 	INT_SBUS, 	INT_VB_ON, 	INT_VB_OFF,
 	INT_VIF0, 	INT_VIF1, 	INT_VU0, 	INT_VU1,
 	INT_IPU, 	INT_TIMER0, INT_TIMER1,	INT_TIMER2,
@@ -16,5 +16,6 @@ enum INTCRequests : int {
 
 u32 intc_read(u32 address);
 void intc_write(u32 address, u32 value);
+void send_interrupt(u32 value);
 
 #endif
