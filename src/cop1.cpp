@@ -7,6 +7,14 @@
 
 COP1_Registers cop1 = {0};
 
+void 
+cop1_reset()
+{
+	printf("Resetting Coprocessor 1\n");
+	memset(&cop1, 0, sizeof(cop1));
+	cop1.fcr0 = 0x2e30;
+}
+
 static f32
 convert (u32 index)
 {
@@ -17,14 +25,6 @@ f32
 cop1_getFPR(u32 index)
 {
 	return cop1.fpr[index].u;
-}
-
-void 
-cop1_reset()
-{
-	printf("Resetting Coprocessor 1\n");
-	memset(&cop1, 0, sizeof(cop1));
-	cop1.fcr0 = 0x2e30;
 }
 
 void 

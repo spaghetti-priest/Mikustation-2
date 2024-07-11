@@ -1,9 +1,9 @@
-/*
+ /*
  * Copyright 2023 Xaviar Roach
- * SPDX-License-Identifier: MIT
- */
-
-#include <thread>
+ * SPD X-License-Identifier: MIT
+ */ 
+ 
+#include <thread> 
 #include <fstream>
 #include <typeinfo>
 #include "SDL2/include/SDL.h"
@@ -19,6 +19,7 @@
 #include "../include/cop0.h"
 #include "../include/cop1.h"
 #include "../include/timer.h"
+#include "../include/ipu.h"
 
 typedef struct SDL_Backbuffer {
     uint32_t w;
@@ -35,6 +36,8 @@ u8 _rdram_sdevid = 0;
 
 static u8 *_bios_memory_;
 static u8 *_rdram_;
+
+static u8 *_iop_ram_;
 
 static u8 *_vu0_code_memory_;
 static u8 *_vu0_data_memory_;
@@ -72,7 +75,8 @@ ee_load_16 (u32 address)
         return *(u16*)&_bios_memory_[address & 0x3FFFFF];
     if (address >= 0x00000000 && address < 0x02000000) 
         return *(u16*)&_rdram_[address];
-
+    if (address >= 0x1C000000 && address < 0x1C200000) 
+        return *(u16*)&_iop_ram_[address];
     //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
     
     return r;
@@ -140,7 +144,6 @@ ee_load_32 (u32 address)
 
     if (address >= 0x1FC00000 && address < 0x20000000) return *(uint32_t*)&_bios_memory_[address & 0x3FFFFF];
     if (address >= 0x00000000 && address < 0x02000000) return *(uint32_t*)&_rdram_[address];
-
     
     return r;
 }
@@ -155,6 +158,9 @@ ee_load_64 (u32 address)
 
     if (address >= 0x12000000 && address < 0x12002000) 
         return gs_read_64_priviledged(address);
+
+     if (address >= 0x1C000000 && address < 0x1C200000) 
+        return *(uint64_t*)&_iop_ram_[address];
 
     //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
     return r;
@@ -172,6 +178,7 @@ ee_store_8 (u32 address, u8 value)
         *(u8*)&_rdram_[address] = value;
         return;
     }
+
     if (address == 0x1000f180) {
         console << (char)value;
         console.flush();
@@ -179,7 +186,12 @@ ee_store_8 (u32 address, u8 value)
         printf("%c", (char)value);
         return;
     };
-  
+
+    if (address >= 0x1C000000 && address < 0x1C200000) {
+        *(u8*)&_iop_ram_[address] = value;
+        return;
+    }
+
     //errlog("[ERROR]: Could not write store_memory() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
@@ -198,6 +210,10 @@ ee_store_16 (u32 address, u16 value)
         return;
     };
     
+    if (address >= 0x1C000000 && address < 0x1C200000) {
+        *(u16*)&_iop_ram_[address] = value;
+        return;
+    }
     //errlog("[ERROR]: Could not write store_memory() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
@@ -265,6 +281,11 @@ ee_store_32 (u32 address, u32 value)
         *(u32*)&_rdram_[address] = value;
         return;
     }
+
+    if (address >= 0x1C000000 && address < 0x1C200000) {
+        *(u32*)&_iop_ram_[address] = value;
+        return;
+    }
     //printf("[ERROR]: Could not write store_memory() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
     //errlog("[ERROR]: Could not write store_memory() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
@@ -292,6 +313,16 @@ ee_store_64 (u32 address, u64 value)
     if (address ==  0x10006000 || address == 0x10006008) {
         gif_fifo_write(address, value);
         return;
+    }
+
+    if (address ==  0x10007010 || address == 0x10007018) {
+        ipu_fifo_write();
+        return;
+    }
+
+    if (address >= 0x1C000000 && address < 0x1C200000) {
+        *(u64*)&_iop_ram_[address] = value;
+        return;;
     }
 
     printf("[ERROR]: Could not write store_memory() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
@@ -403,6 +434,7 @@ main (int argc, char **argv)
     const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
     _bios_memory_   = (u8 *)malloc(sizeof(u8) * MEGABYTES(4));
     _rdram_         = (u8 *)malloc(sizeof(u8) * MEGABYTES(32));
+    _iop_ram_       = (u8 *)malloc(sizeof(u8) * MEGABYTES(2));
 
     if (read_bios(filename) != 1) return 0;
 
