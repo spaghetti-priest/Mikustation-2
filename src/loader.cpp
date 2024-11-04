@@ -4,6 +4,7 @@
  */
 
 #include "../include/loader.h"
+#include "../include/ps2.h"
 #include <iostream>
 #include <assert.h>
 
@@ -73,13 +74,71 @@ load_elf(R5900_Core *ee, const char *path)
 		printf("Segment size in memory: [%#08x]\n", phdr->p_memsz);
 		printf("Flags: [%#08x]\n", phdr->p_flags);
 		printf("Segment alignment: [%#08x]\n", phdr->p_align);
+
+		int mem_write_cursor = phdr->p_vaddr;
+		
+		for (int file_write_cursor = phdr->p_offset; 
+			 file_write_cursor < (phdr->p_offset + phdr->p_filesz); 
+			 file_write_cursor += 4)
+		{
+			u32 value = *(u32*)&elf[file_write_cursor];
+			ee_store_32(mem_write_cursor, value);
+			mem_write_cursor += 4;
+		} 
 	}
 	
 	printf("\n=============================================\n");
-	//*Entry point goes here
-
 	ee->pc = hdr->e_entry;
 
 	free(hdr);
 	return true;
+}
+
+int 
+read_bios (const char *filename, u8 *bios_memory) 
+{
+    size_t file_size = 0;
+    unsigned char *c;
+
+#if _WIN32 || _WIN64
+    FILE* f = fopen(filename, "rb");
+    if (!f) {
+        printf("[ERROR]: Could not open BIOS file. \n");
+        fclose(f);
+        return 0;
+    }
+    printf("Found BIOS file...\n");
+
+    fseek(f, 0, SEEK_END); // @Incomplete: Add 64 bit version compatibility
+    file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if(fread(&c, sizeof(unsigned char), file_size, f) == 1) {
+        printf("[ERROR]: Could not read BIOS file \n");
+        fclose(f);
+        return 0;
+    }
+
+    printf("Copying BIOS to main memory\n");
+    // Copy BIOS to memory
+    uint64_t addr = 0;
+    while (fread(&c, sizeof(unsigned char), sizeof(unsigned char), f) == 1) 
+        bios_memory[addr++] = reinterpret_cast<uint8_t>(c);
+        //_bios_memory_[addr++] = reinterpret_cast<uint8_t>(c);
+
+    fclose(f);
+#else 
+    std::ifstream reader;
+    reader.open(filename, std::ios::in | std::ios::binary);
+    if (!reader.is_open())
+        printf("[ERROR]: Could not read BIOS file!\n");
+
+    reader.seekg(0);
+    reader.read((char*)_bios_memory_, 4 * 1024 * 1024);
+    reader.close();
+#endif
+
+    printf("Sucessfully read BIOS file...\n");
+
+    return 1;
 }

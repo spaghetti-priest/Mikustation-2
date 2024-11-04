@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/intc.h"
+#include "../include/ee/intc.h"
 #include "../include/ps2.h"
 
 #include <iostream>

@@ -4,7 +4,7 @@
 #define GIF_H
 
 #include <queue>
-#include "ps2types.h"
+#include "../ps2types.h"
 
 typedef struct _GIFTag_ {
 	u16 	NLOOP : 15; // Data size

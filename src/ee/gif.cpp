@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/gif.h"
-#include "../include/gs.h"
+#include "../include/ee/gif.h"
+#include "../include/ee/gs.h"
 #include <iostream>
 
 void 
@@ -198,7 +198,7 @@ gif_send_path3 (u128 data)
 u32 
 gif_read_32 (GIF *gif, u32 address)
 {
-	printf("READ: gif_read32 address: [%#08x]\n", address);
+	//printf("READ: gif_read32 address: [%#08x]\n", address);
 
 	if (address == 0x10003020) {
 		printf("READ: STAT [%#08x]\n", gif->stat.value);
@@ -264,7 +264,7 @@ gif_read_32 (GIF *gif, u32 address)
 void 
 gif_write_32 (GIF *gif, u32 address, u32 value)
 {
-	printf("WRITE: gif_write32 address: [%#08x]\n", address);
+	//printf("WRITE: gif_write32 address: [%#08x]\n", address);
 	switch(address)
 	{
 		case 0x10003000:
@@ -297,5 +297,5 @@ gif_write_32 (GIF *gif, u32 address, u32 value)
 void 
 gif_fifo_write (u32 address, u64 data) 
 {
-	printf("WRITE: GIF FIFO\n");
+	//printf("WRITE: GIF FIFO\n");
 }

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/dmac.h"
-#include "../include/gif.h"
+#include "../include/ee/dmac.h"
+#include "../include/ee/gif.h"
 #include "../include/ps2.h"
 #include <iostream>
 
@@ -15,7 +15,7 @@ dmac_reset ()
 {
     printf("Resetting DMAC Controller\n");
 
-    dmac.control.enable = false;
+    dmac.control.enable = true;
     for (int i = 0; i < DMAC_CHANNEL_COUNT; ++i) {
         dmac.interrupt_status.channel_status[i]     = 0;
         dmac.interrupt_status.channel_mask[i]       = 0;
@@ -110,7 +110,7 @@ process_source_chain()
 void
 dmac_cycle ()
 {
-    u128 data; 
+    u128 data = { 0 };
     bool stop_dma_transfer = ~0x100;
 
     if (!dmac.control.enable) return;
@@ -152,6 +152,44 @@ dmac_cycle ()
             //vif_send_path2()
         }
     }
+}
+
+static inline u32
+read_dmac_channel_value(u32 address, u32 index)
+{
+    u32 ad = address & 0x000000FF;
+    switch (ad) {
+        case 0x00:
+        {
+            return dmac.channels[index].control.value;
+        } break;
+        case 0x10:
+        {
+            return dmac.channels[index].address;
+        } break;
+        case 0x20:
+        {
+            return dmac.channels[index].quadword_count.value;
+        } break;
+        case 0x30:
+        {
+            return dmac.channels[index].tag_address.value;
+        } break;
+        case 0x40:
+        {
+            return dmac.channels[index].save_tag0;
+        } break;
+        case 0x50:
+        {
+            return dmac.channels[index].save_tag1;
+        } break;
+        case 0x80:
+        {
+            return dmac.channels[index].scratchpad_address.value;
+        } break;
+    }
+
+    return 0;
 }
 
 void 
@@ -229,15 +267,17 @@ dmac_write_32 (u32 address, u32 value)
             printf("WRITE: DMAC write to VIF0 [%#08x]\n", value);
             set_dma_channel_control(&dmac.channels[0], value);
         } break;
+
         case DMA_VIF1:
         {
             printf("WRITE: DMAC write to VIF1(PATH2 to GIF) [%#08x]\n", value);
             set_dma_channel_control(&dmac.channels[1], value);
         } break;
+        
         case DMA_GIF:
         {
             //printf("WRITE: DMAC write to GIF(PATH3)\n");
-            u32 ad = address & 0xFF;
+            u32 ad = address & 0x000000FF;
             if (ad == 0x00) {
                 set_dma_channel_control(&dmac.channels[2], value);
                 printf("WRITE: GIF_CHCR, value: [%#08x]\n", value);
@@ -260,36 +300,43 @@ dmac_write_32 (u32 address, u32 value)
                 return;
             }
         } break;
+       
         case DMA_IPU_FROM:
         {
             printf("WRITE: DMAC write to IPU_FROM\n");
             set_dma_channel_control(&dmac.channels[3], value);
         } break;
-        case DMA_IPU_TO:
+       
+       case DMA_IPU_TO:
         {
             printf("WRITE: DMAC write to IPU_TO \n");
             set_dma_channel_control(&dmac.channels[4], value);
         } break;
+        
         case DMA_SIF0:
         {
             printf("WRITE: DMAC write to SIF0(from IOP)\n");
             set_dma_channel_control(&dmac.channels[5], value);
         } break;
+       
         case DMA_SIF1:
         {
             printf("WRITE: DMAC write to SIF1(to IOP)\n");
             set_dma_channel_control(&dmac.channels[6], value);
         } break;
+        
         case DMA_SIF2:
         {
             printf("WRITE: DMAC write to SIF2(bidirectional)\n");
             set_dma_channel_control(&dmac.channels[7], value);
         } break;
+        
         case DMA_SPR_FROM:
         {
             printf("WRITE: DMAC write to SPR_FROM\n");
             set_dma_channel_control(&dmac.channels[8], value);
         } break;
+       
         case DMA_SPR_TO:
         {
             printf("WRITE: DMAC write to SPR_TO\n");
@@ -308,7 +355,7 @@ u32
 dmac_read_32 (u32 address)
 {
     address &= 0xFFFFFF00;
-    printf("DMAC READ addr: [%#08x]\n", address);
+    //printf("DMAC READ addr: [%#08x]\n", address);
     switch(address)
     {
     /******************
@@ -328,6 +375,66 @@ dmac_read_32 (u32 address)
             //read_dma_interrupt_status(&dmac.interrupt_status);
         } break;
 
+        case DMA_VIF0:
+        {
+            printf("READ: DMAC read to VIF0\n");
+            return read_dmac_channel_value(address, 0);
+        } break;
+
+        case DMA_VIF1:
+        {
+            printf("READ: DMAC READ to VIF1(PATH2 to GIF)\n");
+            return read_dmac_channel_value(address, 1);         
+        } break;
+
+        case DMA_GIF:
+        {
+            printf("READ: DMAC READ to GIF(PATH3) [%#08x]\n", read_dmac_channel_value(address, 2));
+            return read_dmac_channel_value(address, 2);
+        } break;
+
+        case DMA_IPU_FROM:
+        {
+            printf("READ: DMAC READ to IPU_FROM\n");
+            return read_dmac_channel_value(address, 3);
+        } break;
+
+        case DMA_IPU_TO:
+        {
+            printf("READ: DMAC READ to IPU_TO\n");
+            return read_dmac_channel_value(address, 4);
+        } break;
+
+        case DMA_SIF0:
+        {
+            printf("READ: DMAC READ to SIF0(from IOP)\n");
+            return read_dmac_channel_value(address, 5);
+        } break;
+
+        case DMA_SIF1:
+        {
+            printf("READ: DMAC READ to SIF1(to IOP)\n");
+            return read_dmac_channel_value(address, 6);
+        } break;
+
+        case DMA_SIF2:
+        {
+            printf("READ: DMAC READ to SIF2(bidirectional)\n");
+            return read_dmac_channel_value(address, 7);
+        } break;
+
+        case DMA_SPR_FROM:
+        {
+            printf("READ: DMAC READ to SPR_FROM\n");
+            return read_dmac_channel_value(address, 8);
+        } break;
+
+        case DMA_SPR_TO:
+        {
+            printf("READ: DMAC READ to SPR_TO\n");
+            return read_dmac_channel_value(address, 9);
+        } break;
+        
         default:
         {
             printf("Unhandled Read32 to DMAC [%#08x]\n", address);

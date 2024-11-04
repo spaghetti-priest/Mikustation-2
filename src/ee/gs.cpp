@@ -4,7 +4,7 @@
  */
 
 #include <iostream>
-#include "../include/gs.h"
+#include "../include/ee/gs.h"
 
 alignas(16) GraphicsSynthesizer gs = {0};
 
@@ -95,14 +95,28 @@ gs_set_xyz3 (s16 x, s16 y, u32 z)
 u32 
 gs_read_32_priviledged (u32 address) 
 {
-    printf("READ PRIVILEDGE32: Graphics synthesizer addr[%#x]\n", address);
+    //printf("READ PRIVILEDGE32: Graphics synthesizer addr[%#x]\n", address);
     return 0;
 }
 
 u64 
 gs_read_64_priviledged (u32 address) 
 {
-    printf("READ PRIVILEDGE64: Graphics synthesizer addr[%#x]\n", address);
+    switch(address) 
+    {
+        case 0x12001000: 
+        {
+            printf("GS_READ: read from CSR\n");
+            return gs.csr.value;
+        } break;
+
+        default: 
+        {
+             printf("ERROR: UNRECOGNIZED READ GS PRIVILEDGE64: address[%#x]\n", address);
+             return 0;
+        } break;
+
+    }
     return 0;
 }
 
@@ -124,8 +138,6 @@ gs_write_32_priviledged (u32 address, u32 value)
 void 
 gs_write_64_priviledged (u32 address, u64 value)
 {
-   // printf("WRITE PRIVILEDGE64: Graphics synthesizer value: [%#09x], addr[%#x]\n", value, address);
-
     switch(address)
     {
         case 0x12000000:
@@ -141,16 +153,52 @@ gs_write_64_priviledged (u32 address, u64 value)
             gs.pmode.alpha_value        = (value >> 8) & 0xFF;    
             return;
         } break;
-        
+
+        case 0x12000010:
+        {
+            printf("GS_WRITE: write to SMODE1. Value: [%#08x]\n", value);
+            gs.smode1.value                 = value;
+            return;
+        } break;
+
         case 0x12000020:
         {
             printf("GS_WRITE: write to SMODE2. Value: [%#08x]\n", value);
-            gs.smode2.value             = value;
-            gs.smode2.interlace_mode    = value & 0x1;
-            gs.smode2.interlace_setting = (value >> 1) & 0x1;
-            gs.smode2.mode               = (value >> 2) & 0x3;
+            gs.smode2.value                 = value;
+            gs.smode2.interlace_mode        = value & 0x1;
+            gs.smode2.interlace_setting     = (value >> 1) & 0x1;
+            gs.smode2.mode                  = (value >> 2) & 0x3;
             return;
         } break;
+
+        case 0x12000030:
+        {
+            printf("GS_WRITE: write to SRFSH. Value: [%#08x]\n", value);
+            gs.srfsh.value = value;
+            return;
+        } break;
+
+        case 0x12000040:
+        {
+            printf("GS_WRITE: write to SYNCH1. Value: [%#08x]\n", value);
+            gs.synch1.value = value;
+            return;
+        } break;
+
+        case 0x12000050:
+        {
+            printf("GS_WRITE: write to SYNCH2. Value: [%#08x]\n", value);
+            gs.synch2.value = value;
+            return;
+        } break;
+
+        case 0x12000060:
+        {
+            printf("GS_WRITE: write to SYNCV. Value: [%#08x]\n", value);
+            gs.syncv.value = value;
+            return;
+        } break;
+
         
         case 0x12000070:
         {
@@ -296,6 +344,10 @@ gs_write_64_priviledged (u32 address, u64 value)
             return;
         } break;
         
+        default: 
+        {
+             printf("ERROR: UNRECOGNIZED WRITE GS PRIVILEDGE64: value: [%#09x], address[%#x]\n", value, address);
+        } break;
        }
     return;
 }
@@ -328,6 +380,7 @@ gs_write_64_internal (u32 address, u64 value)
 
         default:
         {
+             printf("UNRECOGNIZED WRITE GS INTERNAL64: value: [%#09x], address[%#x]\n", value, address);
             return;
         }
     }

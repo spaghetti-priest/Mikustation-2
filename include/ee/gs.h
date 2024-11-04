@@ -4,7 +4,7 @@
 #define GS_H
 
 #include <cstdint>
-#include "ps2types.h"
+#include "../ps2types.h"
 /*
   00h     PRIM
   01h     RGBAQ
@@ -476,6 +476,7 @@ union LABEL {
 };
 /*
   12000000h    PMODE
+  12000010h    SMODE1
   12000020h    SMODE2
   12000070h    DISPFB1
   12000080h    DISPLAY1
@@ -503,6 +504,17 @@ union PMODE {
 		bool blending_selection;
 		u8 alpha_value;	
 		u16 unused;
+	};
+	u64 value;
+};
+
+//@@Note @Incomplete: No noted documentation on SMODE1 so this is just copied from PCSX2 
+// https://github.com/PCSX2/pcsx2/blob/2d5faa627ff54f3fb2a69a43286181bee071a1c3/pcsx2/GS/GSRegs.h#L461
+union SMODE1 {
+	struct {
+		//bool vertical_front;
+		//bool interlace_setting;
+		//u8 mode : 2;
 	};
 	u64 value;
 };
@@ -606,6 +618,21 @@ union IMR {
 	u64 value;
 };
 
+union SYNCH {
+	//@@Note @Incomplete: Dont know what this is. No doc
+	u32 value;
+};
+
+union SRFSH {
+	//@@Note @Incomplete: Dont know what this is. No doc
+	u32 value;
+};
+
+union SYNCV {
+	//@@Note @Incomplete: Dont know what this is. No doc
+	u32 value;
+};
+
 typedef struct _BUSDIR_ {
 	bool direction;
 } BUSDIR;
@@ -618,10 +645,6 @@ union SIGLBLID {
 	u64 value;
 };
 
-// @@Architecture @@Note: Im not entirely sure how to architect this. I feel like it would be alot more
-// easier to use use the reset functions as constructors within the data structure. Or...
-// The Individual components should be apart of a PS2 struct., and each reset signal and 
-// functions should be internal to their own files. hmm.... Im wondering how pcsx2 is architected
 typedef struct _GraphicsSynthesizer_ {
 	u16 *vram;
 
@@ -684,7 +707,8 @@ typedef struct _GraphicsSynthesizer_ {
 	// EE Privileged Registers
 	PMODE 	 pmode;
 	DISPFB 	 dispfb1; 
-	DISPFB 	 dispfb2; 
+	DISPFB 	 dispfb2;
+	SMODE1 	 smode1;
 	SMODE2 	 smode2;
 	DISPLAY  display1;
 	DISPLAY  display2;
@@ -696,6 +720,10 @@ typedef struct _GraphicsSynthesizer_ {
 	IMR 	 	 imr;
 	BUSDIR 	 busdir;
 	SIGLBLID siglbid;
+	SRFSH srfsh;
+	SYNCH synch1;
+	SYNCH synch2;
+	SYNCV syncv;
 } GraphicsSynthesizer;
 
 void gs_reset();

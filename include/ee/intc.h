@@ -2,7 +2,7 @@
 #ifndef INTC_H
 #define INTC_H
 
-#include "ps2types.h"
+#include "../ps2types.h"
 
 global_variable u32 INTC_MASK = 0; 
 global_variable u32 INTC_STAT = 0;

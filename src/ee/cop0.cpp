@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/cop0.h"
+#include "../include/ee/cop0.h"
 #include "../include/ps2.h"
 
 void 
@@ -15,8 +15,6 @@ set_cop0_reg(int index, u32 value)
 void
 handle_exception_level_1 (R5900_Core *ee, Exception *exc)
 {
-	exc->vector = V_COMMON;
-
 	ee->cop0.cause.ex_code = exc->code;
 	if (ee->cop0.status.EXL) {
 		exc->vector = V_COMMON;
@@ -39,29 +37,9 @@ handle_exception_level_1 (R5900_Core *ee, Exception *exc)
 	else
 		ee->pc = 0x80000000 + (u32)exc->vector;
 
-	ee->next_instruction = ee_load_32(ee->pc);
+	// @@Incomplete: This doesnt do anything or go anywhere since the next instruction is never
+	//ee->next_instruction = ee_load_32(ee->pc);
 }
 
 void 
 handle_exception_level_2 (R5900_Core *ee, Exception *exc) {}
-
-enum Kernel_modes : u8 {
-    __KERNEL_MODE     = 0,
-    __SUPERVISOR_MODE = 1,
-    __USER_MODE       = 2,
-};
-
-inline void 
-set_kernel_mode (COP0_Registers *cop0, Kernel_modes mode)
-{
-    COP0_Status *status; 
-    u32 ERL 			= cop0->status.ERL;
-    u32 EXL 			= cop0->status.EXL;
-    if (ERL || EXL) return;
-
-    switch (mode) {
-        case __KERNEL_MODE: 		cop0->status.KSU = __KERNEL_MODE; break;
-        case __SUPERVISOR_MODE: 	cop0->status.KSU = __SUPERVISOR_MODE; break;
-        case __USER_MODE: 			cop0->status.KSU = __USER_MODE; break;
-    };
-}

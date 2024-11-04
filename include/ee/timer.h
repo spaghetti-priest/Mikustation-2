@@ -6,7 +6,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "ps2types.h"
+#include "../ps2types.h"
 #include "dmac.h"
 
 // From: https://github.com/ps2dev/ps2sdk/blob/master/ee/kernel/include/timer.h#L53
@@ -16,7 +16,8 @@
 #define BUSCLKBY256    (BUSCLK / 256)
 #define HBLNK_NTSC     (15734)
 
-/* There should be an option in a menu of somesort to figure out the encoding system
+/* 
+	There should be an option in a menu of somesort to figure out the encoding system
 	idk yet so currently NTSC is the default
 */
 #define HBLNK_PAL      (15625)

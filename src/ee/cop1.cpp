@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/cop1.h"
+#include "../include/ee/cop1.h"
 
 COP1_Registers cop1 = {0};
 
@@ -35,28 +35,28 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 	{
 		case 0x00000004:
 		{
-			u32 fs = (instruction >> 11) & 0x1F;
-			u32 rt = (instruction >> 16) & 0x1F;
-			cop1.fpr[fs].u = ee->reg.r[rt].UW[0];
+			u32 fs 			= (instruction >> 11) & 0x1F;
+			u32 rt 			= (instruction >> 16) & 0x1F;
+			cop1.fpr[fs].u 	= ee->reg.r[rt].UW[0];
 			
 			printf("MTC1 [%d] [%d] \n", rt, fs);
 		} break;
 
 		case 0x00000010:
 		{
-			u32 fs = (instruction >> 11) & 0x1F;
-			u32 ft = (instruction >> 16) & 0x1F;
-			f32 reg1 = convert(fs);
-			f32 reg2 = convert(ft);
-			cop1.ACC.f = reg1 + reg2;
+			u32 fs 		= (instruction >> 11) & 0x1F;
+			u32 ft 		= (instruction >> 16) & 0x1F;
+			f32 reg1 	= convert(fs);
+			f32 reg2 	= convert(ft);
+			cop1.ACC.f 	= reg1 + reg2;
 			printf("ADDA.S [%d] [%d] \n", fs, ft);
 		} break;
 
 		case 0x00000006:
 		{
-			u32 fs = (instruction >> 11) & 0x1F;
-			u32 rt = (instruction >> 16) & 0x1F;
-			cop1.fcr31 = ee->reg.r[rt].UW[0];
+			u32 fs 		= (instruction >> 11) & 0x1F;
+			u32 rt 		= (instruction >> 16) & 0x1F;
+			cop1.fcr31 	= ee->reg.r[rt].UW[0];
 			
 			printf("MTC1 [%d] [%d] \n", rt, fs); 
 		} break;

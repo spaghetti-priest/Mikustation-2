@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/timer.h"
-#include "../include/intc.h"
+#include "../include/ee/timer.h"
+#include "../include/ee/intc.h"
 #include <iostream>
 
 // @@Note: Only Timers 0 and 1 have a Tn_HOLD register
@@ -27,33 +27,34 @@ timer_read (u32 address)
 {
 	int index = (address >> 11) & 0x3;
 	int reg = (address & ~0x1800);
-	printf("Timer index: [%d]\n", index);
+	//printf("Timer index: [%d] [%04x]\n", index, reg);
 	switch(reg)
 	{
 		case Tn_COUNT: 
 		{
-			printf("READ: Tn_COUNT\n");
+			printf("READ: Index [%d] Tn_COUNT\n", index);
 			return timers[index].count.value;
 		} break;
 
 		case Tn_MODE: 
 		{
-			printf("READ: Tn_MODE\n");
+			printf("READ: Index [%d] Tn_MODE\n", index);
 			return timers[index].mode.value;
 		} break;
 
 		case Tn_COMP: 
 		{
-			printf("READ: Tn_COMP\n");
+			printf("READ: Index [%d] Tn_COMP\n", index);
 			return timers[index].comp.value;
 		} break;
 
 		case Tn_HOLD: 
 		{
-			printf("READ: Tn_HOLD\n");
+			printf("READ: Index [%d] Tn_HOLD\n", index);
 			return timers[index].hold.value;
 		} break;
 	}
+	return 0;
 }
 
 void 
@@ -115,7 +116,6 @@ timer_write (u32 address, u32 value)
 		} break;
 	}
 }
-
 
 void 
 timer_tick() 

@@ -15,21 +15,7 @@
 #include <windows.h>
 #endif
 
-#include "ps2types.h"
-
-
-typedef struct Range {
-    u32 start;
-    u32 size;
-    
-    inline Range(u32 _start, u32 _size) : start(_start), size(_size) {}
-/*
-    inline u32 contains(u32 addr) {
-        if (addr >= start && addr <= start + size) 
-            return addr - start;
-    }
-    */
-} Range;
+#include "../ps2types.h"
 
 /*
   KUSEG: 00000000h-7FFFFFFFh User segment
@@ -40,17 +26,6 @@ typedef struct Range {
 */
 
 /*
-Range BIOS          = Range(0x1fc00000, MEGABYTES(4));
-Range RDRAM         = Range(0x00000000, MEGABYTES(32));
-Range IO_REGISTERS  = Range(0x10000000, KILOBYTES(64));
-Range VU0           = Range(0x11000000, KILOBYTES(4));
-Range Vu1           = Range(0x11008000, KILOBYTES(16));
-Range GS_REGISTERS  = Range(0x12000000, KILOBYTES(8));
-Range IOP_RAM       = Range(0x1C000000, MEGABYTES(4));
-Range SCRATCHPAD    = Range(0x70000000, KILOBYTES(16));
-*/
-/*
-
 u32 MCH_RICM = 0, MCH_DRD = 0;
 u8 rdram_sdevid = 0;
 */
@@ -188,24 +163,28 @@ union COP0_Registers {
             context,
             pageMask,
             wired,
+            unused0,
             //unreserved
             badVAddr,
             count,
             entryHi0,
-            compare1;
+            compare;
         COP0_Status status;
         COP0_Cause cause;
         u32 EPC,
             PRid,
             config,
+            unused1[6],
             // 17-22 reserved
             bad_paddr,
             debug,
             perf,
+            unused2[2],
             //26-27 reserved
             tagLo,
             tagHi,
-            errorEPC;
+            errorEPC,
+            unused3;
             //reserved
     };
     u32 regs[32];

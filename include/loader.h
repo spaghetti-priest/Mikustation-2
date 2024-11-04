@@ -4,7 +4,7 @@
 #define LOADER_H
 
 #include "ps2types.h"
-#include "r5900Interpreter.h"
+#include "ee/r5900Interpreter.h"
 
 // From: https://wiki.osdev.org/ELF_Tutorial
 #define ELF_NIDENT	16
@@ -50,4 +50,5 @@ typedef struct _Elf32_Shdr_ {
 } Elf32_Shdr;
 
 bool load_elf(R5900_Core *ee, const char *path);
+int read_bios(const char *filename, u8 *bios_memory);
 #endif

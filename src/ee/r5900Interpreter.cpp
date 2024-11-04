@@ -4,16 +4,18 @@
  */
 
 #include <assert.h>
+
 #include "fmt-10.2.1/include/fmt/core.h"
 #include "fmt-10.2.1/include/fmt/format-inl.h"
 #include "fmt-10.2.1/include/fmt/format.h"
 #include "fmt-10.2.1/src/format.cc"
 
+#include "../include/common.h"
 #include "../include/ps2.h"
-#include "../include/r5900Interpreter.h"
-#include "../include/cop0.h"
-#include "../include/cop1.h"
-#include "../include/timer.h"
+#include "../include/ee/r5900Interpreter.h"
+#include "../include/ee/cop0.h"
+#include "../include/ee/cop1.h"
+#include "../include/ee/timer.h"
 std::array<TLB_Entry, 48> TLBS;
 
 // @Incomplete: Make this global within the whole codebase
@@ -25,15 +27,14 @@ std::array<TLB_Entry, 48> TLBS;
 #endif
 
 //@@Incomplete: Make this bold red text to indicate an error
-#define errlog(...) fmt::print(__VA_ARGS__)
+//#define errlog(...) fmt::print(__VA_ARGS__)
+#define errlog(fmt, ...) (void)0
 
 FILE *dis = fopen("disasm.txt", "w+");
 
-//static u8 *_scratchpad_; 
-static u8 *_icache_;
-static u8 *_dcache_;
-
-static u8 *_scratchpad_ = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
+static u8 *_icache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
+static u8 *_dcache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(8));
+static u8 *_scratchpad_     = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
 // @@Refactor: Replace all of the instruction decoding in each function with these macros
 #if 0
@@ -52,7 +53,8 @@ static u8 *_scratchpad_ = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
  * Load Functions
 *******************************************/
 static inline u8 
-ee_core_load_8 (u32 address) {
+ee_core_load_8 (u32 address) 
+{
     uint32_t r;
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint8_t*)&_scratchpad_[address & 0x3FFF];
@@ -65,7 +67,8 @@ ee_core_load_8 (u32 address) {
 }
 
 static inline u16 
-ee_core_load_16 (u32 address) {
+ee_core_load_16 (u32 address) 
+{
     uint32_t r;
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint16_t*)&_scratchpad_[address & 0x3FFF];
@@ -75,12 +78,11 @@ ee_core_load_16 (u32 address) {
     address &= 0x1FFFFFFF;
     
     return ee_load_16(address);
-
-    return r;
 }
 
 static inline u32 
-ee_core_load_32 (u32 address) {
+ee_core_load_32 (u32 address) 
+{
     uint32_t r;
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint32_t*)&_scratchpad_[address & 0x3FFF];
@@ -93,8 +95,9 @@ ee_core_load_32 (u32 address) {
 }
 
 static inline u64 
-ee_core_load_64 (u32 address) {
-       uint32_t r;
+ee_core_load_64 (u32 address) 
+{
+    uint32_t r;
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint64_t*)&_scratchpad_[address & 0x3FFF];
     if (address >= 0x30100000 && address < 0x31FFFFFF) // uncached and accelerated
@@ -105,13 +108,14 @@ ee_core_load_64 (u32 address) {
     return ee_load_64(address);
 }
 
-static inline void ee_core_load_128() {return;}
+static inline void ee_core_load_128(u32 address) {return;}
 
 /*******************************************
  * Store Functions
 *******************************************/
 static inline void 
-ee_core_store_8 (u32 address, u8 value) {
+ee_core_store_8 (u32 address, u8 value) 
+{
       if (address >= 0x70000000 && address < 0x70004000) {
         *(uint8_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
@@ -122,7 +126,8 @@ ee_core_store_8 (u32 address, u8 value) {
 }
 
 static inline void 
-ee_core_store_16 (u32 address, u16 value) {
+ee_core_store_16 (u32 address, u16 value) 
+{
       if (address >= 0x70000000 && address < 0x70004000) {
         *(uint16_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
@@ -133,7 +138,8 @@ ee_core_store_16 (u32 address, u16 value) {
 }
 
 static inline void 
-ee_core_store_32 (u32 address, u32 value) {
+ee_core_store_32 (u32 address, u32 value) 
+{
       if (address >= 0x70000000 && address < 0x70004000) {
         *(uint32_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
@@ -144,7 +150,8 @@ ee_core_store_32 (u32 address, u32 value) {
 }
 
 static inline void 
-ee_core_store_64 (u32 address, u64 value) {
+ee_core_store_64 (u32 address, u64 value) 
+{
     if (address >= 0x70000000 && address < 0x70004000) {
         *(uint64_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
@@ -192,7 +199,7 @@ LBU (R5900_Core *ee, u32 instruction)
     u32 rt          = instruction >> 16 & 0x1f;
     s16 offset      = (s16)(instruction & 0xFFFF);
     u32 vaddr       = ee->reg.r[base].UW[0] + offset;
-    s32 low_bits    = vaddr & 0x3;
+    //s32 low_bits    = vaddr & 0x3;
     //ee->reg.r[rt].UD[0] = (u64)ee_core_load_memory<u8>(vaddr);
     ee->reg.r[rt].UD[0] = (u64)ee_core_load_8(vaddr);
     
@@ -207,6 +214,7 @@ LH (R5900_Core *ee, u32 instruction)
     u32 rt      = instruction >> 16 & 0x1F;
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     u32 low_bit = vaddr & 0b1;
+   
     if (low_bit != 0) {
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
         Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
@@ -242,6 +250,7 @@ LW (R5900_Core *ee, u32 instruction)
     u32 rt      = instruction >> 16 & 0x1F;
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     u32 low_bits = vaddr & 0x3;
+    
     if (low_bits != 0) {
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
         Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
@@ -252,13 +261,32 @@ LW (R5900_Core *ee, u32 instruction)
 }
 
 static void 
+LWU (R5900_Core *ee, u32 instruction) 
+{
+    s32 offset  = (s16)(instruction & 0xFFFF);
+    u32 base    = instruction >> 21 & 0x1F;
+    u32 rt      = instruction >> 16 & 0x1F;
+    u32 vaddr   = ee->reg.r[base].UW[0] + offset;
+    u32 low_bits = vaddr & 0x3;
+   
+    if (low_bits != 0) {
+        errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
+        Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
+        handle_exception_level_1(ee, &exc);
+    }
+    ee->reg.r[rt].SD[0] = (u64)ee_core_load_32(vaddr);
+    syslog("LWU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+}
+
+static void 
 LD (R5900_Core *ee, u32 instruction) 
 {
     u32 base    = instruction >> 21 & 0x1f;
     u32 rt      = instruction >> 16 & 0x1f;
     s16 offset  = (s16)(instruction & 0xFFFF);
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
-    u32 low_bit = vaddr & 0x3;
+    u32 low_bit = vaddr & 0x7;
+    
     if (low_bit != 0) {
         syslog("LD [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -271,13 +299,67 @@ LD (R5900_Core *ee, u32 instruction)
 }
 
 static void 
+LDL (R5900_Core *ee, u32 instruction) 
+{
+    /* This is an interesting and clear implemtation from Dobiestation */
+    const u64 LDL_MASK[8] =
+    {   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+        0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+    };
+
+    const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+    
+    u32 base    = instruction >> 21 & 0x1f;
+    u32 rt      = instruction >> 16 & 0x1f;
+    s16 offset  = (s16)(instruction & 0xFFFF);
+    
+    u32 vaddr           = ee->reg.r[base].UW[0] + offset;
+    u32 aligned_vaddr   = vaddr & ~0x7;
+    u32 shift           = vaddr & 0x7;
+    
+    u64 aligned_dword = ee_core_load_64(aligned_vaddr);
+    u64 result = (ee->reg.r[rt].UD[0] & LDL_MASK[shift] | aligned_vaddr << LDL_SHIFT[shift]);
+    ee->reg.r[rt].UD[0] = result;
+    //syslog("LDL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    printf("LDL [{%d}] [{%#x}] [{%d}]\n", rt, offset, base);
+}
+
+static void 
+LDR (R5900_Core *ee, u32 instruction) 
+{
+    /* This is an interesting and clear implemtation from Dobiestation */
+    const u64 LDR_MASK[8] = 
+    {
+        0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
+        0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
+    };
+
+    const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+    
+    u32 base    = instruction >> 21 & 0x1f;
+    u32 rt      = instruction >> 16 & 0x1f;
+    s16 offset  = (s16)(instruction & 0xFFFF);
+    
+    u32 vaddr           = ee->reg.r[base].UW[0] + offset;
+    u32 aligned_vaddr   = vaddr & ~0x7;
+    u32 shift           = vaddr & 0x7;
+    
+    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+    u64 result          = (ee->reg.r[rt].UD[0] & LDR_MASK[shift] | aligned_vaddr << LDR_SHIFT[shift]);
+    ee->reg.r[rt].UD[0] = result;
+   // syslog("LDR [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    printf("LDR [{%d}] [{%#x}] [{%d}]\n", rt, offset, base);
+}
+
+static void 
 LQ (R5900_Core *ee, u32 instruction) 
 {
     u32 base    = instruction >> 21 & 0x1f;
     u32 rt      = instruction >> 16 & 0x1f;
     s16 offset  = (s16)(instruction & 0xFFFF);
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
-    u32 low_bit = vaddr & 0x3;
+    u32 low_bit = vaddr & 0xF;
+   
     if (low_bit != 0) {
         syslog("LQ [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -332,6 +414,7 @@ SW (R5900_Core *ee, u32 instruction)
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     s32 value   = ee->reg.r[rt].SW[0];
     u32 low_bits = vaddr & 0x3;
+    
     if (low_bits != 0) {
         syslog("SW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -351,7 +434,8 @@ SD (R5900_Core *ee, u32 instruction)
     u32 base    = instruction >> 21 & 0x1f;
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     u64 value   = ee->reg.r[rt].UD[0];
-    u32 low_bits = vaddr & 0x3;
+    u32 low_bits = vaddr & 0x7;
+  
     if (low_bits != 0) {
         syslog("SD [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -364,6 +448,59 @@ SD (R5900_Core *ee, u32 instruction)
 }
 
 static void 
+SDL (R5900_Core *ee, u32 instruction) 
+{
+    /* This is an interesting and clear implemtation from Dobiestation */
+    const u64 SDL_MASK[8] =
+    {   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+        0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+    };
+
+    const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+    
+    u32 base    = instruction >> 21 & 0x1f;
+    u32 rt      = instruction >> 16 & 0x1f;
+    s16 offset  = (s16)(instruction & 0xFFFF);
+    
+    u32 vaddr           = ee->reg.r[base].UW[0] + offset;
+    u32 aligned_vaddr   = vaddr & ~0x7;
+    u32 shift           = vaddr & 0x7;
+    
+    u64 aligned_dword = ee_core_load_64(aligned_vaddr);
+    u64 result = (ee->reg.r[rt].UD[0] & SDL_MASK[shift] | aligned_vaddr << SDL_SHIFT[shift]);
+    ee_core_store_64(aligned_vaddr, aligned_dword);
+    //syslog("SDL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    printf("SDL [{%d}] [{%#x}] [{%d}]\n", rt, offset, base);
+}
+
+static void 
+SDR (R5900_Core *ee, u32 instruction) 
+{
+    /* This is an interesting and clear implemtation from Dobiestation */
+    const u64 SDR_MASK[8] = 
+    {
+        0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
+        0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
+    };
+
+    const u8 SDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+    
+    u32 base    = instruction >> 21 & 0x1f;
+    u32 rt      = instruction >> 16 & 0x1f;
+    s16 offset  = (s16)(instruction & 0xFFFF);
+    
+    u32 vaddr           = ee->reg.r[base].UW[0] + offset;
+    u32 aligned_vaddr   = vaddr & ~0x7;
+    u32 shift           = vaddr & 0x7;
+    
+    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+    u64 result          = (ee->reg.r[rt].UD[0] & SDR_MASK[shift] | aligned_vaddr << SDR_SHIFT[shift]);
+    ee_core_store_64(aligned_vaddr, aligned_dword);
+    //syslog("SDR [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    printf("SDR [{%d}] [{%#x}] [{%d}]\n", rt, offset, base);
+}
+
+static void 
 SQ (R5900_Core *ee, u32 instruction) 
 {
     s16 offset  = (s16)(instruction & 0xFFFF);
@@ -372,7 +509,8 @@ SQ (R5900_Core *ee, u32 instruction)
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     u64 lov     = ee->reg.r[rt].UD[0];
     u64 hiv     = ee->reg.r[rt].UD[1];
-    u32 low_bits = vaddr & 0x3;
+    u32 low_bits = vaddr & 0xF;
+   
     if (low_bits != 0) {
         syslog("SQ [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -393,6 +531,7 @@ SWC1 (R5900_Core *ee, u32 instruction)
     s16 offset  = (s16)(instruction & 0xFFFF);
     u32 vaddr   = ee->reg.r[base].UW[0] + offset;
     u32 low_bits = vaddr & 0x3;
+    
     if (low_bits != 0) {
         syslog("SWC1 [{:d}] [{:#x}] [{:d}] \n", ft, offset, base);
         errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
@@ -406,7 +545,7 @@ SWC1 (R5900_Core *ee, u32 instruction)
 }
 
 /*******************************************
-* Computational Instructions
+* Computational ALU Instructions
 * Arithmetic
 • Logical
 • Shift
@@ -645,6 +784,7 @@ ORI (R5900_Core *ee, u32 instruction)
     syslog("ORI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
 }
 
+/* @Temporary: No XOR instruction? */
 static void
 XORI (R5900_Core *ee, u32 instruction)
 {
@@ -787,6 +927,19 @@ DSLL32 (R5900_Core *ee, u32 instruction)
     ee->reg.r[rd].UD[0] = ee->reg.r[rt].UD[0] << s;
 
     syslog("DSLL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", rd, rt, s);
+}
+
+static void 
+DSRL32 (R5900_Core *ee, u32 instruction) 
+{
+    u32 sa  = instruction >> 6 & 0x1F;
+    u32 rd  = instruction >> 11 & 0x1F;
+    u32 rt  = instruction >> 16 & 0x1F;
+    u32 s   = sa + 32;
+
+    ee->reg.r[rd].UD[0] = ee->reg.r[rt].UD[0] >> s;
+
+    syslog("DSRL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", rd, rt, s);
 }
 
 static void 
@@ -982,6 +1135,17 @@ BLEZ (R5900_Core *ee, u32 instruction)
 }
 
 static void 
+BLEZL (R5900_Core *ee, u32 instruction) 
+{
+    s16 offset  = (s16)((instruction & 0xFFFF) << 2);
+    u32 rs      = instruction >> 21 & 0x1F;
+
+    bool condition = ee->reg.r[rs].SD[0] <= 0;
+    branch_likely(ee, condition, offset);
+    syslog("BLEZ [{:d}] [{:#x}]\n", rs, offset); 
+}
+
+static void 
 BLTZ (R5900_Core *ee, u32 instruction) 
 {
     s32 offset  = (s16)(instruction & 0xFFFF) << 2;
@@ -1059,6 +1223,13 @@ MTC0 (R5900_Core *ee, u32 instruction)
     syslog("MTC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
 }
 
+static void
+ERET (R5900_Core *ee, u32 instruction) 
+{
+    //@@Removal @@Implementation: This could be shortened down a fair bit with just an mfc0 instruction
+    ee->pc = ee->cop0.EPC;
+}
+
 // @@Implemtation: implement TLB
 static void 
 TLBWI (R5900_Core *ee, u32 instruction, int index) 
@@ -1073,17 +1244,27 @@ CACHE_IXIN (R5900_Core *ee, u32 instruction)
     syslog("Invalidate instruction cache");
 }
 
+#define BIOS_HLE
+#ifndef BIOS_HLE
 static void
 SYSCALL (R5900_Core *ee, u32 instruction)
 {
-    printf("Hello we call syscall here lol\n");
+ //   printf("Hello we call syscall here lol\n");
+    printf("SYSCALL [%#02x]\n", ee->reg.r[3].UB[0]);
     Exception exc = get_exception(V_COMMON, __SYSCALL);
     handle_exception_level_1(ee, &exc);
 }
 
-/*******************************************
- * COP1 Instructions
-*******************************************/
+#else
+static void
+SYSCALL (R5900_Core *ee, u32 instruction)
+{
+ //   printf("Hello we call syscall here lol\n");
+    printf("SYSCALL [%#02x]\n", ee->reg.r[3].UB[0]);
+    bios_hle_syscall(ee,  ee->reg.r[3].UB[0]);
+}
+
+#endif
 /*******************************************
  * EE Instructions
 *******************************************/
@@ -1167,10 +1348,18 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
             {
                 case 0x000000: MFC0(ee, instruction);  break;
                 case 0x000004: MTC0(ee, instruction);  break;
-                case 0x000010: 
+                case 0x10000:
                 {
-                    int index = ee->cop0.regs[0];
-                    TLBWI(ee, instruction, index);
+                    case 0x000010: 
+                    {
+                        int index = ee->cop0.regs[0];
+                        TLBWI(ee, instruction, index);
+                    } break;
+
+                    case 0x011000:
+                    {
+                        ERET(ee, instruction);
+                    } break;
                 } break;
 
                 default:
@@ -1201,6 +1390,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
                 case 0x0000002B:    SLTU(ee, instruction);   break;
                 case 0x00000038:    DSLL(ee, instruction);   break;
                 case 0x0000003C:    DSLL32(ee, instruction); break;
+                case 0x0000003E:    DSRL32(ee, instruction); break;
                 case 0x00000024:    AND(ee, instruction);    break;
                 case 0x00000002:    SRL(ee, instruction);    break;
                 case 0x00000003:    SRA(ee, instruction);    break;
@@ -1223,7 +1413,8 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
 
                 default: 
                 {
-                    errlog("[ERROR]: Could not interpret special instruction: [{:#09x}]\n", special);
+                    //errlog("[ERROR]: Could not interpret special instruction: [{:#09x}]\n", special);
+                    errlog("[ERROR]: Could not interpret special instruction: [{:#09x}]\n", instruction);
                 } break;
             }
         } break;
@@ -1237,17 +1428,23 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
         case 0b001001:  ADDIU(ee, instruction);  break;
         case 0b101011:  SW(ee, instruction);     break;
         case 0b111111:  SD(ee, instruction);     break;
+        case 0b101100:  SDL(ee, instruction);    break;
+        case 0b101101:  SDR(ee, instruction);    break;
         case 0b000011:  JAL(ee, instruction);    break;
         case 0b000100:  BEQ(ee, instruction);    break;
         case 0b010100:  BEQL(ee, instruction);   break;
         case 0b001011:  SLTIU(ee, instruction);  break;
         case 0b010101:  BNEL(ee, instruction);   break;
-        case 0b100011:  LW(ee, instruction);     break;
+       case 0b100011:  LW(ee, instruction);     break;
+        case 0b100111:  LWU(ee, instruction);    break;
         case 0b100000:  LB(ee, instruction);     break;
         case 0b111001:  SWC1(ee, instruction);   break;
         case 0b100100:  LBU(ee, instruction);    break;
         case 0b000110:  BLEZ(ee, instruction);   break;
+        case 0b010110:  BLEZL(ee, instruction);  break;
         case 0b110111:  LD(ee, instruction);     break;
+        case 0b011010:  LDL(ee, instruction);    break;
+        case 0b011011:  LDR(ee, instruction);    break;
         case 0b101000:  SB(ee, instruction);     break;
         case 0b101001:  SH(ee, instruction);     break;
         case 0b100001:  LH(ee, instruction);     break;
@@ -1300,7 +1497,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
 
         default: 
         {
-            errlog("[ERROR]: Could not interpret instructino.. opcode: [{:#09x}]\n", opcode);
+            errlog("[ERROR]: Could not interpret instructino.. opcode: [{:#09x}]\n", instruction);
         } break;
     }
 }
@@ -1347,10 +1544,9 @@ r5900_cycle(R5900_Core *ee)
         ee->pc += 4;
         ee->cop0.regs[9] += 1;
         ee->reg.r[0].SD[0] = 0;
-        set_cop0_status(&ee->cop0.status, ee->cop0.regs[12]);
-        set_cop0_cause(&ee->cop0.cause, ee->cop0.regs[13]);
-
-        timer_tick();
+        cop0_status_write(&ee->cop0.status, ee->cop0.regs[12]);
+        cop0_cause_write(&ee->cop0.cause, ee->cop0.regs[13]);
+        set_kernel_mode(&ee->cop0);
    // }
 }
 

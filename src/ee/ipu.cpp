@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ipu.h"
+#include "../include/ee/ipu.h"
 #include <iostream>
 
 IPU ipu = {};
@@ -19,7 +19,14 @@ void
 ipu_write_32 (u32 address, u32 value)
 {
 	switch(address) 
-	{
+	{		
+		case 0x10002000:
+		{
+			ipu.command.write.command_option 	= value  & 0x7FFFFFF;
+			ipu.command.write.command_code 		= (value >> 28) & 0x1F;
+			printf("IPU_CMD value: [%#08x]\n", value);
+		} break;
+		
 		case 0x10002010:
 		{
 			ipu.control.intra_dc_precision 	= (value >> 16) & 0x3;
@@ -29,7 +36,7 @@ ipu_write_32 (u32 address, u32 value)
 			ipu.control.mpeg_bit_stream 	= (value >> 23) & 0x1;
 			ipu.control.picture_type 		= (value >> 24) & 0x7;
 			ipu.control.reset 				= (value >> 30) & 0x1;
-			printf("IPU_CTRL\n");
+			printf("IPU_CTRL value: [%#08x]\n", value);
 		} break;
 	}
 }
@@ -68,7 +75,7 @@ ipu_read_32 (u32 address)
 			r |= ipu.control.mpeg_bit_stream  		<< 23;
 			r |= ipu.control.picture_type  			<< 24;
 			r |= ipu.control.busy  					<< 31;
-			printf("IPU_CTRL\n");
+			printf("IPU_CTRL value: [%#08x]\n", r);
 			return r;
 		} break;
 

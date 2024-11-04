@@ -3,7 +3,7 @@
 #ifndef DMAC_H
 #define DMAC_H
 
-#include "ps2types.h"
+#include "../ps2types.h"
 
 #define DMAC_CHANNEL_COUNT 10
 enum Channels {
@@ -24,11 +24,13 @@ enum DMARegisters {
 union Dn_CHCR {
     struct {
         bool    dir;
+        bool unused;
         u8      mode : 2;
         u16     stack_pointer : 2;
         bool    tag_transfer;
         bool    tag_interrupt;
         bool    start;
+        bool    unused1[7];
         u16     TAG;        
     };
     u32 value;
@@ -188,38 +190,4 @@ void dmac_write_32(u32 address, u32 value);
 u32 dmac_read_32(u32 address);
 void dmac_cycle();
 
-/*
-    if (address >= 0x11000000 && address < 0x11001000) {
-        printf("WRITE: write into VU0 code memory");
-        return;
-    }    
-    if (address >= 0x11000000 && address < 0x11005000) {
-        printf("WRITE: write into VU0 data memory");
-        return;
-    }
-    if (address >= 0x11008000 && address < 0x1100C000) {
-        printf("WRITE: write into VU1 code memoryn");
-        return;
-    }
-    if (address >= 0x1100C000 && address < 0x11010000) {
-        printf("WRITE: write into VU1 data memoryn");
-        return;
-
-    if (address >= 0x11000000 && address < 0x11001000) {
-        printf("READ: read into VU0 code memory");
-        return 0;
-    }    
-    if (address >= 0x11000000 && address < 0x11005000) {
-        printf("READ: read into VU0 data memory");
-        return 0;
-    }
-    if (address >= 0x11008000 && address < 0x1100C000) {
-        printf("READ: read into VU1 code memoryn");
-        return 0;
-    }
-    if (address >= 0x1100C000 && address < 0x11010000) {
-        printf("READ: read into VU1 data memoryn");
-        return 0 ;
-    }
-*/
 #endif

@@ -1,8 +1,8 @@
 #ifndef _IPU_H
 #define _IPU_H
 
-#include "ps2.h"
-#include "ps2types.h"
+#include "../ps2.h"
+#include "../ps2types.h"
 
 union IPU_CMD {
 	struct {
