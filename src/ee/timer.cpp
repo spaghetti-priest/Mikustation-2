@@ -145,7 +145,7 @@ timer_tick()
 				/* Edge triggered IRQ */
 				timer.mode.equal_flag = 1;
 				printf("Trigger compare interrupt\n");
-				send_interrupt(INT_TIMER0 + i);
+				request_interrupt(INT_TIMER0 + i);
 			}
 
 			if (timer.mode.zero_return) timer.count.count = 0;
@@ -156,7 +156,7 @@ timer_tick()
 				/* Edge triggered IRQ */
 				timer.mode.overflow_flag = 1;
 				printf("Trigger overflow interrupt");
-				send_interrupt(INT_TIMER0 + i);
+				request_interrupt(INT_TIMER0 + i);
 			}
 			timer.count.count = 0;
 		}

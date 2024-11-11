@@ -12,6 +12,7 @@ set_cop0_reg(int index, u32 value)
 	return;
 }
 
+
 void
 handle_exception_level_1 (R5900_Core *ee, Exception *exc)
 {

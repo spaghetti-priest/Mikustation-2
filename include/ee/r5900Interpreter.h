@@ -50,28 +50,6 @@ union GP_Registers {
     CPU_Types r[32];
 };
 
-// @@move: why is this in here
-union INTC {
-    uint32_t value;
-    struct {
-        u32 INT_GS : 1;
-        u32 INT_SBUS : 1;
-        u32 INT_VB_ON : 1; // Vblank
-        u32 INT_VB_OFF : 1;
-        u32 INT_VIF0 : 1;        
-        u32 INT_VIF1 : 1;
-        u32 INT_VU0 : 1;
-        u32 INT_VU1 : 1;
-        u32 INT_IPU : 1;
-        u32 INT_TIMER0 : 1;
-        u32 INT_TIMER1 : 1;
-        u32 INT_TIMER2 : 1;
-        u32 INT_TIMER3 : 1;
-        u32 INT_SFIFO : 1;
-        u32 INT_VU0WD : 1;
-    };
-};
-
 typedef struct _TLB_Entry_ {
     bool valid[2];
     bool dirty[2];
@@ -99,57 +77,36 @@ enum INSTRUCTION_TYPE : int {
 union COP0_Cause {
     struct {
         u32 unused          : 2;
-        u32 ex_code         : 5; 
-        u32 unused1         : 3;
+        u32 ex_code         : 5; // Exception Code
+        u32 unused1         : 3; 
         u32 int1_pending    : 1;
         u32 int0_pending    : 1;
-        u32 timer_pending   : 1;
-        u32 EXC2            : 3;
-        u32 unused2         : 9;
-        u32 CE              : 2;
-        u32 BD2             : 1;
-        u32 BD              : 1;
+        u32 timer_pending   : 1; // COP0 timer pending
+        u32 EXC2            : 3; // Level 2 exceptions
+        u32 unused2         : 9; 
+        u32 CE              : 2; // Coprocessor number when coprocessor unstable
+        u32 BD2             : 1; // level 2 exception branch delay slot
+        u32 BD              : 1; // level 1 exception branch delay slot
     };
     uint32_t value;
 };
 
-/* @@Remove: remove these bit masks eventually
-/******************************************************
-*               COP0_Status Bit Masks
-*******************************************************/
-/*
-IE      = 0x01,         // Interrupt enable
-EXL     = 0x02,         // Exception level (set when a level 1 exception occurs)
-ERL     = 0x03,         //  Error level (set when a level 2 exception occurs)
-KSU     = 0x18,         // Kernel Priviledge Level
-IM_2_3  = 0xC00,        // INT0 enable (INTC)
-BEM     = 0x1000,       // Bus error mask - when set, bus errors are disabled
-IM_7    = 0x8000,       // INT5 enable (COP0 timer)
-EIE     = 0x10000,      // EIE - Master interrupt enable
-EDI     = 0x20000,      // EDI - If not set, EI/DI only works in kernel mode
-CH      = 0x40000,      // CH - Status of most recent Cache Hit instruction
-BEV     = 0x400000,     // BEV - If set, level 1 exceptions go to "bootstrap" vectors in BFC00xx
-DEV     = 0x800000,     // DEV - If set, level 2 exceptions go to "bootstrap" vectors in BFC00xxx
-FR      = 0x4000000,    // FR - ?????
-CU      = 0xF0000000,   //Coprocessor Usage, COP3 is disabled
-*/
-
 union COP0_Status {
     struct {
-        u32 IE      : 1, 
-            EXL     : 1, 
-            ERL     : 1, 
-            KSU     : 2, 
-            IM_2    : 1, 
-            IM_3    : 1, 
-            BEM     : 1, 
-            IM_7    : 1, 
-            EIE     : 1, 
-            EDI     : 1, 
-            CH      : 1, 
-            BEV     : 1, 
-            DEV     : 1, 
-            CU      : 4; 
+        u32 IE      : 1, // Interrupt enable
+            EXL     : 1, // Exception level (set when a level 1 exception occurs)
+            ERL     : 1, // Error level (set when a level 2 exception occurs)
+            KSU     : 2, // Kernel Priviledge Level
+            IM_2    : 1, // interrupt_0 pending
+            IM_3    : 1, // interrupt_1 pending
+            BEM     : 1, // Bus error mask - when set, bus errors are disabled
+            IM_7    : 1, // COP0 timer interrupt pending
+            EIE     : 1, // EIE - Master interrupt enable
+            EDI     : 1, // EDI - If not set, EI/DI only works in kernel mode
+            CH      : 1, // CH - Status of most recent Cache Hit instruction
+            BEV     : 1, // BEV - If set, level 1 exceptions go to "bootstrap" vectors in BFC00xx
+            DEV     : 1, // DEV - If set, level 2 exceptions go to "bootstrap" vectors in BFC00xxx
+            CU      : 4; //Coprocessor Usage, COP3 is disabled
     };
     uint32_t value;
 };

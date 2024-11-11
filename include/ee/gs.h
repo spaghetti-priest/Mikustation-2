@@ -86,7 +86,7 @@ union PRMODE {
 
 union PRMODECONT {
 	struct {
-		bool attribute_specified;
+		bool primitive_register;
 		u64 unused : 63;
 	};
 	u64 value;
@@ -645,8 +645,15 @@ union SIGLBLID {
 	u64 value;
 };
 
+enum CRT_MODE : int {
+	CRT_MODE_NTSC		= 0x02,
+	CRT_MODE_PAL 		= 0x03,
+	CRT_MODE_DTV_480P 	= 0x50
+};
+
 typedef struct _GraphicsSynthesizer_ {
 	u16 *vram;
+	CRT_MODE crt_mode;
 
 	// GS Internal Registers
   PRIM prim;
@@ -732,7 +739,7 @@ u64 gs_read_64_priviledged(u32 address);
 void gs_write_32_priviledged(u32 address, u32 value);
 void gs_write_64_priviledged(u32 address, u64 value);
 
-void gs_write_64_internal(u32 address, u64 value);
+void gs_write_64_internal(u8 address, u64 value);
 
 void gs_set_primitive(u64 prim_register);
 void gs_set_q (f32 value);
@@ -744,5 +751,6 @@ void gs_set_xyzf2(s16 x, s16 y, u32 z, u8 f);
 void gs_set_xyzf3(s16 x, s16 y, u32 z, u8 f);
 void gs_set_xyz2(s16 x, s16 y, u32 z);
 void gs_set_xyz3(s16 x, s16 y, u32 z);
-
+void gs_set_crt(bool interlaced, s32 display_mode, bool ffmd);
+void gs_write_hwreg(u64 data);
 #endif

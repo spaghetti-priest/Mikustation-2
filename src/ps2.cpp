@@ -53,12 +53,9 @@ static u8 *_vu0_data_memory_;
 static u8 *_vu1_code_memory_;
 static u8 *_vu1_data_memory_;
 
-static u8* _iop_ram_;
-
+static u8 *_iop_ram_;
 
 alignas(16) R5900_Core ee = {0};
-alignas(16) GIF gif;
-// alignas(16) GraphicsSynthesizer gs;
 
 // EE Virtual/Physical Memory Map:    From: Ps2tek
 Range BIOS              = Range(0x1FC00000, MEGABYTES(4));
@@ -232,6 +229,7 @@ iop_store_32 (u32 address, u32 value)
 
     if (address >= 0x1F808240 && address <= 0x1F80825F) {
         // SIO_SEND1/ SEND2 or Port 1/2 Control
+        //printf("SIO registers address [%#x]\n", address);
         return;
     }
 
@@ -255,7 +253,7 @@ ee_load_8 (u32 address)
 
     //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
     
-    //printf("[ERROR]: Could not write load_memory8() address: [{%#09x}] \n", address);
+    printf("[ERROR]: Could not write load_memory8() address: [{%#09x}] \n", address);
 
     return r;
 }
@@ -275,7 +273,7 @@ ee_load_16 (u32 address)
         return *(u16*)&_iop_ram_[address & 0x1FFFFF];
     //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
     
-    //printf("[ERROR]: Could not write load_memory16() address: [{%#09x}] \n", address);
+    printf("[ERROR]: Could not write load_memory16() address: [{%#09x}] \n", address);
 
     return r;
 }
@@ -297,6 +295,16 @@ ee_load_32 (u32 address)
         case 0x1000f130:
         {
             return 0;
+        } break;
+
+        case 0x1000f000:
+        {
+            return intc_read(address);
+        } break;
+
+        case 0x1000f010:
+        {
+            return intc_read(address);
         } break;
 
         case 0x1000f430:
@@ -338,14 +346,11 @@ ee_load_32 (u32 address)
         } break;
     }
 
-    if (address == 0x1000f000 || address == 0x1000f010) 
-        return intc_read(address);
-
     if (GS_REGISTERS.contains(address))
         return gs_read_32_priviledged(address);
 
-    if (address >= 0x10003000 && address <= 0x10006000)
-        return gif_read_32(&gif, address);
+    if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000)
+        return gif_read_32(address);
 
     if (address >= 0x10008000 && address < 0x1000f000)
         return dmac_read_32(address);
@@ -363,7 +368,7 @@ ee_load_32 (u32 address)
     if (RDRAM.contains(address)) 
         return *(uint32_t*)&_rdram_[address];
 
-    //printf("[ERROR]: Could not write load_memory32() address: [{%#09x}] \n", address);
+    printf("[ERROR]: Could not write load_memory32() address: [{%#09x}] \n", address);
     
     return r;
 }
@@ -382,7 +387,7 @@ ee_load_64 (u32 address)
      //   return *(uint64_t*)&_iop_ram_[address & 0x1FFFFF];
 
     //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
-    //printf("[ERROR]: Could not write load_memory64() address: [{%#09x}] \n", address);
+    printf("[ERROR]: Could not write load_memory64() address: [{%#09x}] \n", address);
     return r;
 }
 
@@ -413,7 +418,7 @@ ee_store_8 (u32 address, u8 value)
         return;
     }
 
-    //printf("[ERROR]: Could not write store_memory8() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
+    printf("[ERROR]: Could not write store_memory8() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
     //errlog("[ERROR]: Could not write store_memory8() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
@@ -464,6 +469,18 @@ ee_store_32 (u32 address, u32 value)
             return;
         } break;
 
+        case 0x1000f000:
+        {
+            intc_write(address, value);
+            return;
+        } break;
+
+        case 0x1000f010:
+        {
+            intc_write(address, value);
+            return;
+        } break;
+
         case 0x1000F200:
         {
             printf("WRITE: EE->IOP communication\n");
@@ -495,18 +512,13 @@ ee_store_32 (u32 address, u32 value)
     //@@Note: Not sure what is this is
     if (address == 0x1000f500) return;
 
-    if (address == 0x1000f000 || address == 0x1000f010) {
-        intc_write(address, value);
-        return;
-    }
-
     if (GS_REGISTERS.contains(address)) {
         gs_write_32_priviledged(address, value);
         return;
     }
 
-    if (address >= 0x10003000 && address <= 0x100030A0) {
-        gif_write_32(&gif, address, value);
+    if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000) {
+        gif_write_32(address, value);
         return;
     }
 
@@ -611,12 +623,25 @@ ee_store_64 (u32 address, u64 value)
 void ee_store_128 (u32 address, u128 value) {}
 
 u32 
-check_interrupt (bool value)
+check_interrupt (bool value, bool int0_priority, bool int1_priorirty)
 {
     Exception e = get_exception(V_INTERRUPT, __INTERRUPT);
-    ee.cop0.cause.int0_pending = value;
     if (!value)
         return 0;
+
+    //@@Note: Not sure what to do when they both assert interrupts
+    // Edge triggered interrupt
+    if (int0_priority) {
+        ee.cop0.status.IM_2         = 1;
+        ee.cop0.cause.int0_pending &= ~1;
+        ee.cop0.cause.int0_pending |= value;
+        printf("Asserting INT0 signal\n");
+    } else if (int1_priorirty) {
+        ee.cop0.status.IM_3         = true;
+        ee.cop0.cause.int1_pending  &= ~true;
+        ee.cop0.cause.int1_pending  |= ~true;      
+        printf("Asserting INT1 signal\n");
+    }
 
     bool interrupt_enable               = ee.cop0.status.IE && ee.cop0.status.EIE;
     bool check_exception_error_level    = ee.cop0.status.ERL && ee.cop0.status.EXL;
@@ -629,26 +654,218 @@ check_interrupt (bool value)
     return 1;
 }
 
-void set_GS_IMR (R5900_Core *ee)
+//From: Ps2SDK
+//Used as argument for CreateThread, ReferThreadStatus
+typedef struct t_ee_thread_param
 {
-    u32 imr = ee->reg.r[4].UD[0];
-    gs_write_64_priviledged(0x12001010, imr);
+    int status;           // 0x00
+    void *func;           // 0x04
+    void *stack;          // 0x08
+    int stack_size;       // 0x0C
+    void *gp_reg;         // 0x10
+    int initial_priority; // 0x14
+    int current_priority; // 0x18
+    u32 attr;             // 0x1C
+    u32 option;           // 0x20 Do not use - officially documented to not work.
+} thread_param;
+
+typedef struct t_ee_sema_param
+{
+    int count,
+        max_count,
+        init_count,
+        wait_threads;
+    u32 attr,
+        option;
+} semaphore_param;
+
+struct TCB //Internal thread structure
+{
+    struct TCB *prev;
+    struct TCB *next;
+    int status;
+    void *func;
+    void *current_stack;
+    void *gp_reg;
+    short current_priority;
+    short init_priority;
+    int wait_type; //0=not waiting, 1=sleeping, 2=waiting on semaphore
+    int sema_id;
+    int wakeup_count;
+    int attr;
+    int option;
+    void *_func; //???
+    int argc;
+    char **argv;
+    void *initial_stack;
+    int stack_size;
+    int *root; //function to return to when exiting thread?
+    void *heap_base;
+};
+
+struct thread_context //Stack context layout
+{
+    u32 sa_reg;  // Shift amount register
+    u32 fcr_reg;  // FCR[fs] (fp control register)
+    u32 unkn;
+    u32 unused;
+    u128 at, v0, v1, a0, a1, a2, a3;
+    u128 t0, t1, t2, t3, t4, t5, t6, t7;
+    u128 s0, s1, s2, s3, s4, s5, s6, s7, t8, t9;
+    u64 hi0, hi1, lo0, lo1;
+    u128 gp, sp, fp, ra;
+    u32 fp_regs[32];
+};
+
+struct semaphore //Internal semaphore structure
+{
+    struct sema *free; //pointer to empty slot for a new semaphore
+    int count;
+    int max_count;
+    int attr;
+    int option;
+    int wait_threads;
+    struct TCB *wait_next, *wait_prev;
+};
+
+//@@Incomplete: My own incomplete interpretation of a BIOS thread
+struct Thread
+{
+    int status;
+    void *stack;
+    s32 stack_size;
+    s32 init_priority;
+    s32 current_priority;
+    u32 thread_id;
+    void *heap_base;
+};
+
+/** Thread status */
+#define THREAD_RUN         0x01
+#define THREAD_READY       0x02
+#define THREAD_WAIT        0x04
+#define THREAD_SUSPEND     0x08
+#define THREAD_WAITSUSPEND 0x0c
+#define THREAD_DORMANT     0x10
+
+/** Thread WAIT Status */
+#define THREAD_NONE  0 // Thread is not in WAIT state
+#define THREAD_SLEEP 1
+#define THREAD_SEMA  2
+
+#define MAX_THREADS 256
+#define MAX_SEMAPHORES 256
+#define MAX_PRIORITY_LEVELS 128
+
+void
+SetGsCrt (bool interlaced, int display_mode, bool ffmd)
+{
+    gs_set_crt(interlaced, display_mode, ffmd);
+    printf("SYSCALL: SetGsCrt \n");
+}
+
+std::vector<Thread> threads(MAX_THREADS);
+u32 current_thread_id;
+
+//AKA: RFU060 or SetupThread
+void
+InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root)
+{
+    u32 stack_base = (u32)stack;
+    u32 rdram_size = RDRAM.start + RDRAM.size;
+    u32 stack_addr = 0;   
+
+    if (stack_base == -1) {
+        stack_addr = rdram_size - stack_size; 
+    } else {
+        stack_addr = stack_base + stack_size;
+    }
+
+    //@Note: ??? Find out what this is 
+    stack_addr -= 0x2A0;
+
+    current_thread_id = 0;
+
+    Thread main_thread = {
+        .status             = THREAD_RUN,
+        .stack              = (void*)stack_addr,
+        .stack_size         = stack_size,
+        .init_priority      = 0,
+        .current_priority   = 0,
+        .thread_id          = current_thread_id,
+    };
+    
+    threads.push_back(main_thread);
+
+    //Return
+    ee.reg.r[2].UD[0] = stack_addr;
+    printf("InitMainThread \n");
+}
+
+//AKA: RFU061
+void
+InitHeap (void *heap, s32 heap_size)
+{
+    auto thread = &threads[0];
+    u32 heap_start = (u32)heap;
+
+    if (heap_start == -1) {
+        thread->heap_base = thread->stack;
+    } else {
+        thread->heap_base = (void*)(heap_start + heap_size);
+    }
+
+    // Return
+    ee.reg.r[2].UD[0] = (u64)thread->heap_base;
+    printf("InitHeap\n");
+}
+
+void
+FlushCache() 
+{
+    printf("FlushCache\n");
 }
 
 void 
+GsPutIMR (u64 imr)
+{
+    gs_write_64_priviledged(0x12001010, imr);
+}
+
+void
+dump_all_ee_registers(R5900_Core *ee)
+{
+    for (int i = 0; i < 32; ++i) {
+        printf("EE Register [%d] contains [%08x]\n", i, ee->reg.r[i].UD[0]);
+    }
+}
+
+/* 
+From:   https://www.psdevwiki.com/ps2/Syscalls 
+        https://psi-rockin.github.io/ps2tek/#bioseesyscalls
+*/
+void 
 bios_hle_syscall (R5900_Core *ee, u32 syscall)
 {
+    void *return_   = (void *)ee->reg.r[2].UD[0];
+    void *param0    = (void *)ee->reg.r[4].UD[0];
+    void *param1    = (void *)ee->reg.r[5].UD[0];
+    void *param2    = (void *)ee->reg.r[6].UD[0];
+    void *param3    = (void *)ee->reg.r[7].UD[0];
+    void *param4    = (void *)ee->reg.r[8].UD[0];
+
     switch(syscall)
     {
-        case 0x02:
+        case 0x02: SetGsCrt((bool)param0, (s32)param1, (bool)param2); break;
+        case 0x3C: InitMainThread((u32)param0, param1, (s32)param2, (char*)param3, (s32)param4); break;
+        case 0x3D: InitHeap(param0, (s32)param1);
+        case 0x64: FlushCache(); break;
+        case 0x71: GsPutIMR((u64)param0); break;
+        default:
         {
-
-        } break;
-        
-        case 0x71:
-        {
-            set_GS_IMR(ee);
-        } break;
+            printf("Unknown Syscall: [%#x]\n", syscall);
+            return;
+        }
     }
 }
 
@@ -657,12 +874,15 @@ typedef struct _SDL_Context_ {
     SDL_Window      *window;
     SDL_Renderer    *renderer;
     SDL_Texture     *texture;
+    SDL_Backbuffer  backbuffer;
+
+    bool running;
+    bool left_down;
 } SDL_Context;
 
 int 
 main (int argc, char **argv) 
 {
-
     SDL_Event       event;
     SDL_Window      *window;
     SDL_Renderer    *renderer;
@@ -670,6 +890,8 @@ main (int argc, char **argv)
     SDL_Backbuffer  backbuffer;
     bool running    = true;
     bool left_down  = false;
+
+    u32 instructions_run;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("Error: %s\n", SDL_GetError());
@@ -681,8 +903,8 @@ main (int argc, char **argv)
 
 #if _WIN32 || _WIN64
     const char *filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
-    const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
-    //const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
+    //const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
+    const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
 #else
     const char *filename = "../data/bios/scph10000.bin";
 #endif    
@@ -713,7 +935,7 @@ main (int argc, char **argv)
     //r5900_reset(ee);
     dmac_reset();
     gs_reset();
-    gif_reset(&gif);
+    gif_reset();
     timer_reset();
     cop1_reset();
     ipu_reset();
@@ -723,7 +945,6 @@ main (int argc, char **argv)
 
     printf("\n=========================\nInitializing System\n=========================\n");
 
-    // @@Note: Testing this file not loading it
     load_elf(&ee, elf_filename);
 
     backbuffer = {
@@ -735,12 +956,14 @@ main (int argc, char **argv)
     };
 
     window = SDL_CreateWindow("Mikustation_2\n",
-                              SDL_WINDOWPOS_UNDEFINED, 
-                              SDL_WINDOWPOS_UNDEFINED, 
-                              backbuffer.h, 
-                              backbuffer.w, 
-                              0);
+                            SDL_WINDOWPOS_UNDEFINED, 
+                            SDL_WINDOWPOS_UNDEFINED, 
+                            backbuffer.h, 
+                            backbuffer.w, 
+                            0);
+    
     renderer = SDL_CreateRenderer(window, -1, 0);
+    
     texture = SDL_CreateTexture(renderer,
                                 backbuffer.pixel_format, 
                                 SDL_TEXTUREACCESS_STATIC, 
@@ -750,7 +973,6 @@ main (int argc, char **argv)
     //size_t set_size = backbuffer.w * backbuffer.pitch;
     size_t set_size = 640 * sizeof(uint32_t) * 480;
     memset(backbuffer.pixels, 255, set_size);
-    u32 instructions_run;
 
     while (running) {
         instructions_run = 0;  
@@ -759,13 +981,21 @@ main (int argc, char **argv)
         while (instructions_run < 500000) {
             /* Step Through Playstation 2 Pipeline */
             r5900_cycle(&ee);
-            dmac_cycle();
+
+            if (instructions_run % 2 == 0){
+                dmac_cycle();  
+            } 
+
             timer_tick();
             
             if (instructions_run % 8 == 0) {
                 iop_cycle();
             }
             instructions_run++;            
+
+            if(INTC_MASK & 0x4) 
+                request_interrupt(INT_VB_ON);
+
         }
 #if 0
         /* Emulator Step Through*/
@@ -791,9 +1021,9 @@ main (int argc, char **argv)
                 }
                 break;
         }
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, NULL, NULL);
-        SDL_RenderPresent(renderer);
+        //SDL_RenderClear(renderer);
+        //SDL_RenderCopy(renderer, texture, NULL, NULL);
+        //SDL_RenderPresent(renderer);
 #endif
     }
 

@@ -33,6 +33,11 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 	u16 opcode = (instruction >> 21) & 0x1F;
 	switch(opcode)
 	{
+		case 0x00000000:
+		{
+
+		} break;
+
 		case 0x00000004:
 		{
 			u32 fs 			= (instruction >> 11) & 0x1F;
@@ -58,8 +63,26 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 			u32 rt 		= (instruction >> 16) & 0x1F;
 			cop1.fcr31 	= ee->reg.r[rt].UW[0];
 			
-			printf("MTC1 [%d] [%d] \n", rt, fs); 
+			printf("CTC1 [%d] [%d] \n", rt, fs); 
 		} break;
+
+		case 0x00000010:
+		{
+			u16 s = value & 0x3F;	
+			switch(s)
+			{
+				case 0x24:
+				{
+					printf("CVT.W.S")
+				} break;
+
+				default:
+				{
+					printf("ERROR: Could not interpret COP1 S instruction {%#09x}\n", instruction);
+					return;
+				} break;
+			}
+		}
 		default:
 		{
 			printf("ERROR: Could not interpret COP1 instruction {%#09x}\n", instruction);

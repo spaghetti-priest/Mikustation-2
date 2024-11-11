@@ -28,8 +28,8 @@ void iop_store_8 (u32 address, u8 value);
 void iop_store_16 (u32 address, u16 value);
 void iop_store_32 (u32 address, u32 value);
 
-u32 check_interrupt(bool value);
-
+u32 check_interrupt (bool value, bool int0_priority, bool int1_priorirty);
+ 
 void bios_hle_syscall(R5900_Core *ee, u32 call);
 
 #endif

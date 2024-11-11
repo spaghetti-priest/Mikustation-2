@@ -1435,7 +1435,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
         case 0b010100:  BEQL(ee, instruction);   break;
         case 0b001011:  SLTIU(ee, instruction);  break;
         case 0b010101:  BNEL(ee, instruction);   break;
-       case 0b100011:  LW(ee, instruction);     break;
+        case 0b100011:  LW(ee, instruction);     break;
         case 0b100111:  LWU(ee, instruction);    break;
         case 0b100000:  LB(ee, instruction);     break;
         case 0b111001:  SWC1(ee, instruction);   break;

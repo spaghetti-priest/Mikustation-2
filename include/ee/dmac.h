@@ -66,7 +66,7 @@ union Dn_SADR {
 union D_CTRL {
     struct {
         bool    enable;  
-        bool    release_signal;  
+        bool    cycle_stealing;  
         u8      memory_drain_channel : 2;
         u8      stall_source_channel : 2;
         u8      stall_drain_channel  : 2; 
@@ -155,8 +155,14 @@ union D_ENABLER {
 
 union DMAtag {
     struct {
-        u64 addr;
-        u64 unused;
+        u16 quadword_count;
+        u16 unused0 : 10;
+        u8 priority_control : 2;
+        u8 tag_id : 3;
+        bool interrupt_request;
+        u32 address; // Lower 4 bits are 0
+        bool memory_selection; // memory or spr;
+        u64 data_to_transfer;
     };
     u128 value;
 };

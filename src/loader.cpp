@@ -94,6 +94,13 @@ load_elf(R5900_Core *ee, const char *path)
 	return true;
 }
 
+
+struct romdir_entry_ {
+	char name[10]; 			//File name, must be null terminated
+	u16 extinfo_size; 	//Size of the file's extended info in EXTINFO
+	u32 file_size; 	 	//Size of the file itself
+};
+
 int 
 read_bios (const char *filename, u8 *bios_memory) 
 {

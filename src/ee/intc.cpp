@@ -8,11 +8,18 @@
 
 #include <iostream>
 
+void
+intc_reset()
+{
+	INTC_MASK = 0;
+	INTC_STAT = 0;
+}
+
 static u32
-assert_interrupt ()
+trigger_interrupt_int0 ()
 {
 	bool int0 = INTC_MASK & INTC_STAT;
-	u32 r = check_interrupt(int0);
+	u32 r = check_interrupt(int0, true, false);
 	if (r == 0)
 		return 0;
 	else 
@@ -20,10 +27,10 @@ assert_interrupt ()
 }
 
 void
-send_interrupt (u32 index)
+request_interrupt (u32 index)
 {
 	INTC_STAT |= 1 << index;
-	assert_interrupt();
+	trigger_interrupt_int0();
 }
 
 u32 
@@ -55,7 +62,7 @@ intc_write (u32 address, u32 value)
 		{
 	        printf("Writing to INTC_STAT [%#08x]\n", value);
 			INTC_STAT &= (~value & 0x7ff);
-			assert_interrupt();
+			trigger_interrupt_int0();
 			return;			
 		}
 
@@ -63,7 +70,7 @@ intc_write (u32 address, u32 value)
 		{
 			printf("Writing to INTC_MASK [%#08x]\n", value);
 			INTC_MASK ^= (value & 0x7ff);
-			assert_interrupt();
+			trigger_interrupt_int0();
 			return;	
 		}
 	}

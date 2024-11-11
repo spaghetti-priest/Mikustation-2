@@ -67,19 +67,19 @@ set_kernel_mode (COP0_Registers *cop0)
 inline void 
 cop0_status_write (COP0_Status *s, u32 data) 
 {
-    s->IE       = (data << 0);
-    s->EXL      = (data << 1);
-    s->ERL      = (data << 2);
-    s->KSU      = (data << 3);
-    s->IM_2     = (data << 10);
-    s->IM_3     = (data << 11);
-    s->BEM      = (data << 12);
-    s->IM_7     = (data << 15);
-    s->EIE      = (data << 16);
-    s->EDI      = (data << 17);
-    s->CH       = (data << 18);
-    s->BEV      = (data << 22);
-    s->DEV      = (data << 23);
+    s->IE       = (data >> 0) & 0x1;
+    s->EXL      = (data >> 1) & 0x1;
+    s->ERL      = (data >> 2) & 0x1;
+    s->KSU      = (data >> 3) & 0x1;
+    s->IM_2     = (data >> 10) & 0x1;
+    s->IM_3     = (data >> 11) & 0x1;
+    s->BEM      = (data >> 12) & 0x1;
+    s->IM_7     = (data >> 15) & 0x1;
+    s->EIE      = (data >> 16) & 0x1;
+    s->EDI      = (data >> 17) & 0x1;
+    s->CH       = (data >> 18) & 0x1;
+    s->BEV      = (data >> 22) & 0x1;
+    s->DEV      = (data >> 23) & 0x1;
     s->CU       = (data >> 28) & 0xF;
     s->value    = data;
 }
@@ -98,4 +98,13 @@ cop0_cause_write (COP0_Cause *c, u32 data)
     c->value            = data;
 }
 
+inline void
+cop0_timer_compare_check(_R5900Core_ *ee)
+{
+    bool are_equal = ee->cop0.regs[9] == ee->cop0.regs[11];
+    if (are_equal) {
+        ee->cop0.cause.timer_pending = 1;
+        ee->cop0.status.IM_7 = 1;
+    }
+}
 #endif

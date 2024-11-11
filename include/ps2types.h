@@ -5,18 +5,6 @@
 
 #include <cstring>
 
-/*
-//#define NDISASM 1
-#ifdef NDISASM
-#define syslog(fmt, ...) (void)0
-#else
-#define syslog(...) fmt::print(__VA_ARGS__ )
-#endif
-
-//@@Incomplete: Make this bold red text to indicate an error
-#define errlog(...) fmt::print(__VA_ARGS__)
-*/
-
 //#define min(a,b) (a < b ? a : b)
 //#define max(a,b) (a > b ? a : b)
 #define KILOBYTES(b) (b * 1024)
@@ -65,7 +53,7 @@ typedef union _u128_ {
     {
         return ( hi != r.hi || lo != r.lo );
     } 
-} u128;
+} u128 __attribute__((aligned(16)));
 
 typedef struct _int128_t_ {
     s64 hi;
@@ -80,7 +68,7 @@ typedef struct _int128_t_ {
     {
         return ( hi != r.hi || lo != r.lo );
     } 
-} s128;
+} s128 __attribute__((aligned(16)));
 
 
 // MIPS IV word is 32 bits 

@@ -22,7 +22,7 @@ ipu_write_32 (u32 address, u32 value)
 	{		
 		case 0x10002000:
 		{
-			ipu.command.write.command_option 	= value  & 0x7FFFFFF;
+			ipu.command.write.command_option 	= value & 0x7FFFFFF;
 			ipu.command.write.command_code 		= (value >> 28) & 0x1F;
 			printf("IPU_CMD value: [%#08x]\n", value);
 		} break;

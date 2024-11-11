@@ -122,17 +122,16 @@ typedef struct _GIF_ {
 	GIF_CNT cnt;     // Transfer status counter
 	GIF_P3CNT p3cnt;   // PATH3 transfer status counter
 	GIF_P3TAG p3tag;   // Bits 0-31 of PATH3 tag when interrupted
-	//GIF_FIFO fifo;
 	GIF_Tag tag[4]; // GIF_TAG 0-4
 	// @@Remove: If the stl queue proves to be slow (likely but also unlikely) then remove this in the future
 	// @@Note: max size of FIFO is 16 quadwords
 	std::queue<u128> FIFO;
 } GIF;
 
-void gif_reset(GIF *gif);
-u32 gif_read_32 (GIF *gif, u32 address);
-void gif_write_32 (GIF *gif, u32 address, u32 value);
-void gif_send_path3(u128 data);
+void gif_reset();
+u32 gif_read_32 (u32 address);
+void gif_write_32 (u32 address, u32 value);
+void gif_process_path3(u128 data);
 void gif_fifo_write(u32 address, u64 data);
 
 #endif
