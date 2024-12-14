@@ -5,8 +5,11 @@
 
 #include <cstring>
 
-//#define min(a,b) (a < b ? a : b)
-//#define max(a,b) (a > b ? a : b)
+//#define MIN(a, b) (a < b ? a : b)
+//#define MIN3(a, b, c) (MIN(MIN(a, b), c))
+//#define MAX(a, b) (a > b ? a : b)
+//#define MAX3(a, b, c) (MAX(MAX(a, b), c))
+
 #define KILOBYTES(b) (b * 1024)
 #define MEGABYTES(b) (KILOBYTES(b) * 1024)
 #define GIGABYTES(b) (MEGABYTES(b) * 1024) 
@@ -91,7 +94,6 @@ inline const char *
 strip_file_path ( const char *s ) {
 #if _WIN32 || _WIN64
     const char* last = strrchr(s, '\\');
-
 #else
     const char* last = strrchr(s, '/');
 #endif

@@ -6,7 +6,7 @@
 #include <queue>
 #include "../ps2types.h"
 
-typedef struct _GIFTag_ {
+typedef struct GIFTag_t {
 	u16 	NLOOP : 15; // Data size
 	bool 	EOP;   		// End of packet
 	u32 unused : 29;
@@ -16,7 +16,7 @@ typedef struct _GIFTag_ {
 	u8 		NREGS;  	// Number of Register descriptors
 	u64 	REGS;   	// Register descriptor 
 
-	u32 regs_left;
+	u32 reg_count;
 	u32 data_left;
 	
 	bool is_tag;
@@ -79,11 +79,11 @@ union GIF_TAG1 {
 	u32 value;
 };
 
-typedef struct GIF_TAG2 {
+typedef struct GIF_TAG2_t {
 	u32 value;
 } GIF_TAG2;
 
-typedef struct GIF_TAG3 {
+typedef struct GIF_TAG3_t {
 	u32 value;
 } GIF_TAG3;
 
@@ -111,7 +111,7 @@ union GIF_P3TAG {
 	u32 value;
 };
 
-typedef struct _GIF_ {
+typedef struct GIF_t {
 	GIF_CTRL ctrl;    // Control register
 	GIF_MODE mode;    // Mode setting
 	GIF_STAT stat;    // Status

@@ -5,6 +5,7 @@
 
 #include "../include/ee/gif.h"
 #include "../include/ee/gs.h"
+#include "../include/common.h"
 #include <iostream>
 
 alignas(16) GIF gif;
@@ -12,7 +13,7 @@ alignas(16) GIF gif;
 void 
 gif_reset () 
 {
-	printf("Resetting GIF interface\n");
+	syslog("Resetting GIF interface\n");
 	memset(&gif, 0, sizeof(gif));
 }
 
@@ -23,14 +24,12 @@ enum Data_Modes : u8 {
 	DISABLE = 0b11,
 };
 
-u32 reg_counter = 0;
-
-void 
+static void 
 gif_process_packed (GIF_Tag *current_tag, u128 data)
 {
-	u32 NLOOP = current_tag->NLOOP;
-	u32 total_data_in_gif = current_tag->NLOOP * current_tag->NREGS; /* When NREGS * NLOOP is odd, the last doubleword in a primitive is discarded.*/
-	u32 destination = (current_tag->REGS >> (4 * reg_counter)) & 0xF;
+	u32 bits_per_reg = 4;
+	u32 destination = (current_tag->REGS >> (bits_per_reg * current_tag->reg_count)) & 0xF;
+
 	if (current_tag->PRE == 1) {
 		gs_set_primitive(current_tag->PRIM);
 	} else {
@@ -109,45 +108,45 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			gs_set_fog(fog);
 		} break;
 		
-		case 0x0e: {
+		case 0x0e: 
+		{
 			/* 0xA+D */
 			u8 addr 			= data.hi & 0xFF;
 			u64 packaged_data 	= data.lo;
 			gs_write_64_internal(addr, packaged_data);
 		} break;
 		
-		case 0x0f: 
-		{
-			/*No Output */
-			return;
-		} break;
+		/*No Output */
+		case 0x0f: return; break;
 
 		default:
 		{
-			printf("Unrecognized GIF tag address\n");
+			errlog("Unrecognized GIF tag address\n");
 		} break;
 	}
 }
 
-void gif_process_reglist(GIF_Tag *current_tag) 
+static void gif_process_reglist(GIF_Tag *current_tag) 
 {
-//	printf("GIFtag process reglist\n");
+	//printf("GIFtag process reglist\n");
 }
 
-void gif_process_image(GIF_Tag *current_tag, u128 data) 
+static void gif_process_image(GIF_Tag *current_tag, u128 data) 
 {
 	//u32 NLOOP = current_tag->NLOOP;
 	//for (int i = 0; i < NLOOP; ++i) {
 		gs_write_hwreg(data.lo);
 		gs_write_hwreg(data.hi);
 	//}
-	printf("GIFtag process reglist\n");
-}
-void gif_process_disable(GIF_Tag *current_tag) {
-//	printf("GIFtag process reglist\n");
+	syslog("GIFtag process reglist\n");
 }
 
-void
+static void gif_process_disable(GIF_Tag *current_tag) 
+{
+	//printf("GIFtag process reglist\n");
+}
+
+static void
 gif_select_mode (GIF_Tag *current_tag, u128 data)
 {
 	u16 mode = current_tag->FLG;
@@ -156,13 +155,13 @@ gif_select_mode (GIF_Tag *current_tag, u128 data)
 		case PACKED:
 		{
 			gif_process_packed(current_tag, data);
-			reg_counter += 1;
-			if (current_tag->NREGS <= reg_counter) {
+			current_tag->reg_count += 1;
+			if (current_tag->NREGS <= current_tag->reg_count) {
 				if (current_tag->data_left == 0) {
 					current_tag->is_tag = false;
 				}
 				current_tag->data_left--;
-				reg_counter = 0;
+				current_tag->reg_count = 0;
 			}
 		} break;
 
@@ -172,6 +171,9 @@ gif_select_mode (GIF_Tag *current_tag, u128 data)
 		{
 			gif_process_image(current_tag, data);
 			current_tag->data_left--;
+			if (current_tag->data_left == 0) {
+				current_tag->is_tag = false;
+			}
 		} break;	
 		
 		case DISABLE: 	gif_process_disable(current_tag); break;
@@ -182,13 +184,13 @@ gif_select_mode (GIF_Tag *current_tag, u128 data)
 }
 
 //@@Incomplete: This only accepts tags from PATH3
-void
-gif_unpack_tag (u128 pack)
+static void
+unpack_gif_tag (u128 pack)
 {
 	if (!gif.tag[0].is_tag) {
 		// of course c++ turns something nice into something ugly and redundant
 		GIF_Tag new_gif_tag = {
-			.NLOOP 		=  (u16)(pack.lo & 0x7fff), 
+			.NLOOP 		= (u16)(pack.lo & 0x7fff), 
 			.EOP 		= (bool)((pack.lo >> 15) & 0x1),   
 			.PRE 		= (bool)((pack.lo >> 46) & 0x1),   
 			.PRIM 		= (u16)((pack.lo >> 47) & 0x7ff),  
@@ -196,11 +198,13 @@ gif_unpack_tag (u128 pack)
 			.NREGS 		= (u8)((pack.lo >> 60) & 0xf),  
 			.REGS 		= pack.hi,
 			.is_tag 	= true,
+			.reg_count  = 0,
 		};
 
-		//new_gif_tag.regs_left = new_gif_tag.NREGS;
 		new_gif_tag.data_left = new_gif_tag.NLOOP;
-		if (new_gif_tag.NREGS == 0 && new_gif_tag.NLOOP != 0)  new_gif_tag.NREGS = 16; 
+		if (new_gif_tag.NREGS == 0 && new_gif_tag.NLOOP != 0)  
+			new_gif_tag.NREGS = 16; 
+		
 		gif.tag[0] = new_gif_tag;
 		gs_set_q(1.0); 
 	}
@@ -212,67 +216,65 @@ void
 gif_process_path3 (u128 data) 
 {
 	if(data.lo || data.hi)
-		gif_unpack_tag(data);
+		unpack_gif_tag(data);
 }
 
 u32 
 gif_read_32 (u32 address)
 {
-	printf("READ: gif_read32 address: [%#08x]\n", address);
-
 	if (gif.ctrl.pause) {
 		switch (address) 
 		{
 			case 0x10003020:
 			{
-				printf("READ: STAT [%#08x]\n", gif.stat.value);
+				syslog("READ: STAT [{:#x}]\n", gif.stat.value);
 				return 0;				
 			}
 			case 0x10003040:
 			{
-				printf("READ: TAG0 [%#08x]\n", gif.tag0.value);
+				syslog("READ: TAG0 [{:#x}]\n", gif.tag0.value);
 				return gif.tag0.value;
 			} break;
 
 			case 0x10003050:
 			{
-				printf("READ: TAG1 [%#08x]\n", gif.tag1.value);
+				syslog("READ: TAG1 [{:#x}]\n", gif.tag1.value);
 				return gif.tag1.value;
 			} break;
 			
 			case 0x10003060:
 			{
-				printf("READ: TAG2 [%#08x]\n", gif.tag2.value);
+				syslog("READ: TAG2 [{:#x}]\n", gif.tag2.value);
 				return gif.tag2.value;
 			} break;
 			
 			case 0x10003070:
 			{
-				printf("READ: TAG3 [%#08x]\n", gif.tag3.value);
+				syslog("READ: TAG3 [{:#x}]\n", gif.tag3.value);
 				return gif.tag3.value;
 			} break;
 			
 			case 0x10003080:
 			{
-				printf("READ: CNT [%#08x]\n", gif.cnt.value);
+				syslog("READ: CNT [{:#x}]\n", gif.cnt.value);
 				return gif.cnt.value;
 			} break;
 			
 			case 0x10003090:
 			{
-				printf("READ: P3CNT [%#08x]\n", gif.p3cnt.value);
+				syslog("READ: P3CNT [{:#x}]\n", gif.p3cnt.value);
 				return gif.p3cnt.value;
 			} break;
 			
 			case 0x100030A0:
 			{
-				printf("READ: P3TAG [%#08x]\n", gif.p3tag.value);
+				syslog("READ: P3TAG [{:#x}]\n", gif.p3tag.value);
 				return gif.p3tag.value;
 			} break;
 
 			default:
 			{
-				printf("[ERROR] Failed to read gif_read32\n");
+				errlog("[ERROR] Failed to read gif_read32\n");
 				return 0;
 			} break;
 		}
@@ -284,12 +286,11 @@ gif_read_32 (u32 address)
 void 
 gif_write_32 (u32 address, u32 value)
 {
-	printf("WRITE: gif_write32 address: [%#08x]\n", address);
 	switch(address)
 	{
 		case 0x10003000:
 		{
-			printf("WRITE: GIF CTRL value: [%#08x]\n", value);
+			syslog("WRITE: GIF CTRL value: [{:#x}]\n", value);
 			gif.ctrl.reset = value & 0x1;
 			gif.ctrl.pause = (value >> 3) & 0x1;
 			gif.ctrl.value = value;
@@ -298,16 +299,16 @@ gif_write_32 (u32 address, u32 value)
 
 		case 0x10003010:
 		{
-			printf("WRITE: GIF MODE value: [%#08x]\n", value);
+			syslog("WRITE: GIF MODE value: [{:#x}]\n", value);
 			gif.mode.mask 				= value & 0x1;
-			gif.mode.intermittent_mode = (value >> 2) & 0x1;
-			gif.mode.value 			= value;
+			gif.mode.intermittent_mode 	= (value >> 2) & 0x1;
+			gif.mode.value 				= value;
 			return;
 		} break;
 
 		default:
 		{
-			printf("[ERROR] Failed to read gif_write32\n");
+			errlog("[ERROR] Failed to read gif_write32\n");
 			return;
 		} break;
 	}

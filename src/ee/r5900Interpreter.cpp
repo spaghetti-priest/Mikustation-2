@@ -4,8 +4,8 @@
  */
 
 #include <assert.h>
+//#include "fmt-10.2.1/include/fmt/core.h"
 
-#include "fmt-10.2.1/include/fmt/core.h"
 #include "fmt-10.2.1/include/fmt/format-inl.h"
 #include "fmt-10.2.1/include/fmt/format.h"
 #include "fmt-10.2.1/src/format.cc"
@@ -17,18 +17,6 @@
 #include "../include/ee/cop1.h"
 #include "../include/ee/timer.h"
 std::array<TLB_Entry, 48> TLBS;
-
-// @Incomplete: Make this global within the whole codebase
-#define NDISASM 1
-#ifdef NDISASM
-#define syslog(fmt, ...) (void)0
-#else
-#define syslog(...) fmt::print(__VA_ARGS__ )
-#endif
-
-//@@Incomplete: Make this bold red text to indicate an error
-//#define errlog(...) fmt::print(__VA_ARGS__)
-#define errlog(fmt, ...) (void)0
 
 FILE *dis = fopen("disasm.txt", "w+");
 
@@ -258,6 +246,26 @@ LW (R5900_Core *ee, u32 instruction)
     }
     ee->reg.r[rt].SD[0] = (s64)ee_core_load_32(vaddr);
     syslog("LW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+}
+
+static void 
+LWC1 (R5900_Core *ee, u32 instruction) 
+{
+    s32 offset  = (s16)(instruction & 0xFFFF);
+    u32 base    = instruction >> 21 & 0x1F;
+    u32 ft      = instruction >> 16 & 0x1F;
+    u32 vaddr   = ee->reg.r[base].UW[0] + offset;
+    u32 low_bits = vaddr & 0x3;
+    
+    if (low_bits != 0) {
+        errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
+        Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
+        handle_exception_level_1(ee, &exc);
+    }
+    u32 data = (u32)ee_core_load_32(vaddr);
+
+    cop1_setFPR(ft, data);
+    syslog("LWC1 [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 }
 
 static void 
@@ -554,6 +562,8 @@ SWC1 (R5900_Core *ee, u32 instruction)
 *******************************************/
 static void add_overflow() {return;}
 static void add_overflow64() {return;}
+static void sub_overflow() {return;}
+static void sub_overflow64() {return;}
 
 static void 
 ADD (R5900_Core *ee, u32 instruction) 
@@ -579,6 +589,18 @@ ADDU (R5900_Core *ee, u32 instruction)
     int32_t result = ee->reg.r[rs].SW[0] + ee->reg.r[rt].SW[0];
     ee->reg.r[rd].UD[0] = result;
     syslog("ADDU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+}
+
+static void 
+ADDI (R5900_Core *ee, u32 instruction) 
+{
+    s16 imm = (s16)(instruction & 0xFFFF);
+    u32 rs  = instruction >> 21 & 0x1f;
+    u32 rt  = instruction >> 16 & 0x1f;
+    s32 result = ee->reg.r[rs].SD[0] + imm;
+    ee->reg.r[rt].SD[0] = result;
+    /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
+    syslog("ADDI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
 }
 
 static void 
@@ -613,6 +635,18 @@ DADDIU (R5900_Core *ee, u32 instruction)
     //ee->reg.r[rt].UD[0] = ee->reg.r[rs].SD[0] + imm;
     ee->reg.r[rt].UD[0] = ee->reg.r[rs].SD[0] + imm;
     syslog("DADDIU [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);  
+}
+
+static void 
+SUB (R5900_Core *ee, u32 instruction) 
+{
+    u32 rd = instruction >> 11 & 0x1F;
+    u32 rt = instruction >> 16 & 0x1F;
+    u32 rs = instruction >> 21 & 0x1F;
+    s32 result = ee->reg.r[rs].SW[0] - ee->reg.r[rt].SW[0];
+    ee->reg.r[rd].UD[0] = (s64)result;
+    /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
+    syslog("SUB [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);    
 }
 
 static void 
@@ -927,6 +961,18 @@ DSLL32 (R5900_Core *ee, u32 instruction)
     ee->reg.r[rd].UD[0] = ee->reg.r[rt].UD[0] << s;
 
     syslog("DSLL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", rd, rt, s);
+}
+
+static void 
+DSRL (R5900_Core *ee, u32 instruction) 
+{
+    u32 sa  = instruction >> 6 & 0x1F;
+    u32 rd  = instruction >> 11 & 0x1F;
+    u32 rt  = instruction >> 16 & 0x1F;
+
+    ee->reg.r[rd].UD[0] = ee->reg.r[rt].UD[0] >> sa;
+
+    syslog("DSRL source: [{:d}] dest: [{:d}] s: [{:#x}] \n", rd, rt, s);
 }
 
 static void 
@@ -1250,7 +1296,7 @@ static void
 SYSCALL (R5900_Core *ee, u32 instruction)
 {
  //   printf("Hello we call syscall here lol\n");
-    printf("SYSCALL [%#02x]\n", ee->reg.r[3].UB[0]);
+    printf("SYSCALL [%#02x]  ", ee->reg.r[3].UB[0]);
     Exception exc = get_exception(V_COMMON, __SYSCALL);
     handle_exception_level_1(ee, &exc);
 }
@@ -1260,7 +1306,7 @@ static void
 SYSCALL (R5900_Core *ee, u32 instruction)
 {
  //   printf("Hello we call syscall here lol\n");
-    printf("SYSCALL [%#02x]\n", ee->reg.r[3].UB[0]);
+    //printf("SYSCALL [%#02x]  ", ee->reg.r[3].UB[0]);
     bios_hle_syscall(ee,  ee->reg.r[3].UB[0]);
 }
 
@@ -1390,11 +1436,13 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
                 case 0x0000002B:    SLTU(ee, instruction);   break;
                 case 0x00000038:    DSLL(ee, instruction);   break;
                 case 0x0000003C:    DSLL32(ee, instruction); break;
+                case 0x0000003A:    DSRL(ee, instruction); break;
                 case 0x0000003E:    DSRL32(ee, instruction); break;
                 case 0x00000024:    AND(ee, instruction);    break;
                 case 0x00000002:    SRL(ee, instruction);    break;
                 case 0x00000003:    SRA(ee, instruction);    break;
                 case 0x000000A:     MOVZ(ee, instruction);   break;
+                case 0x0000022:     SUB(ee, instruction);    break;
                 case 0x0000023:     SUBU(ee, instruction);   break;
                 case 0x0000010:     MFHI(ee, instruction);   break;
                 case 0x0000020:     ADD(ee, instruction);    break;
@@ -1425,6 +1473,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
         case 0b001111:  LUI(ee, instruction);    break;
         case 0b001100:  ANDI(ee, instruction);   break;
         case 0b001101:  ORI(ee, instruction);    break;
+        case 0b001000:  ADDI(ee, instruction);   break;
         case 0b001001:  ADDIU(ee, instruction);  break;
         case 0b101011:  SW(ee, instruction);     break;
         case 0b111111:  SD(ee, instruction);     break;
@@ -1436,6 +1485,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
         case 0b001011:  SLTIU(ee, instruction);  break;
         case 0b010101:  BNEL(ee, instruction);   break;
         case 0b100011:  LW(ee, instruction);     break;
+        case 0b110001:  LWC1(ee, instruction);   break;
         case 0b100111:  LWU(ee, instruction);    break;
         case 0b100000:  LB(ee, instruction);     break;
         case 0b111001:  SWC1(ee, instruction);   break;

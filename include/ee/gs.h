@@ -127,9 +127,9 @@ union XYZ {
 
 union XYOFFSET {
 	struct {
-		u16 offset_x;
+		u16 x;
 		u16 unused0;
-		u16 offset_y;
+		u16 y;
 		u16 unused1;
 	};
 	u64 value;
@@ -406,10 +406,10 @@ union TEST {
 	struct {
 		bool alpha_test;
 		u8 alpha_test_method : 3;
-		u8 comparison_value;
-		u8 fail_method : 2;
-		bool dest_test;
-		bool dest_test_mode;
+		u8 alpha_comparison_value;
+		u8 alpha_fail_method : 2;
+		bool destination_test;
+		bool destination_test_mode;
 		bool depth_test;
 		u8 depth_test_method : 2;
 		u64 unused : 45;
@@ -651,57 +651,75 @@ enum CRT_MODE : int {
 	CRT_MODE_DTV_480P 	= 0x50
 };
 
+typedef struct _Context_ {
+	XYZF 			xyzf;
+	XYZ 			xyz;
+	TEX0 			tex0;
+	CLAMP 		clamp;
+	TEX1 			tex1;
+	TEX2 			tex2;
+	XYOFFSET 	xyoffset;
+	MIPTBP1 	miptbp1;
+	MIPTBP2 	miptbp2;
+	SCISSOR 	scissor;
+	ALPHA 		alpha;
+	TEST 			test;
+	FRAME 		frame;
+	ZBUF 			zbuf;
+} Context;
+
 typedef struct _GraphicsSynthesizer_ {
 	u16 *vram;
 	CRT_MODE crt_mode;
 
+	Context context[2];
 	// GS Internal Registers
   PRIM prim;
   RGBAQ rgbaq;
   ST st;
   UV uv;
-  XYZF xyzf2;
-  XYZF xyzf3;
-  XYZ xyz2;
-  XYZ xyz3;
-  TEX0 tex0_1;
-  TEX0 tex0_2;
-  CLAMP clamp_1;
-  CLAMP clamp_2;
+  XYZF xyzf2; //@@Remove
+  XYZF xyzf3; //@@Remove
+  XYZ xyz2; //@@Remove
+  XYZ xyz3; //@@Remove
+  TEX0 tex0_1; //@@Remove
+  TEX0 tex0_2; //@@Remove
+  CLAMP clamp_1; //@@Remove
+  CLAMP clamp_2; //@@Remove
   FOG fog;
-  TEX1 tex1_1;
-  TEX1 tex1_2;
-  TEX2 tex2_1;
-  TEX2 tex2_2;
-  XYOFFSET xyoffset_1;
-  XYOFFSET xyoffset_2;
+  TEX1 tex1_1;  //@@Remove
+  TEX1 tex1_2; //@@Remove
+  TEX2 tex2_1; //@@Remove
+  TEX2 tex2_2; //@@Remove
+  XYOFFSET xyoffset_1; //@@Remove
+  XYOFFSET xyoffset_2; //@@Remove
   PRMODECONT prmodecont;
   PRMODE prmode;
   TEXCLUT texclut;
   SCANMSK scanmsk;
-  MIPTBP1 miptbp1_1;
-  MIPTBP1 miptbp1_2;
-  MIPTBP2 miptbp2_1;
-  MIPTBP2 miptbp2_2;
+  MIPTBP1 miptbp1_1; //@@Remove
+  MIPTBP1 miptbp1_2; //@@Remove
+  MIPTBP2 miptbp2_1; //@@Remove
+  MIPTBP2 miptbp2_2; //@@Remove
   TEXA texa;
   FOGCOL fogcol;
   TEXFLUSH texflush;
-  SCISSOR scissor_1;
-  SCISSOR scissor_2;
-  ALPHA alpha_1;
-  ALPHA alpha_2;
+  SCISSOR scissor_1; //@@Remove
+  SCISSOR scissor_2; //@@Remove
+  ALPHA alpha_1; //@@Remove
+  ALPHA alpha_2; //@@Remove
   DIMX dimx;
   DTHE dthe;
   COLCLAMP colclamp;
-  TEST test_1;
-  TEST test_2;
+  TEST test_1; //@@Remove
+  TEST test_2; //@@Remove
   PABE pabe;
-  FBA fba_1;
-  FBA FBA_2;
-  FRAME frame_1;
-  FRAME frame_2;
-  ZBUF zbuf_1;
-  ZBUF zbuf_2;
+  FBA fba_1; //@@Remove
+  FBA FBA_2; //@@Remove
+  FRAME frame_1; //@@Remove
+  FRAME frame_2; //@@Remove
+  ZBUF zbuf_1; //@@Remove
+  ZBUF zbuf_2; //@@Remove
   BITBLTBUF bitbltbuf;
   TRXPOS trxpos; 
   TRXREG trxreg;
@@ -743,7 +761,7 @@ void gs_write_64_internal(u8 address, u64 value);
 
 void gs_set_primitive(u64 prim_register);
 void gs_set_q (f32 value);
-void gs_set_rgbaq (u32 r, u32 g, u32 b, u32 a);
+void gs_set_rgbaq (u8 r, u8 g, u8 b, u8 a);
 void gs_set_st (f32 s, f32 t);
 void gs_set_uv (u32 u, u32 v);
 void gs_set_fog (u8 fog);
@@ -753,4 +771,5 @@ void gs_set_xyz2(s16 x, s16 y, u32 z);
 void gs_set_xyz3(s16 x, s16 y, u32 z);
 void gs_set_crt(bool interlaced, s32 display_mode, bool ffmd);
 void gs_write_hwreg(u64 data);
+
 #endif

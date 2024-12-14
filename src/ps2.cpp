@@ -1,12 +1,18 @@
 /*
-*    /   /      |    |  /  |     |
-*   / \ / \     |    | /   |     |
-*  /   \   \    |    | \   |_____|  Mikustation-2
-* --------------------------------------
+__________________________________________________________
+ ___________    _______   ____  _____   __    __
+/\          \  /\__  __\ /\   \/ ____\ /\ \  /  \
+\ \___  __ __\ \/_/\ \-/ \/\   \/____/ \ \ \ \   \
+ \ \  \ \ \\  \   __\_\__ \ \   \_____  \ \_\_____\
+  \ \__\ \_\\__\ /\-_____\ \ \___\____\  \ \_______\
+   \/_\/\/_//__/ \/______/  \/___/____/   \/_______/  Mikustation 2: A Playstation 2 Emulator
+___________________________________________________________
+
+-----------------------------------------------------------------------------
 * Copyright (c) 2023-2024 Xaviar Roach
 * SPD X-License-Identifier: MIT
-*/ 
- 
+ */
+
 #include <thread> 
 #include <fstream>
 #include <typeinfo>
@@ -111,7 +117,7 @@ iop_load_8 (u32 address)
     if (BIOS.contains(address))     
         return *(u8*)&_bios_memory_[address & 0x3FFFFF];
 
-    printf("[ERROR]: Could not write iop_load_memory8() address: [{%#09x}] \n", address);
+    errlog("[ERROR]: Could not read iop_load_memory8() at address [{:#09x}]\n", address);
 
     return r;
 }
@@ -126,7 +132,7 @@ iop_load_16 (u32 address)
     if (BIOS.contains(address))     
         return *(u16*)&_bios_memory_[address & 0x3FFFFF];
  
-    printf("[ERROR]: Could not write iop_load_memory16() address: [{%#09x}] \n", address);
+    errlog("[ERROR]: Could not read iop_load_memory16() at address [{:#09x}]\n", address);
     
     return r;
 }
@@ -155,7 +161,7 @@ iop_load_32 (u32 address)
     if (BIOS.contains(address))     
         return *(u32*)&_bios_memory_[address & 0x3FFFFF];
 
-    printf("[ERROR]: Could not write iop_load_memory32() address: [{%#09x}] \n", address);
+    errlog("[ERROR]: Could not read iop_load_memory32() at address [{:#09x}]\n", address);
 
     return r;
 }
@@ -171,7 +177,7 @@ iop_store_8 (u32 address, u8 value)
     // @@Note: This is a write to POST2 which is unknown as to what it does?
     if (address == 0x1F802070) return;
 
-    printf("[ERROR]: Could not write iop_store_memory8() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
+    errlog("[ERROR]: Could not write iop_store_memory8() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 
 }
 
@@ -183,8 +189,7 @@ iop_store_16 (u32 address, u16 value)
       return;  
     } 
 
-    printf("[ERROR]: Could not write iop_store_memory16() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
-
+    errlog("[ERROR]: Could not write iop_store_memory16() value: [{:#09x}] to address: [{:#09x}] \n", value, address); 
 }
 
 void 
@@ -233,7 +238,7 @@ iop_store_32 (u32 address, u32 value)
         return;
     }
 
-    printf("[ERROR]: Could not write iop_store_memory32() value: [{%#09x}]  to address: [{%#09x}] \n", value, address);
+    errlog("[ERROR]: Could not write iop_store_memory32() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 
 }
 
@@ -251,9 +256,7 @@ ee_load_8 (u32 address)
     if (RDRAM.contains(address))
         return *(u8*)&_rdram_[address];
 
-    //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
-    
-    printf("[ERROR]: Could not write load_memory8() address: [{%#09x}] \n", address);
+    errlog("[ERROR]: Could not read load_memory8() at address [{:#09x}]\n", address);    
 
     return r;
 }
@@ -271,10 +274,8 @@ ee_load_16 (u32 address)
 
     if (IOP_RAM.contains(address)) 
         return *(u16*)&_iop_ram_[address & 0x1FFFFF];
-    //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
+    errlog("[ERROR]: Could not read load_memory16() at address [{:#09x}]\n", address);
     
-    printf("[ERROR]: Could not write load_memory16() address: [{%#09x}] \n", address);
-
     return r;
 }
 
@@ -368,7 +369,7 @@ ee_load_32 (u32 address)
     if (RDRAM.contains(address)) 
         return *(uint32_t*)&_rdram_[address];
 
-    printf("[ERROR]: Could not write load_memory32() address: [{%#09x}] \n", address);
+    errlog("[ERROR]: Could not read load_memory32() at address [{:#09x}]\n", address);
     
     return r;
 }
@@ -383,11 +384,8 @@ ee_load_64 (u32 address)
     if (GS_REGISTERS.contains(address))
         return gs_read_64_priviledged(address);
 
-     //if (IOP_RAM.contains(address)) 
-     //   return *(uint64_t*)&_iop_ram_[address & 0x1FFFFF];
-
-    //errlog("[ERROR]: Could not read load_memory() at address [{:#09x}]\n", address);
-    printf("[ERROR]: Could not write load_memory64() address: [{%#09x}] \n", address);
+    
+    errlog("[ERROR]: Could not read load_memory64() at address [{:#09x}]\n", address);
     return r;
 }
 
@@ -412,14 +410,12 @@ ee_store_8 (u32 address, u8 value)
         return;
     };
 
-    //if (address >= 0x1C000000 && address < 0x1C200000) {
     if (IOP_RAM.contains(address)) {
        *(u8*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
 
-    printf("[ERROR]: Could not write store_memory8() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
-    //errlog("[ERROR]: Could not write store_memory8() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
+    errlog("[ERROR]: Could not write store_memory8() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
 void 
@@ -435,14 +431,12 @@ ee_store_16 (u32 address, u16 value)
         return;
     };
     
-    //if (address >= 0x1C000000 && address < 0x1C200000) {
     if (IOP_RAM.contains(address)) {
        *(u16*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
 
-    printf("[ERROR]: Could not write ee_store_memory16() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
-    //errlog("[ERROR]: Could not write store_memory16() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
+    errlog("[ERROR]: Could not write store_memory16() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
 void 
@@ -541,19 +535,13 @@ ee_store_32 (u32 address, u32 value)
        *(u32*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
-    
-    printf("[ERROR]: Could not write ee_store_memory32() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
-    //errlog("[ERROR]: Could not write store_memory32() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
+
+    errlog("[ERROR]: Could not write store_memory32() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
 void 
 ee_store_64 (u32 address, u64 value) 
 {
-    //if (address >= 0x11000000 && address < 0x11004040) {
-    //    printf("READ: VU1 read address: [%#08x], value: [%#08x]\n", address, value);
-    //    return;
-    //}
-
     if (RDRAM.contains(address)) {
         *(u64*)&_rdram_[address] = value;
         return;
@@ -574,12 +562,7 @@ ee_store_64 (u32 address, u64 value)
         ipu_fifo_write();
         return;
     }
-    /*
-    if (IOP_RAM.contains(address)) {
-        *(u64*)&_iop_ram_[address & 0x1FFFFF] = value;
-        return;
-    }
-    */
+
     if (VU1_CODE_MEMORY.contains(address)) {
         //@HACK         
         *(u64*)&_vu1_code_memory_[address & 0x3FFF] = value;
@@ -616,8 +599,7 @@ ee_store_64 (u32 address, u64 value)
         return;
     }
 
-    printf("[ERROR]: Could not write ee_store_memory64() value: [{%#09x}] to address: [{%#09x}] \n", value, address);
-    //errlog("[ERROR]: Could not write store_memory64() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
+    errlog("[ERROR]: Could not write store_memory64() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
 
 void ee_store_128 (u32 address, u128 value) {}
@@ -654,6 +636,7 @@ check_interrupt (bool value, bool int0_priority, bool int1_priorirty)
     return 1;
 }
 
+//@@Move all of this into a Kernel file
 //From: Ps2SDK
 //Used as argument for CreateThread, ReferThreadStatus
 typedef struct t_ee_thread_param
@@ -757,18 +740,18 @@ struct Thread
 #define MAX_SEMAPHORES 256
 #define MAX_PRIORITY_LEVELS 128
 
-void
+static void
 SetGsCrt (bool interlaced, int display_mode, bool ffmd)
 {
     gs_set_crt(interlaced, display_mode, ffmd);
-    printf("SYSCALL: SetGsCrt \n");
+    syslog("SetGsCrt \n");
 }
 
 std::vector<Thread> threads(MAX_THREADS);
 u32 current_thread_id;
 
 //AKA: RFU060 or SetupThread
-void
+static void
 InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root)
 {
     u32 stack_base = (u32)stack;
@@ -799,11 +782,11 @@ InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root)
 
     //Return
     ee.reg.r[2].UD[0] = stack_addr;
-    printf("InitMainThread \n");
+    syslog("InitMainThread \n");
 }
 
 //AKA: RFU061
-void
+static void
 InitHeap (void *heap, s32 heap_size)
 {
     auto thread = &threads[0];
@@ -817,22 +800,23 @@ InitHeap (void *heap, s32 heap_size)
 
     // Return
     ee.reg.r[2].UD[0] = (u64)thread->heap_base;
-    printf("InitHeap\n");
+    syslog("InitHeap\n");
 }
 
-void
+static void
 FlushCache() 
 {
-    printf("FlushCache\n");
+    syslog("FlushCache\n");
 }
 
-void 
+static void 
 GsPutIMR (u64 imr)
 {
     gs_write_64_priviledged(0x12001010, imr);
+    syslog("GSPutIMR\n");
 }
 
-void
+static void
 dump_all_ee_registers(R5900_Core *ee)
 {
     for (int i = 0; i < 32; ++i) {
@@ -883,6 +867,7 @@ typedef struct _SDL_Context_ {
 int 
 main (int argc, char **argv) 
 {
+    SDL_Context main_context;
     SDL_Event       event;
     SDL_Window      *window;
     SDL_Renderer    *renderer;
@@ -901,12 +886,13 @@ main (int argc, char **argv)
     printf("Mikustation 2: A Playstation 2 Emulator and Debugger\n");
     printf("\n=========================\n...Reseting...\n=========================\n");
 
+// @@Incomplete @@Implementation: Eventually remove hardcoded path. Ask for the path at runtime 
 #if _WIN32 || _WIN64
-    const char *filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
+    const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
     //const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
     const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
 #else
-    const char *filename = "../data/bios/scph10000.bin";
+    const char *bios_filename = "../data/bios/scph10000.bin";
 #endif    
     
     _bios_memory_       = (u8 *)malloc(sizeof(u8) * MEGABYTES(4));
@@ -917,9 +903,9 @@ main (int argc, char **argv)
     _vu1_code_memory_   = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
     _vu1_data_memory_   = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
     
-    if (read_bios(filename, _bios_memory_) != 1) return 0;
+    if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
 
-    //@@Incomplete: Move this into its own function
+    // @@Incomplete: Move this into its own function
     {
         printf("Resetting Emotion Engine Core\n");
         memset(&ee, 0, sizeof(R5900_Core));
@@ -928,7 +914,6 @@ main (int argc, char **argv)
             .current_cycle = 0,
         };
         ee.cop0.regs[15]    = 0x2e20;
-//        _scratchpad_        = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
     }
     
@@ -981,16 +966,9 @@ main (int argc, char **argv)
         while (instructions_run < 500000) {
             /* Step Through Playstation 2 Pipeline */
             r5900_cycle(&ee);
-
-            if (instructions_run % 2 == 0){
-                dmac_cycle();  
-            } 
-
+            if (instructions_run % 2 == 0) { dmac_cycle(); } 
             timer_tick();
-            
-            if (instructions_run % 8 == 0) {
-                iop_cycle();
-            }
+            if (instructions_run % 8 == 0) { iop_cycle(); }
             instructions_run++;            
 
             if(INTC_MASK & 0x4) 

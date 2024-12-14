@@ -7,18 +7,6 @@
 #include "../include/ps2types.h"
 #include "../include/ps2.h"
 
-#if 1
-// @Incomplete: Make this global within the whole codebase
-#define NDISASM 1
-#ifdef NDISASM
-#define syslog(fmt, ...) (void)0
-#else
-#define syslog(...) fmt::print(__VA_ARGS__ )
-#endif
-#endif
-//@@Incomplete: Make this bold red text to indicate an error
-//#define errlog(...) fmt::print(__VA_ARGS__)
-
 R5000_Core iop = {0};
 
 u32 INTC_STAT, INTC_MASK, INTC_CTRL;
@@ -819,7 +807,7 @@ MTHI (u32 instruction)
 static void
 MFLO (u32 instruction)
 {
-    u16 rd          = instruction >> 11 & 0x1F;
+    u16 rd        = instruction >> 11 & 0x1F;
     iop.reg[rd]   = iop.LO;
     
     syslog("I-MFLO[{:d}]\n", rd);

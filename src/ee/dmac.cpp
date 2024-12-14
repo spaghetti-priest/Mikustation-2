@@ -44,38 +44,38 @@ set_dmac_channel_values (u32 address, u32 index, u32 value)
             dmac.channels[index].control.tag_interrupt  = (value >> 7) & 0x1;
             dmac.channels[index].control.start          = (value >> 8) & 0x1;
             dmac.channels[index].control.TAG            = value >> 16;  
-            printf("_CHCR, value: [%#08x]\n", value);
+            //printf("_CHCR, value: [%#08x]\n", value);
         } break;
         case 0x10:
         {
             dmac.channels[index].address = value & 0x7FFFFFF0;
-            printf("_MADR, value: [%#08x]\n", value);
+            //printf("_MADR, value: [%#08x]\n", value);
         } break;
         case 0x20:
         {
             dmac.channels[index].quadword_count.quadwords = value & 0xFFFF;
-            printf("_QWC, value: [%#08x]\n", value);
+            //printf("_QWC, value: [%#08x]\n", value);
         } break;
         case 0x30:
         {
             dmac.channels[index].tag_address.address            = value & 0x7FFFFFF0;
             dmac.channels[index].tag_address.memory_selection   = (value >> 31) & 0x1;
-            printf("_TADR, value: [%#08x]\n", value);
+            //printf("_TADR, value: [%#08x]\n", value);
         } break;
         case 0x40:
         {
             dmac.channels[index].save_tag0 = value;
-            printf("_ASR0, value: [%#08x]\n", value);
+            //printf("_ASR0, value: [%#08x]\n", value);
         } break;
         case 0x50:
         {
             dmac.channels[index].save_tag1 = value;
-            printf("_ASR1, value: [%#08x]\n", value);
+            //printf("_ASR1, value: [%#08x]\n", value);
         } break;
         case 0x80:
         {
             dmac.channels[index].scratchpad_address.addess = value & 0xFFFF;
-            printf("_SADR, value: [%#08x]\n", value);
+            //printf("_SADR, value: [%#08x]\n", value);
         } break;
     }
 
@@ -145,7 +145,7 @@ end_of_transfer()
         dmac.interrupt_status.channel_status[2] = true;
         bool int1 = (dmac.interrupt_status.channel_status[2] & dmac.interrupt_status.channel_mask[2]) != 0;
         check_interrupt(int1, false, true);
-        printf("End of transfer\n");
+        //printf("End of transfer\n");
     }
 }
 
@@ -169,7 +169,8 @@ initialize_dma_tag (u64 value)
 static void
 source_chain_mode()
 {
-    DMAtag dma_tag = initialize_dma_tag(ee_load_64(dmac.channels[2].tag_address.address));
+    u32 tag_address_value                       = ee_load_64(dmac.channels[2].tag_address.address);
+    DMAtag dma_tag                              = initialize_dma_tag(tag_address_value);
     dmac.channels[2].quadword_count.quadwords   = dma_tag.quadword_count;
     dmac.channels[2].control.TAG                = dma_tag.value.lo & 0xFFFF0000;
 
@@ -218,11 +219,13 @@ source_chain_mode()
         {
             u32 temp = dmac.channels[2].address;
             dmac.channels[2].address = dmac.channels[2].tag_address.address + 16;
+
             if (dmac.channels[2].control.stack_pointer == 0) {
                 dmac.channels[2].save_tag0 = temp + (quadwords * 16);
             } else if (dmac.channels[2].control.stack_pointer == 1) {
                 dmac.channels[2].save_tag1 = temp + (quadwords * 16);
             }
+
             dmac.channels[2].tag_address.address = dma_tag.address;
             dmac.channels[2].control.stack_pointer++;
             printf("call\n");
@@ -231,6 +234,7 @@ source_chain_mode()
         case 0x6: 
         {
             dmac.channels[2].address = dmac.channels[2].tag_address.address + 16;
+           
             if (dmac.channels[2].control.stack_pointer == 2) {
                 dmac.channels[2].tag_address.address = dmac.channels[2].save_tag1;
                 dmac.channels[2].control.stack_pointer--;
@@ -240,6 +244,7 @@ source_chain_mode()
             } else {
                 dmac.channels[2].tag_end = true;
             }
+
             printf("ret\n");
         } break; 
         /*end*/
@@ -411,7 +416,7 @@ dmac_write_32 (u32 address, u32 value)
         
         case DMA_GIF:
         {
-            printf("WRITE: GIF");
+            //printf("WRITE: GIF");
             set_dmac_channel_values(address, 2, value);
         } break;
        
@@ -551,7 +556,7 @@ dmac_read_32 (u32 address)
 
         case DMA_GIF:
         {
-            printf("READ: DMAC READ to GIF(PATH3) address\n");
+            //printf("READ: DMAC READ to GIF(PATH3) address\n");
             return read_dmac_channel_values(address, 2);
         } break;
 

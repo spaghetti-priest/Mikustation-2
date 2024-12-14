@@ -1,6 +1,8 @@
 #ifndef _IOP_TIMER_H
 #define _IOP_TIMER_H
 
+#include "../common.h"
+
 enum Timers {
 	TIMER_0,
 	TIMER_1,
