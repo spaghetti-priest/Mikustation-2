@@ -4,7 +4,9 @@
  */
 
 #include "../include/ee/timer.h"
+#include "../include/common.h"
 #include "../include/ee/intc.h"
+#include "../include//ps2types.h"
 #include <iostream>
 
 // @@Note: Only Timers 0 and 1 have a Tn_HOLD register
@@ -32,25 +34,25 @@ timer_read (u32 address)
 	{
 		case Tn_COUNT: 
 		{
-			printf("READ: Index [%d] Tn_COUNT\n", index);
+			//syslog("READ: Index {:d} Tn_COUNT\n", index);
 			return timers[index].count.value;
 		} break;
 
 		case Tn_MODE: 
 		{
-			printf("READ: Index [%d] Tn_MODE\n", index);
+			syslog("READ: Index {:d} Tn_MODE\n", index);
 			return timers[index].mode.value;
 		} break;
 
 		case Tn_COMP: 
 		{
-			printf("READ: Index [%d] Tn_COMP\n", index);
+			syslog("READ: Index {:d} Tn_COMP\n", index);
 			return timers[index].comp.value;
 		} break;
 
 		case Tn_HOLD: 
 		{
-			printf("READ: Index [%d] Tn_HOLD\n", index);
+			syslog("READ: Index {:d} Tn_HOLD\n", index);
 			return timers[index].hold.value;
 		} break;
 	}
@@ -66,16 +68,16 @@ timer_write (u32 address, u32 value)
 	{
 		case Tn_COUNT: 
 		{
-			printf("Timer index: [%d]\n", index);
-			printf("WRITE: Tn_COUNT. Value : [%#08x]\n", value);
+			//syslog("Timer index: [%d]\n", index);
+			syslog("WRITE: Tn_COUNT. Value : [{:#08x}]\n", value);
 			timers[index].count.count = value & 0xFFFF;
 			return;
 		} break;
 
 		case Tn_MODE: 
 		{
-			printf("Timer index: [%d]\n", index);
-			printf("WRITE: Tn_MODE. Value : [%#08x]\n", value);
+			//syslog("Timer index: [%d]\n", index);
+			syslog("WRITE: Tn_MODE. Value : [{:#08x}]\n", value);
 			timers[index].mode.clock_selection 		= (value >> 0) & 0x3;
 			timers[index].mode.gate_function_enable = (value >> 2) & 0x1;
 			timers[index].mode.gate_selection 		= (value >> 3) & 0x1;
@@ -101,16 +103,16 @@ timer_write (u32 address, u32 value)
 
 		case Tn_COMP: 
 		{
-			printf("Timer index: [%d]\n", index);
-			printf("WRITE: Tn_COMP. Value : [%#08x]\n", value);
+			//syslog("Timer index: [%d]\n", index);
+			syslog("WRITE: Tn_COMP. Value : [{:#08x}]\n", value);
 			timers[index].comp.compare = value & 0xFFFF;
 			return;
 		} break;
 
 		case Tn_HOLD: 
 		{
-			printf("Timer index: [%d]\n", index);
-			printf("WRITE: Tn_HOLD. Value : [%#08x]\n", value);
+			//syslog("Timer index: [%d]\n", index);
+			syslog("WRITE: Tn_HOLD. Value : [{:#08x}]\n", value);
 			timers[index].hold.hold = value & 0xFFFF;
 			return;
 		} break;
@@ -144,7 +146,7 @@ timer_tick()
 			if (timer.mode.compare_interrupt && !timer.mode.equal_flag) {
 				/* Edge triggered IRQ */
 				timer.mode.equal_flag = 1;
-				printf("Trigger compare interrupt\n");
+				syslog("Trigger compare interrupt\n");
 				request_interrupt(INT_TIMER0 + i);
 			}
 
@@ -155,7 +157,7 @@ timer_tick()
 			if (timer.mode.overflow_interrupt && !timer.mode.overflow_flag) {
 				/* Edge triggered IRQ */
 				timer.mode.overflow_flag = 1;
-				printf("Trigger overflow interrupt");
+				syslog("Trigger overflow interrupt");
 				request_interrupt(INT_TIMER0 + i);
 			}
 			timer.count.count = 0;

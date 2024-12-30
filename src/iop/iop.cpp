@@ -1,15 +1,13 @@
 #include <assert.h>
 
-#include "fmt-10.2.1/include/fmt/core.h"
-
 #include "../include/common.h"
 #include "../include/iop/iop.h"
-#include "../include/ps2types.h"
 #include "../include/ps2.h"
 
 R5000_Core iop = {0};
 
-u32 INTC_STAT, INTC_MASK, INTC_CTRL;
+//@@Temporary: This are not permanant
+//u32 IOP_INTC_STAT, IOP_INTC_MASK, IOP_INTC_CTRL;
 
 u32
 get_iop_pc()
@@ -92,6 +90,8 @@ iop_core_store_32 (u32 addr, u32 value)
 /*******************************************
  * Load and Store Instructions
 *******************************************/
+static inline void check_addresss_error_exception() {};
+
 static void 
 LB (u32 instruction)
 {
@@ -101,7 +101,7 @@ LB (u32 instruction)
     u32 vaddr       = iop.reg[base] + offset;
 
     iop.reg[rt] = (s64)iop_core_load_8(vaddr);
-    syslog("I-LB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);   
+    intlog("I-LB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);   
 }
 
 static void 
@@ -113,7 +113,7 @@ LBU (u32 instruction)
     u32 vaddr       = iop.reg[base] + offset;
     
     iop.reg[rt] = (u64)iop_core_load_8(vaddr);
-    syslog("I-LBU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
+    intlog("I-LBU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
 } 
 
 static void 
@@ -140,7 +140,7 @@ LH (u32 instruction)
     }
     iop.reg[rt] = (s64)iop_core_load_16(vaddr);
 
-    syslog("I-LH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
+    intlog("I-LH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
 } 
 
 static void 
@@ -157,7 +157,7 @@ LHU (u32 instruction)
     	assert(1);
     }
     iop.reg[rt] = (u64)iop_core_load_16(vaddr);
-    syslog("I-LHU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+    intlog("I-LHU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 } 
 
 static void 
@@ -174,7 +174,7 @@ LW (u32 instruction)
     }
  //   iop.reg[rt] = (s64)ee_load_32(vaddr);
     iop.reg[rt] = (s64)iop_core_load_32(translate_address(vaddr));
-    syslog("I-LW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+    intlog("I-LW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 }
 
 static void 
@@ -199,7 +199,7 @@ LWL (u32 instruction)
     u32 result 			= (iop.reg[rt] & LWL_MASK[shift] | aligned_vaddr << LWL_SHIFT[shift]);
     iop.reg[rt] 		= result;
 
-    syslog("I-LWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    intlog("I-LWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
 }
 
 static void 
@@ -224,7 +224,7 @@ LWR (u32 instruction)
     u32 result 			= (iop.reg[rt] & LWR_MASK[shift] | aligned_vaddr << LWR_SHIFT[shift]);
     iop.reg[rt] 		= result;
 
-    syslog("I-LDR [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    intlog("I-LDR [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
 } 
 
 static void 
@@ -235,7 +235,7 @@ LUI (u32 instruction)
     u16 rt      = instruction >> 16 & 0x1F;
     iop.reg[rt] = imm;
 
- //   syslog("I-LUI [{:d}] [{:#x}]\n", rt, imm); 
+ //   intlog("I-LUI [{:d}] [{:#x}]\n", rt, imm); 
 } 
 
 static void 
@@ -249,7 +249,7 @@ SB (u32 instruction)
 
     iop_core_store_8(vaddr, value);
 
- //   syslog("I-SB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+ //   intlog("I-SB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 } 
 
 static void 
@@ -267,7 +267,7 @@ SH (u32 instruction)
     }
 
     iop_core_store_16(vaddr, value);
-    syslog("I-SH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+    intlog("I-SH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 }
 
 static void 
@@ -285,7 +285,7 @@ SW (u32 instruction)
     }
 
     iop_core_store_32(vaddr, value);
-    syslog("I-SW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
+    intlog("I-SW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
 }
 
 static void 
@@ -306,21 +306,23 @@ SWL (u32 instruction)
     u32 aligned_vaddr   = vaddr & ~0x3;
     u32 shift           = vaddr & 0x3;
 
-	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
+//	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
+    u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
     u32 result 			= (iop.reg[rt] & SWL_MASK[shift] | aligned_vaddr << SWL_SHIFT[shift]);
-    iop_core_store_32(aligned_vaddr, aligned_dword);
-    syslog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+    //iop_core_store_32(aligned_vaddr, aligned_dword);
+    iop_core_store_32(aligned_vaddr, result);
+    intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
 } 
 
 static void 
 SWR (u32 instruction)
 {	
-    const u32 LWR_MASK[8] =
+    const u32 SWR_MASK[8] =
     {   
         0x00000000ULL, 0xff000000ULL, 0xffff0000ULL, 0xffffff00ULL, 
     };
 
-    const u8 LWR_SHIFT[4] = {0, 8, 16, 24};
+    const u8 SWR_SHIFT[4] = {0, 8, 16, 24};
 
     u16 base    		= instruction >> 21 & 0x1f;
     u16 rt      		= instruction >> 16 & 0x1f;
@@ -330,10 +332,12 @@ SWR (u32 instruction)
     u32 aligned_vaddr   = vaddr & ~0x3;
     u32 shift           = vaddr & 0x3;
 
-	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
-    u32 result 			= (iop.reg[rt] & LWR_MASK[shift] | aligned_vaddr << LWR_SHIFT[shift]);
-    iop_core_store_32(aligned_vaddr, aligned_dword);
-    syslog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
+//	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
+    u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
+    u32 result 			= (iop.reg[rt] & SWR_MASK[shift] | aligned_vaddr << SWR_SHIFT[shift]);
+    //iop_core_store_32(aligned_vaddr, aligned_dword);
+    iop_core_store_32(aligned_vaddr, result);
+    intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
 } 
 
 /*******************************************
@@ -354,7 +358,7 @@ ADD (u32 instruction)
 	iop.reg[rd] = iop.reg[rs] + iop.reg[rt];
 	
 	/* @@Incomplete: No overflow detection for now */
-    syslog("I-ADD [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);   
+    intlog("I-ADD [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);   
 } 
 
 static void
@@ -366,7 +370,7 @@ ADDI (u32 instruction)
 	iop.reg[rt] = imm + iop.reg[rs];
 
 	/* @@Incomplete: No overflow detection for now */
-    syslog("I-ADDI [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);  
+    intlog("I-ADDI [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);  
 } 
 
 static void
@@ -376,7 +380,7 @@ ADDU (u32 instruction)
 	u16 rt = instruction >> 16 & 0x1F;
 	u16 rs = instruction >> 21 & 0x1F;
 	iop.reg[rd] = iop.reg[rs] + iop.reg[rt];
-    syslog("I-ADDU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+    intlog("I-ADDU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
 }
 
 static void
@@ -387,7 +391,7 @@ ADDIU (u32 instruction)
 	auto imm = (u32)(s16)(instruction & 0xFFFF);
 	
 	iop.reg[rt] = imm + iop.reg[rs];
- //   syslog("I-ADDIU: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
+ //   intlog("I-ADDIU: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
 }
 
 static void
@@ -399,7 +403,7 @@ SUB (u32 instruction)
 	iop.reg[rd] = iop.reg[rs] - iop.reg[rt];
 
 	/* @@Incomplete: No overflow detection for now */
-    syslog("I-SUB [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
+    intlog("I-SUB [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
 }
 
 static void
@@ -410,7 +414,7 @@ SUBU (u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rd]    = iop.reg[rs] - iop.reg[rt];
     
-    syslog("I-SUBU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
+    intlog("I-SUBU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
 }
 
 static void 
@@ -421,7 +425,7 @@ AND(u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rd]    = iop.reg[rs] & iop.reg[rt];
     
-    syslog("I-AND [{:d}] [{:d}] [{:d}] \n", rd, rs, rt);
+    intlog("I-AND [{:d}] [{:d}] [{:d}] \n", rd, rs, rt);
 }
 
 static void 
@@ -432,7 +436,7 @@ ANDI (u32 instruction)
 	u16 rs 	       = instruction >> 21 & 0x1F;
 	iop.reg[rt]    = imm & iop.reg[rs];
     
-    syslog("I-ANDI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
+    intlog("I-ANDI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
 }
 
 static void
@@ -443,7 +447,7 @@ OR (u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rd]    = iop.reg[rs] | iop.reg[rt];
     
-    syslog("I-OR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+    intlog("I-OR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
 }
 
 static void
@@ -454,7 +458,7 @@ ORI (u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rt]    = imm | iop.reg[rs];
 
-    syslog("I-ORI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
+    intlog("I-ORI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
 }
 
 static void
@@ -464,7 +468,7 @@ XOR (u32 instruction)
 	u16 rt = instruction >> 16 & 0x1F;
 	u16 rs = instruction >> 21 & 0x1F;
 	iop.reg[rd] = iop.reg[rs] ^ iop.reg[rt];
-	syslog("I-XOR\n");
+	intlog("I-XOR\n");
 }
 
 static void
@@ -475,7 +479,7 @@ XORI (u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rt]    = imm ^ iop.reg[rs];
 
-    syslog("I-XORI [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);;
+    intlog("I-XORI [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);;
 }
 
 static void
@@ -486,7 +490,7 @@ NOR (u32 instruction)
 	u16 rs         = instruction >> 21 & 0x1F;
 	iop.reg[rd]    = ~(iop.reg[rs] | iop.reg[rt]);
 
-    syslog("I-NOR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+    intlog("I-NOR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
 }
 
 static void 
@@ -499,7 +503,7 @@ MULT (u32 instruction)
 	iop.LO = product & 0xFFFFFFFF;
 	iop.HI = product >> 32;
 
-    syslog("I-MULT [{:d}] [{:d}]\n", rs, rt);
+    intlog("I-MULT [{:d}] [{:d}]\n", rs, rt);
 } 
 
 static void 
@@ -512,7 +516,7 @@ MULTU (u32 instruction)
 	iop.LO = product & 0xFFFFFFFF;
 	iop.HI = product >> 32;
 
-    syslog("I-MULTU [{:d}] [{:d}]\n", rs, rt);
+    intlog("I-MULTU [{:d}] [{:d}]\n", rs, rt);
 }   
 
 static void 
@@ -525,7 +529,7 @@ DIV (u32 instruction)
 	iop.HI = (s32)(iop.reg[rs] & iop.reg[rt]);
 	
     /* @Incomplete: Result is undefined if rt is zero */
-    syslog("I-DIV [{:d}] [{:d}]\n", rs, rt);
+    intlog("I-DIV [{:d}] [{:d}]\n", rs, rt);
 } 
 
 static void 
@@ -539,7 +543,7 @@ DIVU (u32 instruction)
 	iop.HI = (iop.reg[rs] & iop.reg[rt]);
 	
     /* @Incomplete: Result is undefined if rt is zero */
-    syslog("I-DIVU [{:d}] [{:d}]\n", rs, rt);
+    intlog("I-DIVU [{:d}] [{:d}]\n", rs, rt);
 }
 
 static void 
@@ -552,7 +556,7 @@ SRL (u32 instruction)
     
     iop.reg[rd] = (s32)result;
 
-    syslog("I-SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
+    intlog("I-SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
 } 
 
 static void 
@@ -571,7 +575,7 @@ SRA (u32 instruction)
     
     iop.reg[rd] = result;
 
-    syslog("I-SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
+    intlog("I-SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
 } 
 
 static void 
@@ -585,7 +589,7 @@ SRAV (u32 instruction)
     auto result 	= (s32)(iop.reg[rt] >> sa);
     iop.reg[rd] 	= (s64)result;
     
-    syslog("I-SRAV [{:d}] [{:d}] [{:d}]\n", rd, rt, rs);
+    intlog("I-SRAV [{:d}] [{:d}] [{:d}]\n", rd, rt, rs);
 
 }
 
@@ -597,7 +601,7 @@ SLL (u32 instruction)
     u16 rt = instruction >> 16 & 0x1F;
     iop.reg[rd] = (u32)((s16)iop.reg[rt] << sa);
     
-    syslog("I-SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
+    intlog("I-SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
 } 
 
 static void 
@@ -609,7 +613,7 @@ SLLV (u32 instruction)
     u16 sa = iop.reg[rs] & 0x1F;
 
     iop.reg[rd] = (s32)(iop.reg[rt] << sa);
-    //syslog("I-SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
+    //intlog("I-SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
 }
 
 static void 
@@ -622,7 +626,7 @@ SLT (u32 instruction)
     auto result = iop.reg[rs] < iop.reg[rt] ? 1 : 0;
     iop.reg[rd] = result;
 
-    syslog("I-SLT [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+    intlog("I-SLT [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
 } 
 
 static void 
@@ -635,7 +639,7 @@ SLTI (u32 instruction)
     auto result = (iop.reg[rs] < (s32)imm) ? 1 : 0;
     iop.reg[rt] = result;
 	
-    syslog("I-SLTI [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
+    intlog("I-SLTI [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
 }
 
 static void 
@@ -647,7 +651,7 @@ SLTU (u32 instruction)
     uint32_t result = (iop.reg[rs] < iop.reg[rt]) ? 1 : 0;
     iop.reg[rd] = result;
 	
-    syslog("I-SLTU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
+    intlog("I-SLTU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
 
 } 
 
@@ -661,7 +665,7 @@ SLTIU (u32 instruction)
     u32 result = (iop.reg[rs] < imm) ? 1 : 0;
     iop.reg[rt] = result;
 
-    syslog("I-SLTIU [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);
+    intlog("I-SLTIU [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);
 }
 
 /*******************************************
@@ -693,7 +697,7 @@ J (u32 instruction)
     u32 offset      = ((iop.pc + 4) & 0xF0000000) + (instr_index << 2);
     jump_to(offset);
     
-    syslog("I-J [{:#x}]\n", offset);
+    intlog("I-J [{:#x}]\n", offset);
 } 
 
 static void 
@@ -703,7 +707,7 @@ JR (u32 instruction)
     //@Temporary: check the 2 lsb if 0
     jump_to(iop.reg[source]);
 	
-     syslog("I-JR source: [{:d}] pc_dest: [{:#x}]\n", source, iop.reg[source]);
+     intlog("I-JR source: [{:d}] pc_dest: [{:#x}]\n", source, iop.reg[source]);
 } 
 
 static void 
@@ -714,7 +718,7 @@ JAL (u32 instruction)
     iop.reg[31]  		= iop.pc + 8;
     jump_to(target_address); 
 
-    syslog("I-JAL [{:#x}] \n", target_address);  
+    intlog("I-JAL [{:#x}] \n", target_address);  
 }
 
 static void 
@@ -728,7 +732,7 @@ JALR (u32 instruction)
     else 		 { iop.reg[31] = return_addr; }
     jump_to(iop.reg[rs]);
 	
-    syslog("I-JALR [{:d}]\n", rs);
+    intlog("I-JALR [{:d}]\n", rs);
 } 
 
 static void 
@@ -742,7 +746,7 @@ BEQ (u32 instruction)
     bool condition = iop.reg[rs] == iop.reg[rt];
     branch(condition, imm);
 
- //   syslog("I-BEQ [{:d}] [{:d}] [{:#x}] \n", rs, rt, imm);
+ //   intlog("I-BEQ [{:d}] [{:d}] [{:#x}] \n", rs, rt, imm);
 } 
 
 static void 
@@ -754,7 +758,7 @@ BLEZ (u32 instruction)
     bool condition = iop.reg[rs] <= 0;
     branch(condition, offset);
 
-    syslog("I-BLEZ [{:d}] [{:#x}]\n", rs, offset); 
+    intlog("I-BLEZ [{:d}] [{:#x}]\n", rs, offset); 
 } 
 
 static void 
@@ -766,7 +770,7 @@ BGTZ (u32 instruction)
     bool condition = iop.reg[rs] > 0;
     branch(condition, offset);
 
-    syslog("I-BGTZ [{:d}] [{:#x}] \n", rs, offset);
+    intlog("I-BGTZ [{:d}] [{:#x}] \n", rs, offset);
 }
 
 static void 
@@ -780,7 +784,7 @@ BNE (u32 instruction)
     bool condition = iop.reg[rs] != iop.reg[rt];
     branch(condition, imm);
 
-    syslog("I-BNE [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
+    intlog("I-BNE [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
 }
 
 /*******************************************
@@ -792,7 +796,7 @@ MFHI (u32 instruction)
     u16 rd          = instruction >> 11 & 0x1F;
     iop.reg[rd]   = iop.HI;
     
-    syslog("I-MFHI [{:d}]\n", rd);
+    intlog("I-MFHI [{:d}]\n", rd);
 }
 
 static void
@@ -801,7 +805,7 @@ MTHI (u32 instruction)
     u16 rs = instruction >> 21 & 0x1F;
     iop.HI = iop.reg[rs];
     
-    syslog("I-MTHI [{:d}]\n", rs);
+    intlog("I-MTHI [{:d}]\n", rs);
 }
 
 static void
@@ -810,7 +814,7 @@ MFLO (u32 instruction)
     u16 rd        = instruction >> 11 & 0x1F;
     iop.reg[rd]   = iop.LO;
     
-    syslog("I-MFLO[{:d}]\n", rd);
+    intlog("I-MFLO[{:d}]\n", rd);
 }
 
 static void
@@ -819,7 +823,7 @@ MTLO (u32 instruction)
     u32 rs = instruction >> 21 & 0x1F;
     iop.LO = iop.reg[rs];
     
-    syslog("I-MTHI [{:d}]\n", rs);
+    intlog("I-MTHI [{:d}]\n", rs);
 }
 
 static void
@@ -829,7 +833,7 @@ RFE (u32 instruction)
     iop.cop0.status.current_kernel_mode  = iop.cop0.status.previous_kernel_mode;
     iop.cop0.status.previous_interrupt   = iop.cop0.status.old_interrupt;
     iop.cop0.status.previous_kernel_mode = iop.cop0.status.old_kernel;
-    syslog("I-RFE \n");
+    intlog("I-RFE \n");
 }
 
 /*******************************************
@@ -842,7 +846,7 @@ MFC0 (u32 instruction)
     u16 rt          = instruction >> 16 & 0x1F;
     iop.reg[rt]     = iop.cop0.r[rd];
     
-    syslog("I-MFC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
+    intlog("I-MFC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
 }
 
 static void
@@ -852,7 +856,7 @@ MTC0 (u32 instruction)
     u16 rt          = instruction >> 16 & 0x1F;
     iop.cop0.r[rd]  = iop.reg[rt];
     
-    syslog("I-MTC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
+    intlog("I-MTC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
 }
 
 /* Exception instructions. */

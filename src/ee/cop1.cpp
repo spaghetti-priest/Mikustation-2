@@ -53,7 +53,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 			u32 fs 			= (instruction >> 11) & 0x1F;
 			u32 rt 			= (instruction >> 16) & 0x1F;
 			ee->reg.r[rt].UW[0] = (s32)cop1.fpr[fs].u;
-			syslog("MFC1 [{:d}] [{:d}] \n", rt, fs);
+			intlog("MFC1 [{:d}] [{:d}] \n", rt, fs);
 		} break;
 		
 		case 0x04:
@@ -62,7 +62,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 			u32 rt 			= (instruction >> 16) & 0x1F;
 			cop1.fpr[fs].u 	= ee->reg.r[rt].UW[0];
 			
-			syslog("MTC1 [{:d}] [{:d}] \n", rt, fs);
+			intlog("MTC1 [{:d}] [{:d}] \n", rt, fs);
 		} break;
 
 		case 0x06:
@@ -71,7 +71,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 			u32 rt 		= (instruction >> 16) & 0x1F;
 			cop1.fcr31 	= ee->reg.r[rt].UW[0];
 			
-			syslog("CTC1 [{:d}] [{:d}] \n", rt, fs); 
+			intlog("CTC1 [{:d}] [{:d}] \n", rt, fs); 
 		} break;
 
 		case BC_INSTR:
@@ -103,7 +103,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					cop1.fpr[fd].f = reg1 * reg2;
 
 					/* @@Incomplete: Add exponent overflow and undeflow */
-					syslog("MUL.S [{:d}] [{:d}] [{:d}] \n", fd, fs, ft);
+					intlog("MUL.S [{:d}] [{:d}] [{:d}] \n", fd, fs, ft);
 				} break;
 
 				case 0x03:
@@ -129,7 +129,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					cop1.fpr[fd].f = nom / denom;
 					
 					/* @@Incomplete: Add exponent overflow and undeflow */
-					syslog("DIV.S [{:d}] [{:d}] [{:d}] \n", fd, fs, ft);
+					intlog("DIV.S [{:d}] [{:d}] [{:d}] \n", fd, fs, ft);
 				} break;
 		
 				case 0x06:
@@ -138,7 +138,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					u32 fs = (instruction >> 11) & 0x1F;
 					cop1.fpr[fd].f = cop1.fpr[fs].f;
 
-					syslog("MOV.S [{:d}] [{:d}]\n", fd, fs);
+					intlog("MOV.S [{:d}] [{:d}]\n", fd, fs);
 				}		
 				case 0x18:
 				{
@@ -147,7 +147,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					f32 reg1 	= convert(fs);
 					f32 reg2 	= convert(ft);
 					cop1.ACC.f 	= reg1 + reg2;
-					syslog("ADDA.S [{:d}] [{:d}] \n", fs, ft);
+					intlog("ADDA.S [{:d}] [{:d}] \n", fs, ft);
 				} break;
 
 				case 0x24:
@@ -155,7 +155,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					u32 fd = (instruction >> 6) & 0x1F;
 					u32 fs = (instruction >> 11) & 0x1F;
 					cop1.fpr[fd].u = (u32)floor(convert(fs));				
-					syslog("CVT.W.S [{:d}] [{:d}] \n", fd, fs);
+					intlog("CVT.W.S [{:d}] [{:d}] \n", fd, fs);
 				} break;
 
 				default:
@@ -176,7 +176,7 @@ cop1_decode_and_execute (R5900_Core *ee, u32 instruction)
 					u32 fd = (instruction >> 6) & 0x1F;
 					u32 fs = (instruction >> 11) & 0x1F;
 					cop1.fpr[fd].f = convert(fs);
-					syslog("CVT.S.W [{:d}] [{:d}] \n", fd, fs);
+					intlog("CVT.S.W [{:d}] [{:d}] \n", fd, fs);
 				} break;
 
 				default:

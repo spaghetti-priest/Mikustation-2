@@ -186,14 +186,14 @@ typedef struct _DMAController_ {
     union D_RBSR      ringbuffer_size;  
     union D_RBOR      ringbuffer_offset;  
     union D_STADR     stall_address;   
-    union D_ENABLEW   disabled_status;   
-    union D_ENABLER   disabled;   
+    union D_ENABLEW   hold_control;   
+    union D_ENABLER   hold_state;   
     DMA_Channel       channels[10];
 } DMAC;
 
 void dmac_reset();
-void dmac_write_32(u32 address, u32 value);
-u32 dmac_read_32(u32 address);
+void dmac_write(u32 address, u32 value);
+u32 dmac_read(u32 address);
 void dmac_cycle();
 
 #endif

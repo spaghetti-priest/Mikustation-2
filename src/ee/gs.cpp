@@ -5,34 +5,42 @@
 
 #include <iostream>
 #include <vector>
+#include "assert.h"
+
 #include "../include/ee/gs.h"
 #include "../include/common.h"
+#include "../include/ee/intc.h"
 
 alignas(16) GraphicsSynthesizer gs = {0};
 
-static void vertex_kick();
+static void vertex_kick(bool with_fog);
 static void drawing_kick();
+
+#define MIN(a, b) (a < b ? a : b)
+#define MAX(a, b) (a > b ? a : b)
+#define MIN3(a, b, c) (MIN(MIN(a,b), c))
+#define MAX3(a, b, c) (MAX(MAX(a,b), c))
 
 static inline u32
 pack_RGBA(u8 r, u8 b, u8 g, u8 a)
 {
-    u32 val;
+    u32 val = 0;
     val |= r;
     val |= b << 8;
     val |= g << 16;
     val |= a << 24;
-    return r;
+    return val;
 }
 
 enum Primitive_Types : u8
 {
-    POINT           = 0x0,  
-    LINE            = 0x1,
-    LINESTRIP       = 0x2,
-    TRIANGLE        = 0x3, 
-    TRIANGLESTRIP   = 0x4,
-    TRIANGLEFAN     = 0x5,
-    SPRITE          = 0x6,
+    _POINT           = 0x0,  
+    _LINE            = 0x1,
+    _LINESTRIP       = 0x2,
+    _TRIANGLE        = 0x3, 
+    _TRIANGLESTRIP   = 0x4,
+    _TRIANGLEFAN     = 0x5,
+    _SPRITE          = 0x6,
 };
 
 enum Alpha_Test_Methods : u8
@@ -73,7 +81,14 @@ gs_reset ()
 {
     memset(&gs, 0, sizeof(gs));
     syslog("Resetting Graphics Synthesizer\n");
-    gs.vram = (u16*)malloc(sizeof(u16) * MEGABYTES(4));
+    gs.vram = (u32*)malloc(sizeof(u32) * MEGABYTES(4));
+    memset(gs.vram, 0, sizeof(u32) * MEGABYTES(4));
+}
+
+void 
+gs_shutdown()
+{
+    free(gs.vram);
 }
 
 /*
@@ -81,6 +96,21 @@ gs_reset ()
 GIF PACKED FUNCTIONS
 ========================
 */
+void 
+gs_set_primitive (u64 value) 
+{
+    gs.prim.primitive_type          = (value) & 0x7;
+    gs.prim.shading_method          = (value >> 3) & 0x1;
+    gs.prim.do_texture_mapping      = (value >> 4) & 0x1;
+    gs.prim.do_fogging              = (value >> 5) & 0x1;
+    gs.prim.do_alpha_blending       = (value >> 6) & 0x1;
+    gs.prim.do_1_pass_antialiasing  = (value >> 7) & 0x1;
+    gs.prim.mapping_method          = (value >> 8) & 0x1;
+    gs.prim.context                 = (value >> 9) & 0x1;
+    gs.prim.fragment_value_control  = (value >> 10) & 0x1;
+    gs.prim.value                   = value;
+}
+
 void
 gs_set_q (f32 value)
 {
@@ -88,6 +118,7 @@ gs_set_q (f32 value)
 //    printf("GS SET Q\n");
 }
 
+// @Cleanup: Reduce the number of locations of which to manage state by writing all this data to gs_write_internal
 void
 gs_set_rgbaq (u8 r, u8 g, u8 b, u8 a)
 {
@@ -128,7 +159,7 @@ gs_set_xyzf2 (s16 x, s16 y, u32 z, u8 f)
     gs.xyzf2.z = z;
     gs.xyzf2.f = f;
 
-    vertex_kick();
+    vertex_kick(true);
     drawing_kick();
     //printf("GS SET XYZF2\n");
 }
@@ -140,8 +171,8 @@ gs_set_xyzf3 (s16 x, s16 y, u32 z, u8 f)
     gs.xyzf3.y = y;
     gs.xyzf3.z = z;
     gs.xyzf3.f = f;
-    vertex_kick();
-    //printf("GS SET XYZF3\n");
+    vertex_kick(true);
+    printf("GS SET XYZF3\n");
 }
 
 void 
@@ -151,7 +182,7 @@ gs_set_xyz2 (s16 x, s16 y, u32 z)
     gs.xyz2.y = y;
     gs.xyz2.z = z;
 
-    vertex_kick();
+    vertex_kick(false);
     drawing_kick();
     //printf("GS SET XYZ2\n");
 }
@@ -162,9 +193,11 @@ gs_set_xyz3 (s16 x, s16 y, u32 z)
     gs.xyz3.x = x;
     gs.xyz3.y = y;
     gs.xyz3.z = z;
-    vertex_kick();
-    //printf("GS SET XYZ3\n");
+    vertex_kick(false);
+    printf("GS SET XYZ3\n");
 }
+
+void gs_set_psm(u8 psm) {}
 
 void
 gs_set_crt (bool interlaced, s32 display_mode, bool ffmd)
@@ -180,10 +213,84 @@ gs_set_crt (bool interlaced, s32 display_mode, bool ffmd)
 }
 
 void
-gs_write_hwreg(u64 data)
+gs_render_crt (SDL_Context *context) 
 {
-    gs.hwreg.data = data;
+    PMODE *pmode        = &gs.pmode;
+    DISPLAY *display1   = &gs.display1;
+    DISPLAY *display2   = &gs.display2;
+    DISPFB *dispfb1     = &gs.dispfb1;
+    DISPFB *dispfb2     = &gs.dispfb2;
+    
+    // @Hack
+     u16 framebuffer_width    = ((dispfb2->value >> 9) & 0x3F) * 64; 
+
+    // @Incomplete: Check which of the circuits are enabled then use the respective display buffer
+    // But this is a low priority right now
+    // if (pmode->is_circuit2) 
+
+    u32 x_magh = display2->width / (display2->h_magnification + 1);
+    u32 y_magv = display2->height / (display2->v_magnification + 1);
+    // u32 y = dispfb2->y_position;
+    // u32 x = dispfb2->x_position;
+
+    for (u32 y = dispfb2->y_position; y < y_magv; ++y) {
+        for (u32 x = dispfb2->x_position; x < x_magh; ++x) {
+            // @Copypaste: Based off of Dobiestation output_crt just to get it working
+            u32 frame_x = x;
+            u32 frame_y = y;
+            frame_x *= framebuffer_width;
+            frame_x /= x_magh;
+            context->backbuffer->pixels[x + (y * x_magh)] = gs.vram[dispfb2->base_pointer + frame_x + (frame_y * framebuffer_width)];
+            // @Hack: Temporarily assume that MMOD and AMOD are true and this is the final output value
+            context->backbuffer->pixels[x + (y * x_magh)] |= 0xFF000000;
+        }
+    }
 }
+
+void
+gs_host_to_host_transmission (u64 data) {}
+
+void
+gs_write_hwreg (u64 data)
+{
+    TRXDIR *trxdir              = &gs.trxdir;
+    TRXPOS *trxpos              = &gs.trxpos;
+    TRXREG *trxreg              = &gs.trxreg;
+    BITBLTBUF *bitbltbuf        = &gs.bitbltbuf;
+    Transmission_Buffer *buffer = &gs.transmission_buffer;
+    u32 max_pixels              = trxreg->width * trxreg->height;
+
+    assert(trxdir->direction == 0x00 && "Illegal write to HWREG register when trxdir is not 0x0");
+
+    // BPP is 4 for PSMCT32 but because of hwreg being written twice its actually 2
+    u32 bytes_pp    = 2;
+    u32 x           = trxpos->dest_x_coord + buffer->row;
+    u32 y           = trxpos->dest_y_coord + buffer->pitch; 
+
+    // @Incomplete: Only PSMCT32 and its calculation is represented here     
+    {
+        buffer->address             = (bitbltbuf->dest_base_pointer + ((x + 0) + (bitbltbuf->dest_buffer_width * y)));
+        gs.vram[buffer->address]    = data;
+        buffer->address             = (bitbltbuf->dest_base_pointer + ((x + 1) + (bitbltbuf->dest_buffer_width * y)));
+        gs.vram[buffer->address]    = data >> 32;
+
+        buffer->row                 += bytes_pp;
+        buffer->pixel_count         += bytes_pp;
+    }
+    
+    if (buffer->row >= trxreg->width) {
+        buffer->pitch  += 1;
+        buffer->row     = 0;
+    }
+  
+    if (buffer->pixel_count == max_pixels) {
+        syslog("Ending: Host => Local Transmission\n");
+        gs.trxdir.direction = 3;
+        return;
+    }
+}
+
+void gs_select_transmission_mode() {}
 
 struct Vertex {
     XYZ pos;
@@ -195,7 +302,7 @@ struct Vertex {
 };
 
 struct Vertex_Queue {
-    //@@Remove: std is slow, but remove once it works
+    // @Remove: std is slow, but remove once it works
     std::vector<Vertex> queue;
     u32 size;
 };
@@ -204,19 +311,28 @@ typedef struct _Vector3_ {
     s32 x, y, z;
 } v3;
 
+typedef union _Vector2_ {
+    struct {
+        s32 x, y;
+    };
+    struct {
+        s32 u, v;
+    };
+} v2;
 
+// @Remove: Unnecessary Global Variable
 static Vertex_Queue vertex_queue = {
     .queue  = {},
     .size   = 0,
 };
 
 static inline bool 
-scissoring_test (v3 pos)
+scissor_test_fail (v3 *pos)
 {
-    //@@Incomplete: Only using context 1 for rendering for now
-    SCISSOR scissor     = gs.scissor_1;
-    bool test_x_fail    = (pos.x < scissor.min_x || pos.x > scissor.max_x);
-    bool test_y_fail    = (pos.y < scissor.min_y || pos.y > scissor.max_y);
+    // @Incomplete: Only using context 1 for rendering for now
+    SCISSOR *scissor    = &gs.scissor_1;
+    bool test_x_fail    = (pos->x < scissor->min_x || pos->x > scissor->max_x);
+    bool test_y_fail    = (pos->y < scissor->min_y || pos->y > scissor->max_y);
     
     return (test_x_fail || test_y_fail);
 }
@@ -227,125 +343,118 @@ scissoring_test (v3 pos)
         to the GS
     2.)  
 */
-static void draw_pixel (v3 pos, u32 color, u8 alpha) 
+static void draw_pixel (v3 *pos, u32 color) 
 {
-    bool write_fb_only = false, write_zb_only = false, write_rgb_only = false;
-
-    /* Alpha Test */
     //@@Incomplete: Only using context 1 for rendering for now
-    TEST test           = gs.test_1;
-    u8 alpha_test_value = test.alpha_comparison_value;
-    bool test_fail      = true;
+    TEST *test          = &gs.test_1;
+    FRAME *frame_1      = &gs.frame_1;
+    ZBUF *zbuf_1        = &gs.zbuf_1; 
 
-    if (test.alpha_test) {
-        switch(test.alpha_test_method)
+    // When a pixel fails a test, they are controlled by the GS in drawing 
+    // (meaning they remain unchanged during buffer write)
+    bool control_zb  = gs.zbuf_1.z_value_mask == 1; 
+    bool control_rgb = false;
+    bool control_a   = false; 
+
+    u8 alpha            = (color >> 24) & 0xFF;
+    u8 alpha_test_value = test->alpha_comparison_value;
+    //bool test_fail   = true;
+    bool test_succeded  = true;
+
+    if (test->alpha_test) {
+        switch(test->alpha_test_method)
         {
-            case NEVER:  test_fail = true;  break;
-            case ALWAYS: test_fail = false; break;
-
-            case LESS:
-            {
-                if (alpha < alpha_test_value)
-                    test_fail = false;
-            } break;
-
-            case LEQUAL:
-            {
-                if (alpha <= alpha_test_value)
-                    test_fail = false;
-            } break;
-
-            case EQUAL:
-            {
-                if (alpha == alpha_test_value)
-                    test_fail = false;
-            } break;
-
-            case GEQUAL:
-            {
-                if (alpha >= alpha_test_value)
-                    test_fail = false;
-            } break;
-
-            case GREATER:
-            {
-                if (alpha > alpha_test_value)
-                    test_fail = false;
-            } break;
-
-            case NOTEQUAL:
-            {
-                if (alpha != alpha_test_value)
-                    test_fail = false;
-            } break;
+            case NEVER:     test_succeded = false;                      break;
+            case ALWAYS:    test_succeded = true;                       break;
+            case LESS:      test_succeded = alpha < alpha_test_value;   break;
+            case LEQUAL:    test_succeded = alpha <= alpha_test_value;  break;
+            case EQUAL:     test_succeded = alpha == alpha_test_value;  break;
+            case GEQUAL:    test_succeded = alpha >= alpha_test_value;  break;
+            case GREATER:   test_succeded = alpha > alpha_test_value;   break;
+            case NOTEQUAL:  test_succeded = alpha != alpha_test_value;  break;
         }
 
-        if (test_fail) {
-            switch (test.alpha_fail_method)
+        if (!test_succeded) {
+            switch (test->alpha_fail_method)
             {
-                case KEEP: {}                           break;
-                case FB_ONLY:   write_fb_only = true;   break;
-                case ZB_ONLY:   write_zb_only = true;   break;
-                case RGB_ONLY:  write_rgb_only = true;  break;
+                case KEEP: 
+                    control_zb  = true;
+                    control_rgb = true;
+                    control_a   = true;
+                break;
+                
+                case FB_ONLY:   
+                    control_zb  = true;  
+                break;
+                
+                case ZB_ONLY:   
+                    control_rgb = true;  
+                    control_a   = true;  
+                break;
+                
+                case RGB_ONLY:  
+                    control_a   = true;  
+                    control_zb  = true;  
+                break;
             }
         }
     }
 
-    /* Destination Alpha Test */
-    u8 storage_format = gs.frame_1.storage_format;
-    if (test.destination_test) {
-        if (test.destination_test_mode == 1) {
-            if      (storage_format == PSMCT32) { test_fail = (alpha & (1 << 7)) ? false : true; } 
-            else if (storage_format == PSMCT16) { test_fail = (alpha == 1) ? false : false; } 
-        } else {
-            if      (storage_format == PSMCT32) { test_fail = (alpha & (0 << 7)) ? false : true; } 
-            else if (storage_format == PSMCT16) { test_fail = (alpha == 0) ? false : false; } 
+    u8 storage_format   = frame_1->storage_format;
+    u8 i                = test->destination_test_mode == 1 ? 1 : 0;
+    
+    if (test->destination_test) {
+        if (storage_format == PSMCT32) {
+            test_succeded = (alpha & (i << 7));
+        } else if (storage_format == PSMCT16) {
+            test_succeded = alpha == i;
         }
     }
 
-    // @@Note: Here we shift pos.x and pos.y by 4 bits to the right because the vertex position are floating point numbers
+    // Here we shift pos.x and pos.y by 4 bits to the right because the vertex position are floating point numbers
     // represented as unsigned numbers. THe intial 4 bits of the register are fractional 
-    int index = gs.zbuf_1.base_pointer + ((pos.x >> 4) + (pos.y >> 4) * gs.frame_1.buffer_width);
+    int index       = ((pos->x >> 4) + (pos->y >> 4) * (frame_1->buffer_width * 64));
+    int zpointer    = zbuf_1->base_pointer + index;
 
-    /* Depth Test */
-    bool depth_test_fail = true;
-    if (test.depth_test) {
-        switch(test.depth_test_method)
+    bool depth_test_success = true;
+    if (test->depth_test) {
+        switch(test->depth_test_method)
         {
             case NEVER:
-            {
-                depth_test_fail = true;
-            } break;
+                depth_test_success = false;
+            break;
+
             case ALWAYS:
-            {
-                depth_test_fail = false;
-            } break;
+                depth_test_success = true;
+            break;
+
             case GEQUAL:
-            {
-                if (pos.z >= gs.vram[index])
-                    depth_test_fail = false;
-            } break;
+                if (pos->z >= gs.vram[zpointer])
+                    depth_test_success = true;
+            break;
+
             case GREATER:
-            {
-                if (pos.z > gs.vram[index])
-                    depth_test_fail = false;
-            } break;
+                if (pos->z > gs.vram[zpointer])
+                    depth_test_success = true;
+            break;
         }
-
-        if (depth_test_fail) gs.zbuf_1.z_value_mask = 0;
     }
 
-    /* Alpha Blending */
-    if (gs.prim.alpha_blending)
-    {
-    }
+    // @Incomplete: No alpha blending
+    if (gs.prim.do_alpha_blending) {}
 
-    /* Update whatever needs to be updated */
-    if (write_fb_only) {
-    } else if (write_rgb_only) {
-    }
+    u8 buffer_alpha = gs.vram[frame_1->base_pointer + index] >> 24;
+    
+    if (!control_zb) {
+        gs.vram[frame_1->base_pointer + index] = pos->z;
+    } 
 
-    if(write_zb_only) {}
+    if (!control_rgb) {
+        if (!control_a) {
+            // @Incomplete: there is no alpha blending yet so not writes to alpha here
+        } 
+        gs.vram[frame_1->base_pointer + index] = color;
+    }
 }
 
 
@@ -355,87 +464,49 @@ static void render_point (std::vector<Vertex> vertices)
     u32 color;
 
     //@@Incomplete: Only using context 1 for rendering for now
-    XYOFFSET offset = gs.xyoffset_1;
+    XYOFFSET *offset = &gs.xyoffset_1;
 
-    pos.x = vertices[0].pos.x - offset.x;
-    pos.y = vertices[0].pos.y - offset.y;
+    pos.x = vertices[0].pos.x - offset->x;
+    pos.y = vertices[0].pos.y - offset->y;
     pos.z = vertices[0].pos.z;
 
-    if(scissoring_test(pos))
+    if(scissor_test_fail(&pos))
         return;
-
-    color = pack_RGBA(vertices[0].col.r, 
-                      vertices[0].col.g, 
-                      vertices[0].col.b, 
-                      vertices[0].col.a);
     
-    draw_pixel(pos, color, vertices[0].col.a);        
-    //printf("Render Point\n");
+    draw_pixel(&pos, color);        
+    // printf("Render Point\n");
 }
 
-#if 0
-static void 
-draw_line (Win32_Backbuffer *buffer, s32 x0, s32 x1, s32 y0, s32 y1, u32 color) 
-{
-    if (x0 < 0)                 x0 = 0;
-    if (y0 < 0)                 y0 = 0;
-    if (x1 > buffer->width)     x1 = buffer->width;
-    if (y1 > buffer->height)    y1 = buffer->height;
-
-    s32 dx      = std::abs(x1 - x0);
-    s32 sx      = x0 < x1 ? 1 : -1;
-    s32 dy      = -std::abs(y1 - y0);
-    s32 sy      = y0 < y1 ? 1 : -1;
-    s32 error   = dx + dy;
-    while ( true ) {
-        draw_pixel(buffer, x0, y0, color);
-        if ( x0 == x1 && y0 == y1 ) break;
-        int e2 = 2 * error;
-
-        if ( e2 >= dy ) {
-            if ( x0 == x1 ) break;
-            error = error + dy;
-            x0    = x0 + sx;
-        }
-
-        if ( e2 <= dx ) {
-            if ( y0 == y1) break;
-            error = error + dx;
-            y0    = y0 + sy;
-        }
-    }
-}
-#endif
-
-// @@Copypasta: From pepsiman_render.cpp
+// @Incomplete: Change to DDA drawing algorithm 
+// @Copypasta: From pepsiman_render.cpp
 // Bressenhams drawing algorithm: https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
 #include <stdlib.h>
-static void render_line(std::vector<Vertex> vertices) 
+static void render_line (std::vector<Vertex> vertices) 
 {
-    printf("Render line\n");
-
     v3 p[2];
     s32 x0, x1, y0, y1;
     s32 u0, u1, v0, v1;
-    XYOFFSET offset = gs.xyoffset_1;
+    XYOFFSET *offset = &gs.xyoffset_1;
     
-    x0  = int(vertices[0].pos.x - offset.x);
-    y0  = int(vertices[0].pos.y - offset.y);
+    x0  = int(vertices[0].pos.x - offset->x);
+    y0  = int(vertices[0].pos.y - offset->y);
 
-    x1  = int(vertices[1].pos.x - offset.x);
-    y1  = int(vertices[1].pos.y - offset.y);
+    x1  = int(vertices[1].pos.x - offset->x);
+    y1  = int(vertices[1].pos.y - offset->y);
 
     p[0] = {x0, y0};
     p[1] = {x1, y1};
-    if (scissoring_test(p[0]) || scissoring_test(p[1]))
+
+    if (scissor_test_fail(&p[0]) || scissor_test_fail(&p[1]))
         return;
 
+    // printf("Render line\n");
     u32 color = pack_RGBA(vertices[0].col.r, 
                           vertices[0].col.g, 
                           vertices[0].col.b, 
                           vertices[0].col.a);
 
-    s32 dx      = abs(x1 - x0 );
+    s32 dx      = abs(x1 - x0);
     s32 sx      = x0  < x1 ? 1 : -1;
     s32 dy      = -abs(y1 - y0);
     s32 sy      = y0 < y1 ? 1 : -1;
@@ -444,7 +515,7 @@ static void render_line(std::vector<Vertex> vertices)
     v3 pos = { x0 , y0, (int)vertices[0].pos.z };
     while (true) 
     {
-        draw_pixel (pos, color, 0);
+        draw_pixel (&pos, color);
         if (pos.x == x1 && pos.y == x1) break;
         int e2 = 2 * error;
 
@@ -467,42 +538,116 @@ static void render_triangle (std::vector<Vertex> vertices)
     printf("Drawing Kick!\n");
 
     // @@Incomplete: Only using context 1 for rendering for now
+    // @@Incomplete: No Support for triangle fans right now
     v3 verts[3];
     u32 color;
     u32 depth = 0;
-    XYOFFSET offset = gs.xyoffset_1;
+    XYOFFSET *offset = &gs.xyoffset_1;
 
-    verts[0].x = vertices[0].pos.x - offset.x;
-    verts[0].y = vertices[0].pos.y - offset.y;
+    verts[0].x = vertices[0].pos.x - offset->x;
+    verts[0].y = vertices[0].pos.y - offset->y;
     verts[0].z = vertices[0].pos.z;
 
-    verts[1].x = vertices[1].pos.x - offset.x;
-    verts[1].y = vertices[1].pos.y - offset.y;
+    verts[1].x = vertices[1].pos.x - offset->x;
+    verts[1].y = vertices[1].pos.y - offset->y;
     verts[1].z = vertices[1].pos.z;
 
-    verts[2].x = vertices[2].pos.x - offset.x;
-    verts[2].y = vertices[2].pos.y - offset.y;
+    verts[2].x = vertices[2].pos.x - offset->x;
+    verts[2].y = vertices[2].pos.y - offset->y;
     verts[2].z = vertices[2].pos.z;
 
-    // @@Incomplete: No Support for triangle fans right now
+    // Do we do the scissoring test before we get the bounding box coordinates?
+    if (scissor_test_fail(&verts[0]) || 
+        scissor_test_fail(&verts[1]) ||
+        scissor_test_fail(&verts[2]))
+        return;
+
+    u32 minx = MIN3(verts[0].x, verts[1].x, verts[2].x);
+    u32 miny = MIN3(verts[0].y, verts[1].y, verts[2].y);
+    u32 maxx = MAX3(verts[0].x, verts[1].x, verts[2].x);
+    u32 maxy = MAX3(verts[0].y, verts[1].y, verts[2].y);
+
     printf("Render Triangle\n");
 }
 
-static void render_sprite() 
+// @Copypaste: from pepsiman_renderer.cpp
+inline bool 
+is_top_left (v2 edge, float w) 
 {
-    printf("Drawing Kick!\n");
+    bool overlaps = (w == 0 ? ((edge.y == 0 && edge.x > 0) ||  edge.y > 0) : (w > 0));
+    return overlaps;
+}
+
+// @Copypaste: from pepsiman_render.cpp
+static float 
+orient_2d (v3 a, v3 b, v3 c) 
+{
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+static void 
+render_sprite (std::vector<Vertex> vertices)
+{
+    //printf("Drawing Kick!\n");
+    // @Incomplete: Texture mapping has not been implemented yet
+    v3 pos[2]; 
+    v2 uv[2];
+    u32 color;
+    u32 depth = 0;
+    XYOFFSET *offset = &gs.xyoffset_1;
+
+    pos[0].x = vertices[0].pos.x - offset->x;
+    pos[0].y = vertices[0].pos.y - offset->y;
+    pos[0].z = vertices[0].pos.z;
+    
+    pos[1].x = vertices[1].pos.x - offset->x;
+    pos[1].y = vertices[1].pos.y - offset->y;
+    pos[1].z = vertices[1].pos.z;
+
+    // @Incomplete: Assuming that psm is PSMCT32
+    color = pack_RGBA(vertices[0].col.r, 
+                      vertices[0].col.g, 
+                      vertices[0].col.b, 
+                      vertices[0].col.a);
+
+    // @Hack: Doing this just so I can get things working
+    pos[1].x = (pos[1].x - 1) >> 4;
+    pos[1].y = (pos[1].y - 1) >> 4;
+
+    // Do we do the scissoring test before we get the bounding box coordinates?
+    if (scissor_test_fail(&pos[0]) || scissor_test_fail(&pos[1]))
+        return;
+
+    // Get the bounding box coordinates
+    u32 minx = MIN(pos[0].x, pos[1].x);
+    u32 miny = MIN(pos[0].y, pos[1].y);
+    u32 maxx = MAX(pos[0].x, pos[1].x);
+    u32 maxy = MAX(pos[0].y, pos[1].y);
+
+    // @Incomplete: Check if pixels are top left 
+    // is_top_left();
+
+    v3 p; 
+    p.z = pos[0].z; 
+    for (p.y = miny; p.y < maxy; p.y++) {
+        for (p.x = minx; p.x < maxx; p.x++) {
+            draw_pixel(&p, color);
+        }
+    }
+
     printf("Render Sprite\n");
 }
 
 static void
-vertex_kick() 
+vertex_kick (bool with_fog) 
 {
+    // printf("Push Vertex\n");
     // @@Incomplete: XYZ3 and XYZF3 dont exist yet so XYZ2 for now.
     // Also assuming that XYZF and XYZ are the same.
     Vertex vertex = {
-        .pos.x  = gs.xyz2.x,
-        .pos.y  = gs.xyz2.y,
-        .pos.z  = gs.xyz2.z,
+        .pos.x  = 0,
+        .pos.y  = 0,
+        .pos.z  = 0,
         .col.r  = gs.rgbaq.r,
         .col.g  = gs.rgbaq.g,
         .col.b  = gs.rgbaq.b,
@@ -515,6 +660,16 @@ vertex_kick()
         .f      = gs.xyzf2.f,
     };
 
+    if (with_fog) {
+        vertex.pos.x  = gs.xyzf2.x;
+        vertex.pos.y  = gs.xyzf2.y;
+        vertex.pos.z  = gs.xyzf2.z;
+    } else {
+        vertex.pos.x  = gs.xyz2.x;
+        vertex.pos.y  = gs.xyz2.y;
+        vertex.pos.z  = gs.xyz2.z;
+    }
+
     vertex_queue.queue.push_back(vertex);
     vertex_queue.size += 1;
 }
@@ -526,7 +681,7 @@ drawing_kick()
         @@Incomplete: Check if the drawing attributes changed - PRMODE register
         and check the prim register for context change ex: using XOFFSET_1 or XOFFSET_2
     */
-    u16 type = gs.prim.primative_type;
+    u16 type = gs.prim.primitive_type;
     /*
         @@Bug: The prim type sometimes switches during a drawing kick, creating a mismatch between the queue size 
         and the required vertex size for the prim type. This leads to a situations where the queue size exponentialy
@@ -535,7 +690,7 @@ drawing_kick()
     u16 queue_size = vertex_queue.size;
     switch(type)
     {
-        case POINT:
+        case _POINT:
         {
             if (queue_size == 1) {
                 render_point(vertex_queue.queue);
@@ -544,7 +699,7 @@ drawing_kick()
             }
         } break;
 
-        case LINE:
+        case _LINE:
         {
             if (queue_size == 2) {
                 render_line(vertex_queue.queue);
@@ -553,19 +708,18 @@ drawing_kick()
             }
         } break;
 
-        case LINESTRIP:
+        case _LINESTRIP:
         {
             //@@Hack: not sure if this fixes the previously mentioned bug 
             if (queue_size >= 3) {
                 //render_point();
                 vertex_queue.queue.clear();
                 vertex_queue.size = 0;
-                printf("Line Strip\n");
-
+                //printf("Line Strip\n");
             }
         } break;
 
-        case TRIANGLE:
+        case _TRIANGLE:
         {
             if (queue_size == 3) {
                 render_triangle(vertex_queue.queue);
@@ -574,33 +728,32 @@ drawing_kick()
             }
         } break;
 
-        case TRIANGLESTRIP:
+        case _TRIANGLESTRIP:
         {
             //@@Hack: not sure if this fixes the previously mentioned bug 
             if (queue_size >= 3) {
                 //render_point();
                 vertex_queue.queue.clear();
                 vertex_queue.size = 0;
-                printf("Triangle Strip\n");
-
+               // printf("Triangle Strip\n");
             }
         } break;
 
-        case TRIANGLEFAN:
+        case _TRIANGLEFAN:
         {
             //@@Hack: not sure if this fixes the previously mentioned bug 
             if (queue_size >= 3) {
                 //render_point();
                 vertex_queue.queue.clear();
                 vertex_queue.size = 0;
-                printf("Traigle Fan\n");
+                //printf("Traigle Fan\n");
             }
         } break;
-
-        case SPRITE:
+        
+        case _SPRITE:
         {
             if (queue_size == 2) {
-                render_sprite();
+                render_sprite(vertex_queue.queue);
                 vertex_queue.queue.clear();
                 vertex_queue.size = 0;
             }
@@ -608,8 +761,8 @@ drawing_kick()
     }    
 }
 
-bool v_sync_interrupt = false;
-bool v_sync_generated = false;
+bool vsync_interrupt = false;
+bool vsync_generated = false;
 
 u32 
 gs_read_32_priviledged (u32 address) 
@@ -624,6 +777,9 @@ gs_read_32_priviledged (u32 address)
                 just doing this hack in order to continued onwards since it loops forever
              */
             syslog("GS_READ32: read from CSR value\n");
+            // @@Hack: Hardcode Set vsync to generate an interrupt
+            vsync_interrupt = false;
+            vsync_generated = true;
             return 0x8;
             //return gs.csr.value;
         } break;
@@ -650,6 +806,8 @@ gs_read_64_priviledged (u32 address)
                 just doing this hack in order to continued onwards since it loops forever
             */
             syslog("GS_READ: read from CSR\n");
+            vsync_interrupt = false;
+            vsync_generated = true;
             return 0x8;
             //return gs.csr.value;
         } break;
@@ -688,9 +846,9 @@ gs_write_32_priviledged (u32 address, u32 value)
             gs.csr.value = value;
         #endif
             syslog("GS_WRITE32: write to CSR. Value: [{:#x}]\n", value);
-            if (value & 0x8) {//(gs.csr.v_interrupt) {
-                v_sync_interrupt = true;
-                v_sync_generated = false;
+            if (value & 0x8) {
+                vsync_interrupt = true;
+                vsync_generated = false;
             }
             return;
         } break;
@@ -722,13 +880,14 @@ gs_write_64_priviledged (u32 address, u64 value)
         {
             syslog("GS_WRITE_PRIVILEDGED: write to PMODE. Value: [{:#08x}]\n", value);
             gs.pmode.value              = value;
-            gs.pmode.circuit1           = value & 0x1;
-            gs.pmode.circuit2           = (value >> 1) & 0x1;
+            gs.pmode.is_circuit1        = value & 0x1;
+            gs.pmode.is_circuit2        = (value >> 1) & 0x1;
             gs.pmode.CRT                = (value >> 2) & 0x3;
             gs.pmode.value_selection    = (value >> 5) & 0x1;   
             gs.pmode.output_selection   = (value >> 6) & 0x1;  
             gs.pmode.blending_selection = (value >> 7) & 0x1;
             gs.pmode.alpha_value        = (value >> 8) & 0xFF;    
+            gs.pmode.unused             = 0;
             return;
         } break;
 
@@ -782,7 +941,8 @@ gs_write_64_priviledged (u32 address, u64 value)
             syslog("GS_WRITE_PRIVILEDGED: write to DISPFB1. Value: [{:#x}]\n", value);
             gs.dispfb1.value            = value;
             gs.dispfb1.base_pointer     = (value & 0x1FF) * 2048;
-            gs.dispfb1.buffer_width     = ((value >> 9) & 0x2F) * 48;
+            // gs.dispfb1.buffer_width     = ((value >> 9) & 0x3F) * 64;
+            gs.dispfb1.buffer_width     = ((value >> 9) & 0x3F);
             gs.dispfb1.storage_formats  = (value >> 15) & 0x1F;
             gs.dispfb1.x_position       = (value >> 32) & 0x7FF;
             gs.dispfb1.x_position       = (value >> 43) & 0x7FF;
@@ -797,20 +957,21 @@ gs_write_64_priviledged (u32 address, u64 value)
             gs.display1.y_position      = (value >> 11) & 0xFFF;
             gs.display1.h_magnification = (value >> 23) & 0xF;
             gs.display1.v_magnification = (value >> 27) & 0x3;
-            gs.display1.area_width      = (value >> 32) & 0xFFF;
-            gs.display1.area_height     = (value >> 44) & 0x7FF;
+            gs.display1.width           = ((value >> 32) & 0xFFF) + 1;
+            gs.display1.height          = ((value >> 44) & 0x7FF) + 1;
             return;
         } break;
         
         case 0x12000090:
         {
             syslog("GS_WRITE_PRIVILEDGED: write to DISPFB2. Value: [{:#x}]\n", value);
-            gs.dispfb2.value            = value;
             gs.dispfb2.base_pointer     = (value & 0x1FF) * 2048;
-            gs.dispfb2.buffer_width     = ((value >> 9) & 0x2F) * 48;
+            gs.dispfb2.buffer_width     = ((value >> 9) & 0x3F) * 64;
+            gs.dispfb2.buffer_width     = ((value >> 9) & 0x3F);
             gs.dispfb2.storage_formats  = (value >> 15) & 0x1F;
             gs.dispfb2.x_position       = (value >> 32) & 0x7FF;
-            gs.dispfb2.x_position       = (value >> 43) & 0x7FF;
+            gs.dispfb2.y_position       = (value >> 43) & 0x7FF;
+            gs.dispfb2.value            = value;
             return;
         } break;
         
@@ -819,11 +980,11 @@ gs_write_64_priviledged (u32 address, u64 value)
             syslog("GS_WRITE_PRIVILEDGED: write to DISPLAY2. Value: [{:#x}]\n", value);
             gs.display2.value           = value;
             gs.display2.x_position      = value & 0xFFF;
-            gs.display2.y_position      = (value >> 11) & 0xFFF;
+            gs.display2.y_position      = (value >> 11) & 0x7FF;
             gs.display2.h_magnification = (value >> 23) & 0xF;
             gs.display2.v_magnification = (value >> 27) & 0x3;
-            gs.display2.area_width      = (value >> 32) & 0xFFF;
-            gs.display2.area_height     = (value >> 44) & 0x7FF;
+            gs.display2.width           = ((value >> 32) & 0xFFF) + 1;
+            gs.display2.height          = ((value >> 44) & 0x7FF) + 1;
             return;
         } break;
         
@@ -832,7 +993,8 @@ gs_write_64_priviledged (u32 address, u64 value)
             syslog("GS_WRITE_PRIVILEDGED: write to EXTBUF. Value: [{:#x}]\n", value);
             gs.extbuf.value                 = value;
             gs.extbuf.base_pointer          = (value & 0x3FFF) * 64;
-            gs.extbuf.buffer_width          = ((value >> 14) & 0x3F) * 64;
+            // gs.extbuf.buffer_width          = ((value >> 14) & 0x3F) * 64;
+            gs.extbuf.buffer_width          = ((value >> 14) & 0x3F);
             gs.extbuf.input_selection       = (value >> 20) & 0x3;
             gs.extbuf.interlace_mode        = (value >> 22) * 0x1;
             gs.extbuf.input_alpha_method    = (value >> 23) & 0x3;
@@ -891,8 +1053,8 @@ gs_write_64_priviledged (u32 address, u64 value)
             #endif
             syslog("GS_WRITE_PRIVILEDGED: write to CSR. Value: [{:#x}]\n", value);
             if (value & 0x8) {
-                v_sync_interrupt = true;
-                v_sync_generated = false;
+                vsync_interrupt = true;
+                vsync_generated = false;
             }
             return;
         } break;
@@ -936,29 +1098,14 @@ gs_write_64_priviledged (u32 address, u64 value)
 }
 
 void 
-gs_set_primitive (u64 value) 
-{
-    gs.prim.primative_type          = (value) & 0x7;
-    gs.prim.shading_method          = (value >> 3) & 0x1;
-    gs.prim.texture_mapping         = (value >> 4) & 0x1;
-    gs.prim.fogging                 = (value >> 5) & 0x1;
-    gs.prim.alpha_blending          = (value >> 6) & 0x1;
-    gs.prim.antialiasing            = (value >> 7) & 0x1;
-    gs.prim.mapping_method          = (value >> 8) & 0x1;
-    gs.prim.context                 = (value >> 9) & 0x1;
-    gs.prim.fragment_value_control  = (value >> 10) & 0x1;
-    gs.prim.value                   = value;
-}
-
-void 
-gs_write_64_internal (u8 address, u64 value) 
+gs_write_internal (u8 address, u64 value) 
 {
     switch(address)
     {
         case 0x00:
         {
             gs_set_primitive(value);
-            syslog("GS_WRITE_INTERNAL: write to PRIM. Value: [{:#04x}]\n", value);
+            syslog("GS_WRITE: write to PRIM. Value: [{:#04x}]\n", value);
         } break;
 
         case 0x01:
@@ -966,24 +1113,28 @@ gs_write_64_internal (u8 address, u64 value)
             gs.rgbaq.r = value & 0xFF;
             gs.rgbaq.g = (value >> 8) & 0xFF;
             gs.rgbaq.b = (value >> 16) & 0xFF;
-            gs.rgbaq.a = (value >> 24) & 0xFF;
+            
+            u32 a      = (value >> 24) & 0xFF;
+            gs.rgbaq.a = a == 0x80 ? 1.0 : a;
+            
             gs.rgbaq.q = (value >> 32);
-            syslog("GS_WRITE_INTERNAL: write to RGBAQ. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to RGBAQ. Value: [{:#x}]\n", value);
         } break;
 
         case 0x02:
         {
             /* Mostly compliant with iEEE 754 */
+            // lower 8 bits of the mantissa are rounded down
             gs.st.s = value & 0xFFFFFFFF;
             gs.st.t = (value >> 32);
-            syslog("GS_WRITE_INTERNAL: write to ST. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to ST. Value: [{:#x}]\n", value);
         } break;
         
         case 0x03:
         {
             gs.uv.u = (value >> 14) & 0x3FFFF;
             gs.uv.v = (value >> 32) & 0x3FFFF;
-            syslog("GS_WRITE_INTERNAL: write to UV. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to UV. Value: [{:#x}]\n", value);
         }
 
         case 0x04:
@@ -998,45 +1149,60 @@ gs_write_64_internal (u8 address, u64 value)
             gs.xyzf2.y      = (value >> 16) & 0xFFFF;
             gs.xyzf2.z      = (value >> 32) & 0xFFFF;
             gs.xyzf2.f      = (value >> 56) & 0xFF;
-            vertex_kick();
+            syslog("GS_WRITE: write to XYZF2. Value: [{:#x}]\n", value);
+            
+            vertex_kick(true);
             drawing_kick();
-            syslog("GS_WRITE_INTERNAL: write to XYZF2. Value: [{:#x}]\n", value);
         } break;
 
         case 0x05:
         {
+            /*
+                @@Note: I dont know if the game dev checks whether or not the register
+                has a max X and max Y (4095.9375) so check if that is the case in the
+                occasion there has to be a hardcoded solution
+            */
             gs.xyz2.x = (value) & 0xFFFF;
             gs.xyz2.y = (value >> 16) & 0xFFFF;
             gs.xyz2.z = (value >> 32);
             
-            XYZ xyz2 = {};
-            xyz2.x = (value) & 0xFFFF;
-            xyz2.y = (value >> 16) & 0xFFFF;
-            xyz2.z = (value >> 32);
-            gs.context[1].xyz = xyz2;
-
-            vertex_kick();
+            syslog("GS_WRITE: write to XYZ2. Value: [{:#x}]\n", value);
+            
+            vertex_kick(false);
             drawing_kick();
-            syslog("GS_WRITE_INTERNAL: write to XYZ2. Value: [{:#x}]\n", value);
         } break;
+
+        case 0x06:
+            gs.tex0_1.base_pointer            = (value & 0x3fff) * 64; 
+            gs.tex0_1.buffer_width            = (value >> 14) & 0x3f; 
+            gs.tex0_1.pixel_storage_format    = (value >> 20) & 0x3f; 
+            gs.tex0_1.texture_width           = (value >> 26) & 0xf;
+            gs.tex0_1.texture_height          = (value >> 30) & 0xf;
+            gs.tex0_1.color_component         = (value >> 34) & 0x1;
+            gs.tex0_1.texture_function        = (value >> 35) & 0x3;
+            gs.tex0_1.clut_base_pointer       = ((value >> 37) & 0x3fff) * 64;
+            gs.tex0_1.clut_storage_format     = (value >> 51) & 0xf;
+            gs.tex0_1.clut_storage_mode       = (value >> 55) & 0x1;
+            gs.tex0_1.clut_entry_offset       = (value >> 56) & 0x1f;
+            gs.tex0_1.clut_load_control       = (value >> 61) & 0x7;
+        break;
 
         case 0x18:
         {
-            XYOFFSET xyoffset = {};
-            xyoffset.x = (value) & 0xFFFF;
-            xyoffset.y = (value >> 32) & 0xFFFF;
-            gs.context[1].xyoffset = xyoffset;
-
             gs.xyoffset_1.x = (value) & 0xFFFF;
             gs.xyoffset_1.y = (value >> 32) & 0xFFFF;
-            syslog("GS_WRITE_INTERNAL: write to XYOFFSET_1. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to XYOFFSET_1. Value: [{:#x}]\n", value);
         } break;
 
         case 0x1A: 
         {
-            gs.prmodecont.primitive_register = value & 0x1;
-            syslog("GS_WRITE_INTERNAL: write to PRMODECONT. Value: [{:#x}]\n", value);
+            gs.prmodecont.specify_prim_register = value & 0x1;
+            syslog("GS_WRITE: write to PRMODECONT. Value: [{:#x}]\n", value);
         } break;
+
+        case 0x3f:
+            gs.texflush.value = value;
+        break;
 
         case 0x40:
         {
@@ -1044,13 +1210,19 @@ gs_write_64_internal (u8 address, u64 value)
             gs.scissor_1.max_x = (value >> 16) & 0x7FF;
             gs.scissor_1.min_y = (value >> 32) & 0x7FF;
             gs.scissor_1.max_y = (value >> 48) & 0x7FF;
-            syslog("GS_WRITE_INTERNAL: write to SCISSOR_1. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to SCISSOR_1. Value: [{:#x}]\n", value);
+        } break;
+        
+        case 0x45:
+        {
+            gs.dthe.control = value & 0x1;
+            syslog("GS_WRITE: write to DTHE. Value: [{:#x}]\n", value);
         } break;
         
         case 0x46:
         {
             gs.colclamp.clamp_method = value & 0x1;
-            syslog("GS_WRITE_INTERNAL: write to COLCLAMP. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to COLCLAMP. Value: [{:#x}]\n", value);
         } break;
 
         case 0x47:
@@ -1065,16 +1237,21 @@ gs_write_64_internal (u8 address, u64 value)
             gs.test_1.depth_test_method         = (value >> 17) & 0x3;
             gs.test_1.value                     = value;
             
-            syslog("GS_WRITE_INTERNAL: write to TEST_1. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to TEST_1. Value: [{:#x}]\n", value);
         } break;
 
         case 0x4C:
         {
+            u8 test1  = ((value >> 16) & 0x3F);
+            u16 test2 = ((value >> 16) & 0x3F);
+            test1 *= 64;
+            test2 *= 64;
             gs.frame_1.base_pointer     = (value & 0x1FF) * 2048;
             gs.frame_1.buffer_width     = ((value >> 16) & 0x3F) * 64;
+            //gs.frame_1.buffer_width     = ((value >> 16) & 0x3F);
             gs.frame_1.storage_format   = (value >> 24) & 0x3F;
             gs.frame_1.drawing_mask     = (value >> 32);
-            syslog("GS_WRITE_INTERNAL: write to FRAME_1. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to FRAME_1. Value: [{:#x}]\n", value);
         } break;
 
         case 0x4E:
@@ -1082,19 +1259,19 @@ gs_write_64_internal (u8 address, u64 value)
             gs.zbuf_1.base_pointer      = (value & 0x1FF) * 2048;
             gs.zbuf_1.storage_format    = (value >> 24) & 0xF;
             gs.zbuf_1.z_value_mask      = value >> 32 & 0x1;
-            syslog("GS_WRITE_INTERNAL: write to ZBUF_1. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to ZBUF_1. Value: [{:#x}]\n", value);
             return;
         } break;
 
         case 0x50: 
         {
-            gs.bitbltbuf.src_base_pointer       = value & 0x7fff;  
-            gs.bitbltbuf.src_buffer_width       = (value >> 16) & 0x7F;
+            gs.bitbltbuf.src_base_pointer       = (value & 0x7fff) * 64;  
+            gs.bitbltbuf.src_buffer_width       = ((value >> 16) & 0x7F) * 64;
             gs.bitbltbuf.src_storage_format     = (value >> 24) & 0x7F; 
-            gs.bitbltbuf.dest_base_pointer      = (value >> 32) & 0x7FFF;
-            gs.bitbltbuf.dest_buffer_width      = (value >> 48) & 0x7F;  
+            gs.bitbltbuf.dest_base_pointer      = ((value >> 32) & 0x7FFF) * 64;
+            gs.bitbltbuf.dest_buffer_width      = ((value >> 48) & 0x7F) * 64;  
             gs.bitbltbuf.dest_storage_format    = (value >> 56) & 0x7F;
-            syslog("GS_WRITE_INTERNAL: write to BITBLTBUF. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to BITBLTBUF. Value: [{:#x}]\n", value);
         } break;
 
         case 0x51: 
@@ -1104,20 +1281,32 @@ gs_write_64_internal (u8 address, u64 value)
             gs.trxpos.dest_x_coord            = (value >> 32) & 0x7FF;
             gs.trxpos.dest_y_coord            = (value >> 48) & 0x7FF;
             gs.trxpos.transmission_direction  = (value >> 59) & 0x3;
-            syslog("GS_WRITE_INTERNAL: write to TRXPOS. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to TRXPOS. Value: [{:#x}]\n", value);
         } break;
 
         case 0x52: 
         {
-            gs.trxreg.width = value & 0xFFF;
+            gs.trxreg.width  = value & 0xFFF;
             gs.trxreg.height = (value >> 32) & 0xFFF;
-            syslog("GS_WRITE_INTERNAL: write to TRXREG. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to TRXREG. Value: [{:#x}]\n", value);
         } break;
 
         case 0x53: 
         {
             gs.trxdir.direction = value & 0x3;
-            syslog("GS_WRITE_INTERNAL: write to TRXDIR. Value: [{:#x}]\n", value);
+            syslog("GS_WRITE: write to TRXDIR. Value: [{:#x}]\n", value);
+            switch(gs.trxdir.direction)
+            {
+                case 0: syslog("Executing Host => Local Transmission\n");  break;
+                case 1: syslog("Executing Local => Host Transmission\n");  break;
+                case 2: syslog("Executing Local => Local Transmission\n"); break;
+            }
+        } break;
+
+        case 0x54: 
+        {
+            if (gs.trxdir.direction == 0)
+                gs_write_hwreg(value);
         } break;
 
         // shut up

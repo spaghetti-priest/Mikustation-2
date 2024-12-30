@@ -3,17 +3,12 @@
 #ifndef R5900INTERP_H
 #define R5900INTERP_H
 
-#include <cstdint>
-#include <iostream>
-#include <vector>
-#include <fstream>
-#include <stdio.h>
-#include <cstdint>
-#include <array>
-
+/*
+#define WIN32_LEAN_AND_MEAN
 #if _WIN32 || _WIN64
 #include <windows.h>
 #endif
+*/
 
 #include "../ps2types.h"
 
@@ -88,7 +83,7 @@ union COP0_Cause {
         u32 BD2             : 1; // level 2 exception branch delay slot
         u32 BD              : 1; // level 1 exception branch delay slot
     };
-    uint32_t value;
+    u32 value;
 };
 
 union COP0_Status {
@@ -108,7 +103,7 @@ union COP0_Status {
             DEV     : 1, // DEV - If set, level 2 exceptions go to "bootstrap" vectors in BFC00xxx
             CU      : 4; //Coprocessor Usage, COP3 is disabled
     };
-    uint32_t value;
+    u32 value;
 };
 
 union COP0_Registers {
@@ -146,7 +141,7 @@ union COP0_Registers {
     };
     u32 regs[32];
 
-    inline u32 operator [](uint32_t i) {
+    inline u32 operator [](u32 i) {
         return regs[i];
     }
 };
@@ -231,7 +226,7 @@ ee_core_store_memory(u32 address, T value)
 #endif
 
 void r5900_cycle(R5900_Core *ee);
-//void r5900_reset(R5900_Core &ee);
+void ee_reset(R5900_Core *ee);
 void r5900_shutdown();
 
 #endif

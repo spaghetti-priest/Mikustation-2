@@ -4,6 +4,7 @@
  */
 
 #include "../include/ee/ipu.h"
+#include "../include/common.h"
 #include <iostream>
 
 IPU ipu = {};
@@ -12,7 +13,7 @@ void
 ipu_reset() 
 {
 	memset(&ipu, 0, sizeof(ipu));
-	printf("Resetting IPU \n");
+	syslog("Resetting IPU \n");
 }
 
 void 
@@ -24,7 +25,7 @@ ipu_write_32 (u32 address, u32 value)
 		{
 			ipu.command.write.command_option 	= value & 0x7FFFFFF;
 			ipu.command.write.command_code 		= (value >> 28) & 0x1F;
-			printf("IPU_CMD value: [%#08x]\n", value);
+			syslog("IPU_CMD value: [{:#08x}]\n", value);
 		} break;
 		
 		case 0x10002010:
@@ -36,7 +37,7 @@ ipu_write_32 (u32 address, u32 value)
 			ipu.control.mpeg_bit_stream 	= (value >> 23) & 0x1;
 			ipu.control.picture_type 		= (value >> 24) & 0x7;
 			ipu.control.reset 				= (value >> 30) & 0x1;
-			printf("IPU_CTRL value: [%#08x]\n", value);
+			syslog("IPU_CTRL value: [{:#08x}]\n", value);
 		} break;
 	}
 }
@@ -50,7 +51,7 @@ ipu_write_64 (u32 address, u64 value)
 		{
 			ipu.command.write.command_option 	= (value >> 0) & 0x0FFFFFFF;
 			ipu.command.write.command_code 		= (value >> 28) & 0xF;
-			printf("IPU_CMD\n");
+			syslog("IPU_CMD\n");
 		} break;
 	}
 }
@@ -75,7 +76,7 @@ ipu_read_32 (u32 address)
 			r |= ipu.control.mpeg_bit_stream  		<< 23;
 			r |= ipu.control.picture_type  			<< 24;
 			r |= ipu.control.busy  					<< 31;
-			printf("IPU_CTRL value: [%#08x]\n", r);
+			syslog("IPU_CTRL value: [{:#08x}]\n", r);
 			return r;
 		} break;
 
@@ -85,7 +86,7 @@ ipu_read_32 (u32 address)
 			r |= ipu.bitposition.bitstream_pointer << 0;
 			r |= ipu.bitposition.fifo_counter << 8;
 			r |= ipu.bitposition.fifo_pointer << 16;
-			printf("IPU_BP\n");
+			syslog("IPU_BP\n");
 			return r;
 		} break;
 	}
@@ -101,7 +102,7 @@ ipu_read_64 (u32 address)
 			u64 r;
 			r |= ipu.command.read.decoded_data << 0; 
 			r |= ipu.command.read.command_busy << 63;
-			printf("IPU_CMD\n");
+			syslog("IPU_CMD\n");
 			return r;
 		} break;
 		
@@ -110,12 +111,12 @@ ipu_read_64 (u32 address)
 			u64 r;
 			r |= ipu.bitstream.bstop << 0;
 			r |= ipu.bitstream.command_busy << 63;
-			printf("IPU_TOP\n");
+			syslog("IPU_TOP\n");
 			return r;
 		} break;
 	}
 }
 
 void ipu_fifo_write() {
-	printf("IPU in_fifo write\n");
+	syslog("IPU in_fifo write\n");
 }

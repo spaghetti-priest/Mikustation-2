@@ -89,16 +89,4 @@ union CPU_Types {
     s8   SB[16];
 };
 
-// @@Note: Removable: Putting this here since there is no dedicated file system yet
-inline const char *
-strip_file_path ( const char *s ) {
-#if _WIN32 || _WIN64
-    const char* last = strrchr(s, '\\');
-#else
-    const char* last = strrchr(s, '/');
-#endif
-   last += 1;
-   return last;
-}
-
 #endif

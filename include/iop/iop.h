@@ -99,22 +99,22 @@ iop_cop0_write_cause (IOP_COP0_Cause *cause, u32 data)
 inline void 
 iop_cop0_write_status (IOP_COP0_Status *status, u32 data)
 {
-    status->current_interrupt     = (data << 0);
-    status->current_kernel_mode   = (data << 1);
-    status->previous_interrupt    = (data << 2);
-    status->previous_kernel_mode  = (data << 3);
-    status->old_interrupt         = (data << 4);
-    status->old_kernel            = (data << 5);
+    status->current_interrupt     = (data >> 0) & 0x1;
+    status->current_kernel_mode   = (data >> 1) & 0x1;
+    status->previous_interrupt    = (data >> 2) & 0x1;
+    status->previous_kernel_mode  = (data >> 3) & 0x1;
+    status->old_interrupt         = (data >> 4) & 0x1;
+    status->old_kernel            = (data >> 5) & 0x1;
     status->interrupt_mask        = ((data >> 8) & 0xFF);
-    status->isolate_cache         = (data << 16);
-    status->swapped_cache         = (data << 17);
-    status->cache_parity_bit      = (data << 18);
-    status->last_load_operation   = (data << 19);
-    status->cache_parity_error    = (data << 20);
-    status->TLB_shutdown          = (data << 21);
-    status->boot_exception_vector = (data << 22);
-    status->reverse_endianess     = (data << 25);
-    status->cop0_enable           = (data << 28);
+    status->isolate_cache         = (data >> 16) & 0x1;
+    status->swapped_cache         = (data >> 17) & 0x1;
+    status->cache_parity_bit      = (data >> 18) & 0x1;
+    status->last_load_operation   = (data >> 19) & 0x1;
+    status->cache_parity_error    = (data >> 20) & 0x1;
+    status->TLB_shutdown          = (data >> 21) & 0x1;
+    status->boot_exception_vector = (data >> 22) & 0x1;
+    status->reverse_endianess     = (data >> 25) & 0x1;
+    status->cop0_enable           = (data >> 28) & 0x1;
 }
   
 // @Temporary @Note: Only using this for EE and IOP loads in the interconnect

@@ -6,8 +6,7 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#include "../ps2types.h"
-#include "dmac.h"
+#include <cstdint>
 
 // From: https://github.com/ps2dev/ps2sdk/blob/master/ee/kernel/include/timer.h#L53
 #define EECLK 		   (294912000)
@@ -31,10 +30,10 @@ enum Timers {
 
 union Tn_MODE {
 	struct {
-		u8 clock_selection : 2;
+		uint8_t clock_selection : 2;
 		bool gate_function_enable;
 		bool gate_selection;
-		u8 gate_mode : 2;
+		uint8_t gate_mode : 2;
 		bool zero_return;
 		bool count_enable;
 		bool compare_interrupt;
@@ -43,31 +42,31 @@ union Tn_MODE {
 		bool overflow_flag;
 		bool unused[19];
 	};
-	u32 value;
+	uint32_t value;
 };
 
 union Tn_COUNT {
 	struct {
-		u16 count;
-		u16 unused;
+		uint16_t count;
+		uint16_t unused;
 	};
-	u32 value;
+	uint32_t value;
 };
 
 union Tn_COMP {
 	struct {
-		u16 compare;
-		u16 unused;
+		uint16_t compare;
+		uint16_t unused;
 	};
-	u32 value;
+	uint32_t value;
 };
 
 union Tn_HOLD {
 	struct {
-		u16 hold;
-		u16 unused;
+		uint16_t hold;
+		uint16_t unused;
 	};
-	u32 value;
+	uint32_t value;
 };
 
 typedef struct _Timer_ {
@@ -76,13 +75,13 @@ typedef struct _Timer_ {
 	union Tn_COMP comp;
 	union Tn_HOLD hold;
 
-	u32 counter;
-	u32 prescaler;
+	uint32_t counter;
+	uint32_t prescaler;
 } Timer;
 
 void timer_reset();
-u32 timer_read(u32 address);
-void timer_write(u32 address, u32 value);
+uint32_t timer_read(uint32_t address);
+void timer_write(uint32_t address, uint32_t value);
 void timer_tick();
 
 #endif

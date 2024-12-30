@@ -2,10 +2,10 @@
 __________________________________________________________
  ___________    _______   ____  _____   __    __
 /\          \  /\__  __\ /\   \/ ____\ /\ \  /  \
-\ \___  __ __\ \/_/\ \-/ \/\   \/____/ \ \ \ \   \
+\ \___  __ __\ \/_/\ \-/ \ \   \/____/ \ \ \ \   \
  \ \  \ \ \\  \   __\_\__ \ \   \_____  \ \_\_____\
   \ \__\ \_\\__\ /\-_____\ \ \___\____\  \ \_______\
-   \/_\/\/_//__/ \/______/  \/___/____/   \/_______/  Mikustation 2: A Playstation 2 Emulator
+   \/_\/\/_//__/ \/______/  \/___/____/   \/_______/  Mikustation 2: Playstation 2 Emulator
 ___________________________________________________________
 
 -----------------------------------------------------------------------------
@@ -14,14 +14,13 @@ ___________________________________________________________
  */
 
 #include <thread> 
-#include <fstream>
 #include <typeinfo>
-#include "SDL2/include/SDL.h"
 
 #include "../include/ps2.h"
 #include "../include/loader.h"
 #include "../include/common.h"
 #include "../include/ps2types.h"
+#include "../include/sif.h"
 
 #include "../include/ee/r5900Interpreter.h"
 #include "../include/ee/gs.h"
@@ -34,19 +33,9 @@ ___________________________________________________________
 #include "../include/ee/ipu.h"
 #include "../include/ee/vu.h"
 #include "../include/ee/vif.h"
-
 #include "../include/iop/iop.h"
 #include "../include/iop/iop_dmac.h"
 
-typedef struct SDL_Backbuffer {
-    uint32_t w;
-    uint32_t h;
-    uint32_t pixel_format;
-    uint32_t pitch;
-    uint32_t *pixels;
-} SDL_Backbuffer;
-
-std::ofstream console("disasm.txt", std::ios::out);
 
 u32 MCH_RICM    = 0, MCH_DRD    = 0;
 u8 _rdram_sdevid = 0;
@@ -73,7 +62,7 @@ Range VU1_CODE_MEMORY   = Range(0x11008000, KILOBYTES(16));
 Range VU1_DATA_MEMORY   = Range(0x1100C000, KILOBYTES(16));
 Range GS_REGISTERS      = Range(0x12000000, KILOBYTES(8));
 Range IOP_RAM           = Range(0x1C000000, MEGABYTES(2));
-Range SCRATCHPAD        = Range(0x70000000, KILOBYTES(16));
+//Range SCRATCHPAD        = Range(0x70000000, KILOBYTES(16));
 
 // IOP Physical Memory Map.          From:Ps2tek
 Range PSX_RAM           = Range(0x00000000, MEGABYTES(2));
@@ -110,7 +99,7 @@ iop_output_to_console (u32 iop_pc)
 u8 
 iop_load_8 (u32 address)
 {
-    u8 r;
+    u8 r = 0;
 
     if (PSX_RAM.contains(address))  
         return *(u8*)&_iop_ram_[address];
@@ -125,7 +114,7 @@ iop_load_8 (u32 address)
 u16 
 iop_load_16 (u32 address)
 {
-    u16 r;
+    u16 r = 0;
 
     if (PSX_RAM.contains(address))  
         return *(u16*)&_iop_ram_[address];
@@ -140,7 +129,7 @@ iop_load_16 (u32 address)
 u32 
 iop_load_32 (u32 address)
 {
-    u32 r;
+    u32 r = 0;
 
     switch(address)
     {
@@ -248,7 +237,7 @@ iop_store_32 (u32 address, u32 value)
 u8 
 ee_load_8 (u32 address) 
 {
-    uint8_t r;
+    uint8_t r = 0;
 
     if (BIOS.contains(address)) 
         return *(u8*)&_bios_memory_[address & 0x3FFFFF];
@@ -264,7 +253,7 @@ ee_load_8 (u32 address)
 u16 
 ee_load_16 (u32 address) 
 {
-    uint16_t r;
+    uint16_t r = 0;
 
     if (BIOS.contains(address)) 
         return *(u16*)&_bios_memory_[address & 0x3FFFFF];
@@ -274,6 +263,10 @@ ee_load_16 (u32 address)
 
     if (IOP_RAM.contains(address)) 
         return *(u16*)&_iop_ram_[address & 0x1FFFFF];
+
+    if (address == 0x1a000006) 
+        return 1;
+
     errlog("[ERROR]: Could not read load_memory16() at address [{:#09x}]\n", address);
     
     return r;
@@ -282,12 +275,10 @@ ee_load_16 (u32 address)
 u32 
 ee_load_32 (u32 address) 
 {
-    uint32_t r;
+    uint32_t r = 0;
     
     switch(address) 
     {
-        printf("Hardware I/O read addr: {%#x}\n", address); 
-
         case 0x10002010:
         {
             return ipu_read_32(address);
@@ -312,13 +303,6 @@ ee_load_32 (u32 address)
         {
             //printf("Read from MCH_RICM\n");
             return 0;
-        } break;
-
-
-        case 0x1000F210:
-        {
-            printf("READ: IOP->EE communication\n");
-            return 0x1000C030;
         } break;
         
         case 0x1000f440:
@@ -347,21 +331,24 @@ ee_load_32 (u32 address)
         } break;
     }
 
+    if (address >= 0x1000F200 && address <= 0x1000F260)
+        return sif_read(address);
+
     if (GS_REGISTERS.contains(address))
         return gs_read_32_priviledged(address);
 
-    if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000)
-        return gif_read_32(address);
+    //if ((address & 0xFFFFF000) == 0x10003000)
+    if ((address >= 0x10003000) && (address <= 0x100030A0))
+        return gif_read(address);
 
-    if (address >= 0x10008000 && address < 0x1000f000)
-        return dmac_read_32(address);
+    if (address >= 0x10008000 && address < 0x1000f590)
+        return dmac_read(address);
 
     if (address >= 0x10000000 && address <= 0x10001840)
         return timer_read(address);
     
-    if (IOP_RAM.contains(address)) {
+    if (IOP_RAM.contains(address))
        return *(u32*)&_iop_ram_[address & 0x1FFFFF];
-    }
 
     if (BIOS.contains(address)) 
         return *(uint32_t*)&_bios_memory_[address & 0x3FFFFF];
@@ -377,15 +364,19 @@ ee_load_32 (u32 address)
 u64 
 ee_load_64 (u32 address) 
 {
-    uint64_t r;
+    uint64_t r = 0;
     if (RDRAM.contains(address)) 
         return *(uint64_t*)&_rdram_[address];
 
     if (GS_REGISTERS.contains(address))
         return gs_read_64_priviledged(address);
-
     
-    errlog("[ERROR]: Could not read load_memory64() at address [{:#09x}]\n", address);
+    if (address == 0x10006000 || address == 0x10006008) {
+        gif_fifo_read(address);
+        return 0;
+    }
+    
+    // errlog("[ERROR]: Could not read load_memory64() at address [{:#09x}]\n", address);
     return r;
 }
 
@@ -444,7 +435,6 @@ ee_store_32 (u32 address, u32 value)
 {
     switch (address)
     {
-        printf("Hardware I/O write value: [%#08x], addr: [%#08x]\n", value, address ); 
         case 0x10002000:
         {
             ipu_write_32(address, value);
@@ -475,12 +465,6 @@ ee_store_32 (u32 address, u32 value)
             return;
         } break;
 
-        case 0x1000F200:
-        {
-            printf("WRITE: EE->IOP communication\n");
-            return;
-        } break;
-
         case 0x1000f430:
         {
             uint8_t SA = (value >> 16) & 0xFFF;
@@ -506,18 +490,24 @@ ee_store_32 (u32 address, u32 value)
     //@@Note: Not sure what is this is
     if (address == 0x1000f500) return;
 
+    if (address >= 0x1000F200 && address <= 0x1000F260) {
+        sif_write(address, value);
+        return;
+    }
+
     if (GS_REGISTERS.contains(address)) {
         gs_write_32_priviledged(address, value);
         return;
     }
 
-    if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000) {
-        gif_write_32(address, value);
+    //if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000) {
+    if ((address >= 0x10003000) && (address <= 0x100030A0)) {
+        gif_write(address, value);
         return;
     }
 
     if (address >= 0x10008000 && address < 0x1000f000) {
-       dmac_write_32(address, value);
+       dmac_write(address, value);
        return;
     }
 
@@ -553,8 +543,8 @@ ee_store_64 (u32 address, u64 value)
     }
 
     /* @@Move @@Incomplete: This is a 128 bit move this should be moved into a different function */
-    if (address ==  0x10006000 || address == 0x10006008) {
-        gif_fifo_write(address, value);
+    if (address == 0x10006000 || address == 0x10006008) {
+        gif_fifo_write(address);
         return;
     }
 
@@ -636,233 +626,18 @@ check_interrupt (bool value, bool int0_priority, bool int1_priorirty)
     return 1;
 }
 
-//@@Move all of this into a Kernel file
-//From: Ps2SDK
-//Used as argument for CreateThread, ReferThreadStatus
-typedef struct t_ee_thread_param
+inline void 
+swap_framebuffers (SDL_Context *context)
 {
-    int status;           // 0x00
-    void *func;           // 0x04
-    void *stack;          // 0x08
-    int stack_size;       // 0x0C
-    void *gp_reg;         // 0x10
-    int initial_priority; // 0x14
-    int current_priority; // 0x18
-    u32 attr;             // 0x1C
-    u32 option;           // 0x20 Do not use - officially documented to not work.
-} thread_param;
+    // @Fix: Pitch is giving me a headache I can see the light in the future
+    SDL_UnlockSurface(context->surface);
 
-typedef struct t_ee_sema_param
-{
-    int count,
-        max_count,
-        init_count,
-        wait_threads;
-    u32 attr,
-        option;
-} semaphore_param;
+    u32 mem_size = context->backbuffer->w * context->backbuffer->h * sizeof(u32);
+    memcpy(context->surface->pixels, context->backbuffer->pixels, mem_size);
 
-struct TCB //Internal thread structure
-{
-    struct TCB *prev;
-    struct TCB *next;
-    int status;
-    void *func;
-    void *current_stack;
-    void *gp_reg;
-    short current_priority;
-    short init_priority;
-    int wait_type; //0=not waiting, 1=sleeping, 2=waiting on semaphore
-    int sema_id;
-    int wakeup_count;
-    int attr;
-    int option;
-    void *_func; //???
-    int argc;
-    char **argv;
-    void *initial_stack;
-    int stack_size;
-    int *root; //function to return to when exiting thread?
-    void *heap_base;
-};
-
-struct thread_context //Stack context layout
-{
-    u32 sa_reg;  // Shift amount register
-    u32 fcr_reg;  // FCR[fs] (fp control register)
-    u32 unkn;
-    u32 unused;
-    u128 at, v0, v1, a0, a1, a2, a3;
-    u128 t0, t1, t2, t3, t4, t5, t6, t7;
-    u128 s0, s1, s2, s3, s4, s5, s6, s7, t8, t9;
-    u64 hi0, hi1, lo0, lo1;
-    u128 gp, sp, fp, ra;
-    u32 fp_regs[32];
-};
-
-struct semaphore //Internal semaphore structure
-{
-    struct sema *free; //pointer to empty slot for a new semaphore
-    int count;
-    int max_count;
-    int attr;
-    int option;
-    int wait_threads;
-    struct TCB *wait_next, *wait_prev;
-};
-
-//@@Incomplete: My own incomplete interpretation of a BIOS thread
-struct Thread
-{
-    int status;
-    void *stack;
-    s32 stack_size;
-    s32 init_priority;
-    s32 current_priority;
-    u32 thread_id;
-    void *heap_base;
-};
-
-/** Thread status */
-#define THREAD_RUN         0x01
-#define THREAD_READY       0x02
-#define THREAD_WAIT        0x04
-#define THREAD_SUSPEND     0x08
-#define THREAD_WAITSUSPEND 0x0c
-#define THREAD_DORMANT     0x10
-
-/** Thread WAIT Status */
-#define THREAD_NONE  0 // Thread is not in WAIT state
-#define THREAD_SLEEP 1
-#define THREAD_SEMA  2
-
-#define MAX_THREADS 256
-#define MAX_SEMAPHORES 256
-#define MAX_PRIORITY_LEVELS 128
-
-static void
-SetGsCrt (bool interlaced, int display_mode, bool ffmd)
-{
-    gs_set_crt(interlaced, display_mode, ffmd);
-    syslog("SetGsCrt \n");
+    SDL_LockSurface(context->surface);
+    SDL_UpdateWindowSurface(context->window);
 }
-
-std::vector<Thread> threads(MAX_THREADS);
-u32 current_thread_id;
-
-//AKA: RFU060 or SetupThread
-static void
-InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root)
-{
-    u32 stack_base = (u32)stack;
-    u32 rdram_size = RDRAM.start + RDRAM.size;
-    u32 stack_addr = 0;   
-
-    if (stack_base == -1) {
-        stack_addr = rdram_size - stack_size; 
-    } else {
-        stack_addr = stack_base + stack_size;
-    }
-
-    //@Note: ??? Find out what this is 
-    stack_addr -= 0x2A0;
-
-    current_thread_id = 0;
-
-    Thread main_thread = {
-        .status             = THREAD_RUN,
-        .stack              = (void*)stack_addr,
-        .stack_size         = stack_size,
-        .init_priority      = 0,
-        .current_priority   = 0,
-        .thread_id          = current_thread_id,
-    };
-    
-    threads.push_back(main_thread);
-
-    //Return
-    ee.reg.r[2].UD[0] = stack_addr;
-    syslog("InitMainThread \n");
-}
-
-//AKA: RFU061
-static void
-InitHeap (void *heap, s32 heap_size)
-{
-    auto thread = &threads[0];
-    u32 heap_start = (u32)heap;
-
-    if (heap_start == -1) {
-        thread->heap_base = thread->stack;
-    } else {
-        thread->heap_base = (void*)(heap_start + heap_size);
-    }
-
-    // Return
-    ee.reg.r[2].UD[0] = (u64)thread->heap_base;
-    syslog("InitHeap\n");
-}
-
-static void
-FlushCache() 
-{
-    syslog("FlushCache\n");
-}
-
-static void 
-GsPutIMR (u64 imr)
-{
-    gs_write_64_priviledged(0x12001010, imr);
-    syslog("GSPutIMR\n");
-}
-
-static void
-dump_all_ee_registers(R5900_Core *ee)
-{
-    for (int i = 0; i < 32; ++i) {
-        printf("EE Register [%d] contains [%08x]\n", i, ee->reg.r[i].UD[0]);
-    }
-}
-
-/* 
-From:   https://www.psdevwiki.com/ps2/Syscalls 
-        https://psi-rockin.github.io/ps2tek/#bioseesyscalls
-*/
-void 
-bios_hle_syscall (R5900_Core *ee, u32 syscall)
-{
-    void *return_   = (void *)ee->reg.r[2].UD[0];
-    void *param0    = (void *)ee->reg.r[4].UD[0];
-    void *param1    = (void *)ee->reg.r[5].UD[0];
-    void *param2    = (void *)ee->reg.r[6].UD[0];
-    void *param3    = (void *)ee->reg.r[7].UD[0];
-    void *param4    = (void *)ee->reg.r[8].UD[0];
-
-    switch(syscall)
-    {
-        case 0x02: SetGsCrt((bool)param0, (s32)param1, (bool)param2); break;
-        case 0x3C: InitMainThread((u32)param0, param1, (s32)param2, (char*)param3, (s32)param4); break;
-        case 0x3D: InitHeap(param0, (s32)param1);
-        case 0x64: FlushCache(); break;
-        case 0x71: GsPutIMR((u64)param0); break;
-        default:
-        {
-            printf("Unknown Syscall: [%#x]\n", syscall);
-            return;
-        }
-    }
-}
-
-typedef struct _SDL_Context_ {
-    SDL_Event       event;
-    SDL_Window      *window;
-    SDL_Renderer    *renderer;
-    SDL_Texture     *texture;
-    SDL_Backbuffer  backbuffer;
-
-    bool running;
-    bool left_down;
-} SDL_Context;
 
 int 
 main (int argc, char **argv) 
@@ -872,6 +647,7 @@ main (int argc, char **argv)
     SDL_Window      *window;
     SDL_Renderer    *renderer;
     SDL_Texture     *texture;
+    SDL_Surface     *surface; 
     SDL_Backbuffer  backbuffer;
     bool running    = true;
     bool left_down  = false;
@@ -883,14 +659,17 @@ main (int argc, char **argv)
         return -1;
     }
 
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
     printf("Mikustation 2: A Playstation 2 Emulator and Debugger\n");
     printf("\n=========================\n...Reseting...\n=========================\n");
 
 // @@Incomplete @@Implementation: Eventually remove hardcoded path. Ask for the path at runtime 
 #if _WIN32 || _WIN64
-    const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
-    //const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
-    const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
+    //const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
+    const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph39001.bin";
+    // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
+    const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
+    // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02b\\demo2b.elf";
 #else
     const char *bios_filename = "../data/bios/scph10000.bin";
 #endif    
@@ -905,22 +684,11 @@ main (int argc, char **argv)
     
     if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
 
-    // @@Incomplete: Move this into its own function
-    {
-        printf("Resetting Emotion Engine Core\n");
-        memset(&ee, 0, sizeof(R5900_Core));
-        ee = {
-            .pc            = 0xbfc00000,
-            .current_cycle = 0,
-        };
-        ee.cop0.regs[15]    = 0x2e20;
-
-    }
-    
-    //r5900_reset(ee);
+    ee_reset(&ee);
     dmac_reset();
     gs_reset();
     gif_reset();
+    intc_reset();
     timer_reset();
     cop1_reset();
     ipu_reset();
@@ -936,28 +704,41 @@ main (int argc, char **argv)
         .w              = 640,
         .h              = 480,
         .pixel_format   = SDL_PIXELFORMAT_ARGB8888,
-        .pitch          = 640 * sizeof(uint32_t),
+        .pitch          = 640 * 4,
         .pixels         = new uint32_t[648 * 480],
     };
 
-    window = SDL_CreateWindow("Mikustation_2\n",
+    window = SDL_CreateWindow("Mikustation 2\n",
                             SDL_WINDOWPOS_UNDEFINED, 
                             SDL_WINDOWPOS_UNDEFINED, 
-                            backbuffer.h, 
                             backbuffer.w, 
+                            backbuffer.h, 
                             0);
     
     renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_RenderSetLogicalSize(renderer, 640, 480);
     
     texture = SDL_CreateTexture(renderer,
                                 backbuffer.pixel_format, 
-                                SDL_TEXTUREACCESS_STATIC, 
-                                backbuffer.h, 
-                                backbuffer.w);
+                                SDL_TEXTUREACCESS_STREAMING, 
+                                backbuffer.w, 
+                                backbuffer.h);
 
-    //size_t set_size = backbuffer.w * backbuffer.pitch;
-    size_t set_size = 640 * sizeof(uint32_t) * 480;
-    memset(backbuffer.pixels, 255, set_size);
+    surface = SDL_GetWindowSurface(window);
+
+    if (!surface) {
+        printf("[ERROR]: %s\n", SDL_GetError());
+        return 0;
+    }
+
+    main_context = {
+        .event      = &event,
+        .window     = window,
+        .renderer   = renderer,
+        .texture    = texture,
+        .surface    = surface,
+        .backbuffer = &backbuffer,
+    };
 
     while (running) {
         instructions_run = 0;  
@@ -971,14 +752,19 @@ main (int argc, char **argv)
             if (instructions_run % 8 == 0) { iop_cycle(); }
             instructions_run++;            
 
-            if(INTC_MASK & 0x4) 
+            // if (intc_read(0x1000f010) & 0x4) {
+            
+            if(instructions_run == 475000) {
                 request_interrupt(INT_VB_ON);
-
+                gs_render_crt(&main_context);
+                swap_framebuffers(&main_context);
+            }
+            request_interrupt(INT_VB_OFF);
+        
         }
-#if 0
+#if 1
         /* Emulator Step Through*/
-        //SDL_UpdateTexture(texture, NULL, backbuffer.pixels, backbuffer.pitch);
-        SDL_WaitEvent(&event);
+        SDL_PollEvent(&event);
         switch (event.type)
         {
             case SDL_QUIT:
@@ -991,22 +777,13 @@ main (int argc, char **argv)
             case SDL_MOUSEBUTTONDOWN:
                 if (event.button.button == SDL_BUTTON_LEFT)
                     left_down = true;
-            case SDL_MOUSEMOTION:
-                if (left_down) {
-                    int mouseX = event.motion.x;
-                    int mouseY = event.motion.y;
-                    backbuffer.pixels[mouseY * 640 + mouseX] = 0;
-                }
-                break;
         }
-        //SDL_RenderClear(renderer);
-        //SDL_RenderCopy(renderer, texture, NULL, NULL);
-        //SDL_RenderPresent(renderer);
 #endif
     }
 
     r5900_shutdown();
-    
+    gs_shutdown();
+
     free(_bios_memory_);
     free(_rdram_);
     delete[] backbuffer.pixels;

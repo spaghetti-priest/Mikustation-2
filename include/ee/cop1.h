@@ -2,7 +2,6 @@
 #define COP1_H
 
 #include "r5900Interpreter.h"
-#include "../ps2types.h"
 
 union FPRreg {
 	float f;

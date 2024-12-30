@@ -1,7 +1,7 @@
 #ifndef _IOP_TIMER_H
 #define _IOP_TIMER_H
 
-#include "../common.h"
+#include <cstdint>
 
 enum Timers {
 	TIMER_0,
@@ -13,14 +13,14 @@ enum Timers {
 };
 
 union TN_COUNT {
-	u32 value;
+	uint32_t value;
 };
 
 union TN_MODE {
-	u32 value;
+	uint32_t value;
 };
 
 union TN_TARGET {
-	u32 value;
+	uint32_t value;
 };
 #endif

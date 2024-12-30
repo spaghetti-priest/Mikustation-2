@@ -4,9 +4,22 @@
  */
 
 #include "../include/loader.h"
+#include "../include/common.h"
 #include "../include/ps2.h"
 #include <iostream>
 #include <assert.h>
+
+//@Cleanup: This resides here since there is no dedicated file IO
+inline const char *strip_file_path (const char *s) 
+{
+#if _WIN32 || _WIN64
+    const char* last = strrchr(s, '\\');
+#else
+    const char* last = strrchr(s, '/');
+#endif
+   last += 1;
+   return last;
+}
 
 bool 
 load_elf(R5900_Core *ee, const char *path)
@@ -16,7 +29,7 @@ load_elf(R5900_Core *ee, const char *path)
 	u8 *elf;
 	u64 addr = 0;
 
-	assert(f);
+	assert(f && "File name or Path for ELF file cannot be found");
 
 	fseek(f, 0, SEEK_END);
 	size_t file_size = ftell(f);
@@ -25,7 +38,7 @@ load_elf(R5900_Core *ee, const char *path)
 	elf = (u8 *)malloc(file_size * sizeof(u8));
 
 	if (fread(&buf, sizeof(unsigned char), file_size, f) == 1) {
-        printf("[ERROR]: Could not read ELF file \n");
+        errlog("[ERROR]: Could not read ELF file \n");
         fclose(f);
         return false;
     }
@@ -38,7 +51,7 @@ load_elf(R5900_Core *ee, const char *path)
 	if (elf[0] == 0x7F && elf[1] == 'E' && elf[2] == 'L' && elf[3] == 'F') {
 		printf("Valid ELF found...\n");
 	} else {
-		printf("[ERROR]: ELF file is not valid\n");
+		errlog("[ERROR]: ELF file is not valid\n");
 		return false;
 	}
 
@@ -75,15 +88,17 @@ load_elf(R5900_Core *ee, const char *path)
 		printf("Flags: [%#08x]\n", 							phdr->p_flags);
 		printf("Segment alignment: [%#08x]\n", 				phdr->p_align);
 
-		int mem_write_cursor = phdr->p_vaddr;
-		
-		for (int file_write_cursor = phdr->p_offset; 
-			 file_write_cursor < (phdr->p_offset + phdr->p_filesz); 
-			 file_write_cursor += 4)
+		int mem_write_cursor 	= phdr->p_vaddr;
+		int file_write_cursor 	= phdr->p_offset;
+
+		// This could be just one memset
+		while(file_write_cursor < (phdr->p_offset + phdr->p_filesz))
 		{
 			u32 value = *(u32*)&elf[file_write_cursor];
 			ee_store_32(mem_write_cursor, value);
-			mem_write_cursor += 4;
+
+			file_write_cursor 	+= 4;
+			mem_write_cursor 	+= 4;
 		} 
 	}
 	
@@ -110,7 +125,7 @@ read_bios (const char *filename, u8 *bios_memory)
 #if _WIN32 || _WIN64
     FILE* f = fopen(filename, "rb");
     if (!f) {
-        printf("[ERROR]: Could not open BIOS file. \n");
+        errlog("[ERROR]: Could not open BIOS file. \n");
         fclose(f);
         return 0;
     }
@@ -121,7 +136,7 @@ read_bios (const char *filename, u8 *bios_memory)
     fseek(f, 0, SEEK_SET);
 
     if(fread(&c, sizeof(unsigned char), file_size, f) == 1) {
-        printf("[ERROR]: Could not read BIOS file \n");
+        errlog("[ERROR]: Could not read BIOS file \n");
         fclose(f);
         return 0;
     }
@@ -138,7 +153,7 @@ read_bios (const char *filename, u8 *bios_memory)
     std::ifstream reader;
     reader.open(filename, std::ios::in | std::ios::binary);
     if (!reader.is_open())
-        printf("[ERROR]: Could not read BIOS file!\n");
+        errlog("[ERROR]: Could not read BIOS file!\n");
 
     reader.seekg(0);
     reader.read((char*)_bios_memory_, 4 * 1024 * 1024);

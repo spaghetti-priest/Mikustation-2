@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include "../ps2types.h"
+#include "../ps2.h"
 /*
   00h     PRIM
   01h     RGBAQ
@@ -54,12 +55,12 @@
 ********************************/		
 union PRIM {
 	struct {
-		u8 primative_type : 3;
+		u8 primitive_type : 3;
 		bool shading_method;
-		bool texture_mapping;
-		bool fogging;
-		bool alpha_blending;
-		bool antialiasing;
+		bool do_texture_mapping;
+		bool do_fogging;
+		bool do_alpha_blending;
+		bool do_1_pass_antialiasing;
 		bool mapping_method;
 		bool context;
 		bool fragment_value_control;
@@ -72,10 +73,10 @@ union PRMODE {
 	struct {
 		u8 unused : 3;
 		bool shading_method;
-		bool texture_mapping;
-		bool fogging;
-		bool alpha_blending;
-		bool antialiasing;
+		bool do_texture_mapping;
+		bool do_fogging;
+		bool do_alpha_blending;
+		bool do_1_pass_antialiasing;
 		bool mapping_method;
 		bool context;
 		bool fragment_value_control;
@@ -86,7 +87,7 @@ union PRMODE {
 
 union PRMODECONT {
 	struct {
-		bool primitive_register;
+		bool specify_prim_register;
 		u64 unused : 63;
 	};
 	u64 value;
@@ -141,7 +142,8 @@ union XYOFFSET {
 union FRAME {
 	struct {
 		u16 base_pointer : 9;		u8 unused0 : 7;
-		u16 buffer_width : 6;		u8 unused1 : 2;
+		// u16 buffer_width : 6;		u8 unused1 : 2;
+		u16 buffer_width ;			u8 unused1 : 2;
 		u16 storage_format : 6;	u8 unused2 : 2;
 		u32 drawing_mask;
 	};
@@ -163,10 +165,12 @@ union ZBUF {
 union BITBLTBUF {
 	struct {
 		u16 src_base_pointer : 14;	u8 unused0 : 3;
-		u8 src_buffer_width : 6;		u8 unused1 : 3;
+		// u8 src_buffer_width : 6;		u8 unused1 : 3;
+		u8 src_buffer_width;			u8 unused1 : 3;
 		u8 src_storage_format : 6;	u8 unused2 : 3;
 		u16 dest_base_pointer : 14;	u8 unused3 : 3;
-		u8 dest_buffer_width : 6;		u8 unused4 : 3;
+		// u8 dest_buffer_width : 6;		u8 unused4 : 3;
+		u16 dest_buffer_width;		u8 unused4 : 3;
 		u8 dest_storage_format : 6;	u8 unused5 : 3;
 	};
 	u64 value;
@@ -496,8 +500,8 @@ union LABEL {
 // Unncessarily did these in an hurry
 union PMODE {
 	struct {
-		bool circuit1;
-		bool circuit2;
+		bool is_circuit1;
+		bool is_circuit2;
 		u8 CRT : 3;
 		bool value_selection;	
 		bool output_selection;	
@@ -508,7 +512,7 @@ union PMODE {
 	u64 value;
 };
 
-//@@Note @Incomplete: No noted documentation on SMODE1 so this is just copied from PCSX2 
+// @@Note @Incomplete: No noted documentation on SMODE1 so this is just copied from PCSX2 
 // https://github.com/PCSX2/pcsx2/blob/2d5faa627ff54f3fb2a69a43286181bee071a1c3/pcsx2/GS/GSRegs.h#L461
 union SMODE1 {
 	struct {
@@ -531,7 +535,8 @@ union SMODE2 {
 union DISPFB {
 	struct {
 		u16 base_pointer : 9;
-		u8  buffer_width : 6;
+		// u8  buffer_width : 6;
+		u16  buffer_width;
 		u8  storage_formats : 5;
 		u16 x_position : 11;
 		u16 y_position : 11;
@@ -545,8 +550,8 @@ union DISPLAY {
 		u16 y_position : 12;
 		u8  h_magnification : 4;
 		u8  v_magnification : 4;
-		u16 area_width  : 12;
-		u16 area_height : 11;
+		u16 width  : 12;
+		u16 height : 11;
 	};
 	u64 value;
 };
@@ -668,9 +673,17 @@ typedef struct _Context_ {
 	ZBUF 			zbuf;
 } Context;
 
+struct Transmission_Buffer {
+    u32 row;
+    u32 pitch;
+    u32 pixel_count;
+    u32 address;
+};
+
 typedef struct _GraphicsSynthesizer_ {
-	u16 *vram;
+	u32 *vram;
 	CRT_MODE crt_mode;
+	Transmission_Buffer transmission_buffer;
 
 	Context context[2];
 	// GS Internal Registers
@@ -752,12 +765,14 @@ typedef struct _GraphicsSynthesizer_ {
 } GraphicsSynthesizer;
 
 void gs_reset();
+void gs_shutdown();
+
 u32 gs_read_32_priviledged(u32 address);
 u64 gs_read_64_priviledged(u32 address);
 void gs_write_32_priviledged(u32 address, u32 value);
 void gs_write_64_priviledged(u32 address, u64 value);
 
-void gs_write_64_internal(u8 address, u64 value);
+void gs_write_internal(u8 address, u64 value);
 
 void gs_set_primitive(u64 prim_register);
 void gs_set_q (f32 value);
@@ -771,5 +786,7 @@ void gs_set_xyz2(s16 x, s16 y, u32 z);
 void gs_set_xyz3(s16 x, s16 y, u32 z);
 void gs_set_crt(bool interlaced, s32 display_mode, bool ffmd);
 void gs_write_hwreg(u64 data);
+
+void gs_render_crt(SDL_Context *context);
 
 #endif
