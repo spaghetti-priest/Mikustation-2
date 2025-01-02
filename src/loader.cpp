@@ -9,7 +9,7 @@
 #include <iostream>
 #include <assert.h>
 
-//@Cleanup: This resides here since there is no dedicated file IO
+// @Cleanup: This resides here since there is no dedicated file IO
 inline const char *strip_file_path (const char *s) 
 {
 #if _WIN32 || _WIN64

@@ -622,7 +622,7 @@ check_interrupt (bool value, bool int0_priority, bool int1_priorirty)
     if (!interrupt_enable)
         return 0;
 
-    handle_exception_level_1(&ee, &e);
+    handle_exception_level_1(&ee.cop0, &e, ee.pc, ee.is_branching);
     return 1;
 }
 
@@ -665,11 +665,11 @@ main (int argc, char **argv)
 
 // @@Incomplete @@Implementation: Eventually remove hardcoded path. Ask for the path at runtime 
 #if _WIN32 || _WIN64
-    //const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
+    // const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
     const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph39001.bin";
     // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
-    const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
-    // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02b\\demo2b.elf";
+    // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
+    const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02b\\demo2b.elf";
 #else
     const char *bios_filename = "../data/bios/scph10000.bin";
 #endif    
@@ -744,7 +744,7 @@ main (int argc, char **argv)
         instructions_run = 0;  
         // @@Note: In dobiestation and chonkystation there is a random instruction limit in order to 
         // synch the ee and iop cycle rate by 1/8 it looks like an arbitrary number.      
-        while (instructions_run < 500000) {
+        while (instructions_run < 1000000) {
             /* Step Through Playstation 2 Pipeline */
             r5900_cycle(&ee);
             if (instructions_run % 2 == 0) { dmac_cycle(); } 
@@ -754,12 +754,12 @@ main (int argc, char **argv)
 
             // if (intc_read(0x1000f010) & 0x4) {
             
-            if(instructions_run == 475000) {
-                request_interrupt(INT_VB_ON);
+            if(instructions_run == 975000) {
+                // request_interrupt(INT_VB_ON);
                 gs_render_crt(&main_context);
                 swap_framebuffers(&main_context);
             }
-            request_interrupt(INT_VB_OFF);
+            // request_interrupt(INT_VB_OFF);
         
         }
 #if 1

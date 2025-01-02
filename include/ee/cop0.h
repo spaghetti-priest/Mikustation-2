@@ -133,7 +133,7 @@ get_exception(ExceptionVectors vector, ExceptionCodes code)
     return r;
 }
 
-void handle_exception_level_1 (_R5900Core_*ee, Exception *exc);
+u32 handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, unsigned int current_pc, bool is_branching);
 
 /*inline void 
 set_kernel_mode (COP0_Registers *cop0)

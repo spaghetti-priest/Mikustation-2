@@ -222,7 +222,7 @@ gs_render_crt (SDL_Context *context)
     DISPFB *dispfb2     = &gs.dispfb2;
     
     // @Hack
-     u16 framebuffer_width    = ((dispfb2->value >> 9) & 0x3F) * 64; 
+    u16 framebuffer_width = ((dispfb2->value >> 9) & 0x3F) * 64; 
 
     // @Incomplete: Check which of the circuits are enabled then use the respective display buffer
     // But this is a low priority right now
@@ -414,6 +414,7 @@ static void draw_pixel (v3 *pos, u32 color)
     // Here we shift pos.x and pos.y by 4 bits to the right because the vertex position are floating point numbers
     // represented as unsigned numbers. THe intial 4 bits of the register are fractional 
     int index       = ((pos->x >> 4) + (pos->y >> 4) * (frame_1->buffer_width * 64));
+    //int index      = (pos->x  + pos->y) * (frame_1->buffer_width * 64);
     int zpointer    = zbuf_1->base_pointer + index;
 
     bool depth_test_success = true;
@@ -593,7 +594,7 @@ render_sprite (std::vector<Vertex> vertices)
     v3 pos[2]; 
     v2 uv[2];
     u32 color;
-    u32 depth = 0;
+    u32 depth = 0;   
     XYOFFSET *offset = &gs.xyoffset_1;
 
     pos[0].x = vertices[0].pos.x - offset->x;
@@ -604,6 +605,13 @@ render_sprite (std::vector<Vertex> vertices)
     pos[1].y = vertices[1].pos.y - offset->y;
     pos[1].z = vertices[1].pos.z;
 
+    uv[0].u = vertices[0].uv.u;
+    uv[0].v = vertices[0].uv.v;
+
+    uv[1].u = vertices[1].uv.u;
+    uv[1].v = vertices[1].uv.v;
+
+
     // @Incomplete: Assuming that psm is PSMCT32
     color = pack_RGBA(vertices[0].col.r, 
                       vertices[0].col.g, 
@@ -611,6 +619,8 @@ render_sprite (std::vector<Vertex> vertices)
                       vertices[0].col.a);
 
     // @Hack: Doing this just so I can get things working
+    pos[0].x = pos[0].x >> 4;
+    pos[0].y = pos[0].y >> 4;
     pos[1].x = (pos[1].x - 1) >> 4;
     pos[1].y = (pos[1].y - 1) >> 4;
 
@@ -1135,7 +1145,7 @@ gs_write_internal (u8 address, u64 value)
             gs.uv.u = (value >> 14) & 0x3FFFF;
             gs.uv.v = (value >> 32) & 0x3FFFF;
             syslog("GS_WRITE: write to UV. Value: [{:#x}]\n", value);
-        }
+        } break;
 
         case 0x04:
         {
@@ -1185,6 +1195,8 @@ gs_write_internal (u8 address, u64 value)
             gs.tex0_1.clut_storage_mode       = (value >> 55) & 0x1;
             gs.tex0_1.clut_entry_offset       = (value >> 56) & 0x1f;
             gs.tex0_1.clut_load_control       = (value >> 61) & 0x7;
+            //gs.tex0_1.value                   = value;
+            syslog("GS_WRITE: write to TEX0_1. Value: [{:#x}]\n", value);
         break;
 
         case 0x18:
@@ -1227,7 +1239,7 @@ gs_write_internal (u8 address, u64 value)
 
         case 0x47:
         {
-            gs.test_1.alpha_test                = (value >> 0) & 0x1;
+            gs.test_1.alpha_test                = (value) & 0x1;
             gs.test_1.alpha_test_method         = (value >> 1) & 0x7;
             gs.test_1.alpha_comparison_value    = (value >> 4) & 0xFF;
             gs.test_1.alpha_fail_method         = (value >> 11) & 0x3;
@@ -1235,7 +1247,7 @@ gs_write_internal (u8 address, u64 value)
             gs.test_1.destination_test_mode     = (value >> 15) & 0x1;
             gs.test_1.depth_test                = (value >> 16) & 0x1;
             gs.test_1.depth_test_method         = (value >> 17) & 0x3;
-            gs.test_1.value                     = value;
+            //gs.test_1.value                     = value;
             
             syslog("GS_WRITE: write to TEST_1. Value: [{:#x}]\n", value);
         } break;

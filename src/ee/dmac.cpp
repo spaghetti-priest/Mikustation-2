@@ -31,7 +31,7 @@ dmac_reset ()
     }
 }
 
-//@@Incomplete: This only works for GIF channel aswell as normal and interleave transfer mode
+// @Incomplete: This only works for GIF channel aswell as normal and interleave transfer mode
 static void
 end_of_transfer()
 {

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef R5000INTERPRETER_H
 #define R5000INTERPRETER_H
 

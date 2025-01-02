@@ -75,7 +75,7 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			//v = (data.lo >> 32) & 0x3FFF;
 			reg |= (data.lo & 0x3FFF); // u
 			reg |= ((data.lo >> 32) & 0x3FFF) >> 16; // v
-			gs_set_uv(u, v);
+			// gs_set_uv(u, v);
 			gs_write_internal(0x03, reg);
 		} break;
 
