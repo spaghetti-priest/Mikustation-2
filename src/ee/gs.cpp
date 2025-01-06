@@ -96,108 +96,33 @@ gs_shutdown()
 GIF PACKED FUNCTIONS
 ========================
 */
-void 
-gs_set_primitive (u64 value) 
-{
-    gs.prim.primitive_type          = (value) & 0x7;
-    gs.prim.shading_method          = (value >> 3) & 0x1;
-    gs.prim.do_texture_mapping      = (value >> 4) & 0x1;
-    gs.prim.do_fogging              = (value >> 5) & 0x1;
-    gs.prim.do_alpha_blending       = (value >> 6) & 0x1;
-    gs.prim.do_1_pass_antialiasing  = (value >> 7) & 0x1;
-    gs.prim.mapping_method          = (value >> 8) & 0x1;
-    gs.prim.context                 = (value >> 9) & 0x1;
-    gs.prim.fragment_value_control  = (value >> 10) & 0x1;
-    gs.prim.value                   = value;
-}
-
 void
 gs_set_q (f32 value)
 {
     gs.rgbaq.q = value;
-//    printf("GS SET Q\n");
-}
-
-// @Cleanup: Reduce the number of locations of which to manage state by writing all this data to gs_write_internal
-void
-gs_set_rgbaq (u8 r, u8 g, u8 b, u8 a)
-{
-    gs.rgbaq.r = r;
-    gs.rgbaq.g = g;
-    gs.rgbaq.b = b;
-    gs.rgbaq.a = a;
-    //printf("GS SET RGBAQ\n");
-}
-
-void 
-gs_set_st (f32 s, f32 t)
-{
-    gs.st.s = s;
-    gs.st.t = t;
-    //printf("GS SET ST\n");
-}
-
-void 
-gs_set_uv (u32 u, u32 v)
-{
-    gs.uv.u = u;
-    gs.uv.v = v;
-    //printf("GS SET UV\n");
-}
-
-void  
-gs_set_fog (u8 fog)
-{
-    gs.fog.fog = fog;
-}
-
-void 
-gs_set_xyzf2 (s16 x, s16 y, u32 z, u8 f)
-{
-    gs.xyzf2.x = x;
-    gs.xyzf2.y = y;
-    gs.xyzf2.z = z;
-    gs.xyzf2.f = f;
-
-    vertex_kick(true);
-    drawing_kick();
-    //printf("GS SET XYZF2\n");
-}
-
-void 
-gs_set_xyzf3 (s16 x, s16 y, u32 z, u8 f)
-{
-    gs.xyzf3.x = x;
-    gs.xyzf3.y = y;
-    gs.xyzf3.z = z;
-    gs.xyzf3.f = f;
-    vertex_kick(true);
-    printf("GS SET XYZF3\n");
-}
-
-void 
-gs_set_xyz2 (s16 x, s16 y, u32 z)
-{
-    gs.xyz2.x = x;
-    gs.xyz2.y = y;
-    gs.xyz2.z = z;
-
-    vertex_kick(false);
-    drawing_kick();
-    //printf("GS SET XYZ2\n");
-}
-
-void 
-gs_set_xyz3 (s16 x, s16 y, u32 z)
-{
-    gs.xyz3.x = x;
-    gs.xyz3.y = y;
-    gs.xyz3.z = z;
-    vertex_kick(false);
-    printf("GS SET XYZ3\n");
 }
 
 void gs_set_psm(u8 psm) {}
+
+u32
+get_output_resolution (s32 mode)
+{
+    switch(mode)
+    {
+        case CRT_MODE_NTSC:
+
+        break;
+
+        case CRT_MODE_PAL:
+        
+        break;
+
+        case CRT_MODE_DTV_480P:
+
+        break;
+    }
+    return 0;
+} 
 
 void
 gs_set_crt (bool interlaced, s32 display_mode, bool ffmd)
@@ -260,7 +185,9 @@ gs_write_hwreg (u64 data)
     Transmission_Buffer *buffer = &gs.transmission_buffer;
     u32 max_pixels              = trxreg->width * trxreg->height;
 
-    assert(trxdir->direction == 0x00 && "Illegal write to HWREG register when trxdir is not 0x0");
+    // assert(trxdir->direction == 0x00 && "Illegal write to HWREG register when trxdir is not 0x0");
+    if (trxdir->direction != 0x0)
+        return;
 
     // BPP is 4 for PSMCT32 but because of hwreg being written twice its actually 2
     u32 bytes_pp    = 2;
@@ -284,8 +211,13 @@ gs_write_hwreg (u64 data)
     }
   
     if (buffer->pixel_count == max_pixels) {
-        syslog("Ending: Host => Local Transmission\n");
+        buffer->pitch       = 0;
+        buffer->row         = 0;
+        buffer->pixel_count = 0;
+        buffer->address     = 0;
         gs.trxdir.direction = 3;
+        
+        syslog("Ending: Host => Local Transmission\n");
         return;
     }
 }
@@ -459,7 +391,7 @@ static void draw_pixel (v3 *pos, u32 color)
 }
 
 
-static void render_point (std::vector<Vertex> vertices) 
+static void render_point (Vertex *vertex) 
 {
     v3 pos;
     u32 color;
@@ -467,10 +399,11 @@ static void render_point (std::vector<Vertex> vertices)
     //@@Incomplete: Only using context 1 for rendering for now
     XYOFFSET *offset = &gs.xyoffset_1;
 
-    pos.x = vertices[0].pos.x - offset->x;
-    pos.y = vertices[0].pos.y - offset->y;
-    pos.z = vertices[0].pos.z;
+    pos.x = vertex->pos.x - offset->x;
+    pos.y = vertex->pos.y - offset->y;
+    pos.z = vertex->pos.z;
 
+    color = pack_RGBA(vertex->col.r, vertex->col.g, vertex->col.b, vertex->col.a);
     if(scissor_test_fail(&pos))
         return;
     
@@ -501,7 +434,6 @@ static void render_line (std::vector<Vertex> vertices)
     if (scissor_test_fail(&p[0]) || scissor_test_fail(&p[1]))
         return;
 
-    // printf("Render line\n");
     u32 color = pack_RGBA(vertices[0].col.r, 
                           vertices[0].col.g, 
                           vertices[0].col.b, 
@@ -514,6 +446,7 @@ static void render_line (std::vector<Vertex> vertices)
     s32 error   = dx + dy;
 
     v3 pos = { x0 , y0, (int)vertices[0].pos.z };
+    printf("Render line\n");
     while (true) 
     {
         draw_pixel (&pos, color);
@@ -654,7 +587,7 @@ vertex_kick (bool with_fog)
     // printf("Push Vertex\n");
     // @@Incomplete: XYZ3 and XYZF3 dont exist yet so XYZ2 for now.
     // Also assuming that XYZF and XYZ are the same.
-    Vertex vertex = {
+/*    Vertex vertex = {
         .pos.x  = 0,
         .pos.y  = 0,
         .pos.z  = 0,
@@ -668,7 +601,22 @@ vertex_kick (bool with_fog)
         .uv.v   = gs.uv.v,
         .q      = gs.rgbaq.q,
         .f      = gs.xyzf2.f,
-    };
+    };*/
+
+   Vertex vertex = {0};
+    vertex.pos.x  = 0;
+    vertex.pos.y  = 0;
+    vertex.pos.z  = 0;
+    vertex.col.r  = gs.rgbaq.r;
+    vertex.col.g  = gs.rgbaq.g;
+    vertex.col.b  = gs.rgbaq.b;
+    vertex.col.a  = gs.rgbaq.a;
+    vertex.st.s   = gs.st.s;
+    vertex.st.t   = gs.st.t;
+    vertex.uv.u   = gs.uv.u;
+    vertex.uv.v   = gs.uv.v;
+    vertex.q      = gs.rgbaq.q;
+    vertex.f      = gs.xyzf2.f;
 
     if (with_fog) {
         vertex.pos.x  = gs.xyzf2.x;
@@ -703,7 +651,7 @@ drawing_kick()
         case _POINT:
         {
             if (queue_size == 1) {
-                render_point(vertex_queue.queue);
+                render_point(&vertex_queue.queue[0]);
                 vertex_queue.queue.clear();
                 vertex_queue.size = 0;
             }
@@ -1114,7 +1062,16 @@ gs_write_internal (u8 address, u64 value)
     {
         case 0x00:
         {
-            gs_set_primitive(value);
+            gs.prim.primitive_type          = (value) & 0x7;
+            gs.prim.shading_method          = (value >> 3) & 0x1;
+            gs.prim.do_texture_mapping      = (value >> 4) & 0x1;
+            gs.prim.do_fogging              = (value >> 5) & 0x1;
+            gs.prim.do_alpha_blending       = (value >> 6) & 0x1;
+            gs.prim.do_1_pass_antialiasing  = (value >> 7) & 0x1;
+            gs.prim.mapping_method          = (value >> 8) & 0x1;
+            gs.prim.context                 = (value >> 9) & 0x1;
+            gs.prim.fragment_value_control  = (value >> 10) & 0x1;
+            gs.prim.value                   = value;
             syslog("GS_WRITE: write to PRIM. Value: [{:#04x}]\n", value);
         } break;
 
@@ -1197,6 +1154,10 @@ gs_write_internal (u8 address, u64 value)
             gs.tex0_1.clut_load_control       = (value >> 61) & 0x7;
             //gs.tex0_1.value                   = value;
             syslog("GS_WRITE: write to TEX0_1. Value: [{:#x}]\n", value);
+        break;
+
+        case 0x0a:
+            gs.fog.fog = (value >> 56);
         break;
 
         case 0x18:

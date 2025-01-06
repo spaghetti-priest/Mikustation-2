@@ -17,11 +17,24 @@ gif_reset ()
 	memset(&gif, 0, sizeof(gif));
 }
 
-enum Data_Modes : u8 {
+enum Data_Modes : u8 
+{
 	PACKED 	= 0b00,
 	REGLIST = 0b01,
 	IMAGE 	= 0b10,
 	DISABLE = 0b11,
+};
+
+enum Packing_Formats : u8
+{
+	PRIM 	= 0x00,
+	RGBAQ 	= 0x01,
+	ST 		= 0x02,
+	UV 		= 0x03,
+	XYZF 	= 0x04,
+	XYZ 	= 0x05,
+	FOG 	= 0x0a,
+	A_D 	= 0x0e,
 };
 
 static void 
@@ -31,93 +44,72 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 	u32 destination = (current_tag->REGS >> (bits_per_reg * current_tag->reg_count)) & 0xF;
 
 	if (current_tag->PRE == 1) {
-		gs_set_primitive(current_tag->PRIM);
+		gs_write_internal(0x00, current_tag->PRIM);
 	} else {
 		/* Idle Cylcle Here */
 	}
 
+	u64 reg = 0;
+	
 	switch(destination)
 	{
-		// @Cleanup: Reduce the number of locations of which to manage state by writing all this data to gs_write_internal
-		case 0x00: 
-		{
-			gs_set_primitive(data.lo & 0x3FF);
+		case PRIM: {
+			gs_write_internal(0x00, data.lo);
 		} break;
 
-		case 0x01: 
-		{
-			u64 reg = 0;
-			u8 r, g, b, a;
+		case RGBAQ: {
 			reg |= data.lo 			& 0xFF; 	   // red
 			reg |= ((data.lo >> 32) & 0xFF) >> 8;  // green 
 			reg |= ((data.hi >> 0)  & 0xFF) >> 16; // blue
 			reg |= ((data.hi >> 32) & 0xFF) >> 24; // alpha
-			// gs_set_rgbaq(r, g, b, a);
+			
 			gs_write_internal(0x01, reg);
 		} break;
 		
-		case 0x02: 
-		{
-
-			f32 s, t, q;
-			s = data.lo & 0xFFFF;
-			t = data.lo >> 32;
-			q = data.hi & 0xFFFF;
-			gs_set_st(s, t);
+		case ST: {
+			reg |= data.lo & 0xFFFFFFFF; // s
+			reg |= data.lo >> 32; 		 // t
+			f32 q 	= data.hi & 0xFFFFFFFF;
+			
+			gs_write_internal(0x02, reg);
 			gs_set_q(q);
 		} break;
 		
-		case 0x03: 
-		{
-			u64 reg = 0;
-			u32 u, v;
-			//u = data.lo & 0x3FFF;
-			//v = (data.lo >> 32) & 0x3FFF;
-			reg |= (data.lo & 0x3FFF); // u
+		case UV: {
+			reg |= (data.lo 		& 0x3FFF); // u
 			reg |= ((data.lo >> 32) & 0x3FFF) >> 16; // v
-			// gs_set_uv(u, v);
 			gs_write_internal(0x03, reg);
 		} break;
 
-		case 0x04: 
-		{
-			u16 x, y;
-			u32 z;
-			u8 f;
-			bool ADC;
-			x 	= data.lo & 0xFFFF;
-			y 	= (data.lo >> 32) & 0xFFFF;
-			z 	= (data.hi >> 4) & 0xFFFFFF;
-			f 	= (data.hi >> 36) & 0xFF;
-			ADC = (data.hi >> 47) & 0x1;
+		case XYZF: {
+			reg |= (data.lo 		& 0xFFFF); // x
+			reg |= ((data.lo >> 32) & 0xFFFF) 	>> 16; // y 
+			reg |= ((data.hi >> 4) 	& 0xFFFFFF) >> 32; // z
+			reg |= ((data.hi >> 36) & 0xFF)		>> 56; // f
 
-			if (ADC == 0)	gs_set_xyzf2(x,y,z,f);
-			else 			gs_set_xyzf3(x,y,z,f);
+			bool ADC = (data.hi >> 47) & 0x1;
+			
+			if (ADC == 0)	gs_write_internal(0x04, reg);
+			else 			gs_write_internal(0x0c, reg);
 		} break;
 
-		case 0x05: 
-		{
-			s16 x, y;
-			u32 z;
-			bool ADC;
-			x 	= data.lo & 0xFFFF;
-			y 	= (data.lo >> 32) & 0xFFFF;
-			z 	= (data.hi >> 4) & 0xFFFFFFFF;
+		case XYZ: {
+			reg |= (data.lo 		& 0xFFFF); // x
+			reg |= ((data.lo >> 32) & 0xFFFF) 	  >> 16; // y 
+			reg |= ((data.hi >> 4) 	& 0xFFFFFFFF) >> 32; // z
 
-			ADC = (data.hi >> 47) & 0x1;
+			bool ADC = (data.hi >> 47) & 0x1;
 
-			if (ADC == 0)	gs_set_xyz2(x, y, z);
-			else 			gs_set_xyz3(x, y, z);
+			if (ADC == 0)	gs_write_internal(0x05, reg);
+			else 			gs_write_internal(0x0d, reg);
 		} break;
 
-		case 0x0a: 
-		{
-			u8 fog = (data.hi >> 36) & 0xFF;
-			gs_set_fog(fog);
+		case FOG: {
+			reg |= ((data.hi >> 36) & 0xFF) >> 56; //fog
+			gs_write_internal(0x0a, reg);
 		} break;
 		
-		case 0x0e: 
-		{
+		case A_D: {
 			/* 0xA+D */
 			u8 addr 			= data.hi & 0xFF;
 			u64 packaged_data 	= data.lo;
@@ -127,8 +119,7 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 		/*No Output */
 		case 0x0f: return; break;
 
-		default:
-		{
+		default: {
 			errlog("[ERROR]: Unrecognized GIF tag address\n");
 		} break;
 	}

@@ -56,7 +56,7 @@ typedef union _u128_ {
     {
         return ( hi != r.hi || lo != r.lo );
     } 
-} u128 __attribute__((aligned(16)));
+} u128;// __attribute__((aligned(16)));
 
 typedef struct _int128_t_ {
     s64 hi;
@@ -71,7 +71,7 @@ typedef struct _int128_t_ {
     {
         return ( hi != r.hi || lo != r.lo );
     } 
-} s128 __attribute__((aligned(16)));
+} s128;// __attribute__((aligned(16)));
 
 
 // MIPS IV word is 32 bits 

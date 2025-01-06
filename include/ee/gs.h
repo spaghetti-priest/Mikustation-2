@@ -651,8 +651,8 @@ union SIGLBLID {
 };
 
 enum CRT_MODE : int {
-	CRT_MODE_NTSC		= 0x02,
-	CRT_MODE_PAL 		= 0x03,
+	CRT_MODE_NTSC				= 0x02,
+	CRT_MODE_PAL 				= 0x03,
 	CRT_MODE_DTV_480P 	= 0x50
 };
 

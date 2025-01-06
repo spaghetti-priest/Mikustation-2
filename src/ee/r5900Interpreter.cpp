@@ -20,6 +20,10 @@
 #include <cstdint>
 #include <fstream>
 
+// @Incomplete: This is not verified to work but Im putting it here anyways
+#define SignExtend(x)
+#define ZeroExtend(x)
+
 //std::array<TLB_Entry, 48> TLBS;
 FILE* dis = fopen("disasm.txt", "w+");
 
@@ -29,7 +33,7 @@ static u8 *_icache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 static u8 *_dcache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(8));
 static u8 *_scratchpad_     = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
-Range SCRATCHPAD = Range(0x70000000, KILOBYTES(16));
+ //Range SCRATCHPAD = Range(0x70000000, KILOBYTES(16));
 
 typedef struct Instruction_t {
     u8 opcode;
@@ -60,22 +64,23 @@ dump_all_ee_registers(R5900_Core *ee)
 static inline u8 
 ee_core_load_8 (u32 address) 
 {
-    if (SCRATCHPAD.contains(address))
+    // if (SCRATCHPAD.contains(address))
+    if (address >= 0x70000000 && address < 0x70004000)
         return *(uint8_t*)&_scratchpad_[address & 0x3FFF];
     if (address >= 0x30100000 && address < 0x31FFFFFF) // uncached and accelerated ram
         address -= 0x10000000; // move to unaccelerated ram
 
     // mask from virtual memory to physical
     address &= 0x1FFFFFFF;
-    
+
     return ee_load_8(address);
 }
 
 static inline u16 
 ee_core_load_16 (u32 address) 
 {
-    uint32_t r;
-    if (SCRATCHPAD.contains(address))
+    // if (SCRATCHPAD.contains(address))
+    if (address >= 0x70000000 && address < 0x70004000)
         return *(uint16_t*)&_scratchpad_[address & 0x3FFF];
     if (address >= 0x30100000 && address < 0x31FFFFFF) // uncached and accelerated ram
         address -= 0x10000000;// move to unaccelerated ram
@@ -88,8 +93,8 @@ ee_core_load_16 (u32 address)
 static inline u32 
 ee_core_load_32 (u32 address) 
 {
-    uint32_t r;
-    if (SCRATCHPAD.contains(address))
+    // if (SCRATCHPAD.contains(address))
+    if (address >= 0x70000000 && address < 0x70004000)
         return *(uint32_t*)&_scratchpad_[address & 0x3FFF];
     if (address >= 0x30100000 && address < 0x31FFFFFF) // uncached and accelerated ram
         address -= 0x10000000; // move to unaccelerated ram
@@ -102,8 +107,8 @@ ee_core_load_32 (u32 address)
 static inline u64 
 ee_core_load_64 (u32 address) 
 {
-    uint32_t r;
-    if (SCRATCHPAD.contains(address))
+    // if (SCRATCHPAD.contains(address))
+    if (address >= 0x70000000 && address < 0x70004000)
         return *(uint64_t*)&_scratchpad_[address & 0x3FFF];
     if (address >= 0x30100000 && address < 0x31FFFFFF) // uncached and accelerated
         address -= 0x10000000; // move to unaccelerated ram
@@ -121,7 +126,8 @@ static inline void ee_core_load_128(u32 address) {return;}
 static inline void 
 ee_core_store_8 (u32 address, u8 value) 
 {
-    if (SCRATCHPAD.contains(address)) {
+    // if (SCRATCHPAD.contains(address)) {
+    if (address >= 0x70000000 && address < 0x70004000) {
         *(uint8_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
     }
@@ -133,7 +139,8 @@ ee_core_store_8 (u32 address, u8 value)
 static inline void 
 ee_core_store_16 (u32 address, u16 value) 
 {
-    if (SCRATCHPAD.contains(address)) {
+    // if (SCRATCHPAD.contains(address)) {
+    if (address >= 0x70000000 && address < 0x70004000) {
         *(uint16_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
     }
@@ -145,7 +152,8 @@ ee_core_store_16 (u32 address, u16 value)
 static inline void 
 ee_core_store_32 (u32 address, u32 value) 
 {
-    if (SCRATCHPAD.contains(address)) {
+    // if (SCRATCHPAD.contains(address)) {
+    if (address >= 0x70000000 && address < 0x70004000) {
         *(uint32_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
     }
@@ -157,7 +165,8 @@ ee_core_store_32 (u32 address, u32 value)
 static inline void 
 ee_core_store_64 (u32 address, u64 value) 
 {
-    if (SCRATCHPAD.contains(address)) {
+    // if (SCRATCHPAD.contains(address)) {
+    if (address >= 0x70000000 && address < 0x70004000) {
         *(uint64_t*)&_scratchpad_[address & 0x3FFF] = value;
         return;
     }
@@ -202,7 +211,7 @@ static inline void check_address_error_exception (R5900_Core *ee, Type type, u32
     }
 }
 
-static void 
+static inline void 
 LUI (R5900_Core *ee, Instruction *i) 
 {
     s64 imm                 = (s64)(s32)((i->imm) << 16);
@@ -212,7 +221,7 @@ LUI (R5900_Core *ee, Instruction *i)
     // printf("LUI [{%d}] [{%#08x}]\n", rt, imm);
 }
 
-static void 
+static inline void 
 LB (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -221,16 +230,16 @@ LB (R5900_Core *ee, Instruction *i)
     intlog("LB [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);  
 }
 
-static void 
+static inline void 
 LBU (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
     
     ee->reg.r[i->rt].UD[0] = (u64)ee_core_load_8(vaddr);
-    intlog("LBU [{:d}] [{:#x}] [{:d}] \n", rt, (s32)i->sign_offset, i->rs);    
+    intlog("LBU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);    
 }
 
-static void
+static inline void
 LH (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -241,7 +250,7 @@ LH (R5900_Core *ee, Instruction *i)
     intlog("LH [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);    
 }
 
-static void
+static inline void
 LHU (R5900_Core *ee, Instruction *i)
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -252,7 +261,7 @@ LHU (R5900_Core *ee, Instruction *i)
     intlog("LHU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 LW (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -264,7 +273,7 @@ LW (R5900_Core *ee, Instruction *i)
     // printf("LW [{%d}] [{%#08x}] [{%d}] \n", rt, (s32)i->sign_offset, base);
 }
 
-static void 
+static inline void 
 LWC1 (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -277,7 +286,7 @@ LWC1 (R5900_Core *ee, Instruction *i)
     intlog("LWC1 [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 LWU (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -288,7 +297,7 @@ LWU (R5900_Core *ee, Instruction *i)
     intlog("LWU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 LD (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -299,17 +308,25 @@ LD (R5900_Core *ee, Instruction *i)
     intlog("LD [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+/* This is an interesting and clear implemtation from Dobiestation */
+static const u64 LDL_MASK[8] =
+{   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+    0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+};
+
+static const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+
+static const u64 LDR_MASK[8] = 
+{
+    0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
+    0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
+};
+
+static const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+
+static inline void 
 LDL (R5900_Core *ee, Instruction *i) 
 {
-    /* This is an interesting and clear implemtation from Dobiestation */
-    const u64 LDL_MASK[8] =
-    {   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
-        0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
-    };
-
-    const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
-    
     u32 vaddr           = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
     u32 aligned_vaddr   = vaddr & ~0x7;
     u32 shift           = vaddr & 0x7;
@@ -320,18 +337,9 @@ LDL (R5900_Core *ee, Instruction *i)
     intlog("LDL [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 LDR (R5900_Core *ee, Instruction *i) 
 {
-    /* This is an interesting and clear implemtation from Dobiestation */
-    const u64 LDR_MASK[8] = 
-    {
-        0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
-        0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
-    };
-
-    const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
-    
     u32 vaddr           = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
     u32 aligned_vaddr   = vaddr & ~0x7;
     u32 shift           = vaddr & 0x7;
@@ -343,7 +351,7 @@ LDR (R5900_Core *ee, Instruction *i)
     printf("LDR [{%d}] [{%#x}] [{%d}]\n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 LQ (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -355,7 +363,7 @@ LQ (R5900_Core *ee, Instruction *i)
     // intlog("LQ [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 SB (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -365,7 +373,7 @@ SB (R5900_Core *ee, Instruction *i)
     intlog("SB [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 SH (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -377,7 +385,7 @@ SH (R5900_Core *ee, Instruction *i)
     intlog("SH [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs); 
 }
 
-static void 
+static inline void 
 SW (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -390,7 +398,7 @@ SW (R5900_Core *ee, Instruction *i)
     // printf("SW [{%d}] [{%#08x}] [{%d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 SWC1 (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -401,7 +409,7 @@ SWC1 (R5900_Core *ee, Instruction *i)
     intlog("SWC1 [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs); 
 }
 
-static void 
+static inline void 
 SD (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
@@ -415,17 +423,25 @@ SD (R5900_Core *ee, Instruction *i)
     // printf("SD [{%d}] [{%#08x}] [{%d}] \n", i->rt, (s32)i->sign_offset, i->rs);
 }
 
-static void 
+/* This is an interesting and clear implemtation from Dobiestation */
+static const u64 SDL_MASK[8] =
+{   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+    0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+};
+
+static const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+
+static const u64 SDR_MASK[8] = 
+{
+    0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
+    0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
+};
+
+static const u8 SDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+
+static inline void 
 SDL (R5900_Core *ee, Instruction *i) 
 {
-    /* This is an interesting and clear implemtation from Dobiestation */
-    const u64 SDL_MASK[8] =
-    {   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
-        0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
-    };
-
-    const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
-    
     u32 vaddr           = ee->reg.r[i->rs].UW[0] + i->sign_offset;
     u32 aligned_vaddr   = vaddr & ~0x7;
     u32 shift           = vaddr & 0x7;
@@ -437,18 +453,9 @@ SDL (R5900_Core *ee, Instruction *i)
     printf("SDL [{%d}] [{%#x}] [{%d}]\n", i->rt, i->sign_offset, i->rs);
 }
 
-static void 
+static inline void 
 SDR (R5900_Core *ee, Instruction *i) 
 {
-    /* This is an interesting and clear implemtation from Dobiestation */
-    const u64 SDR_MASK[8] = 
-    {
-        0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
-        0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
-    };
-
-    const u8 SDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
-    
     u32 vaddr           = ee->reg.r[i->rs].UW[0] + i->sign_offset;
     u32 aligned_vaddr   = vaddr & ~0x7;
     u32 shift           = vaddr & 0x7;
@@ -461,7 +468,7 @@ SDR (R5900_Core *ee, Instruction *i)
 }
 
 //@@Incomplete: Change this to using uint128 data structure
-static void 
+static inline void 
 SQ (R5900_Core *ee, Instruction *i) 
 {
     u32 vaddr   = ee->reg.r[i->rs].UW[0] + i->sign_offset;
@@ -483,12 +490,12 @@ SQ (R5900_Core *ee, Instruction *i)
 • Multiply
 • Divide
 *******************************************/
-static void add_overflow() {return;}
-static void add_overflow64() {return;}
-static void sub_overflow() {return;}
-static void sub_overflow64() {return;}
+static inline void add_overflow() {return;}
+static inline void add_overflow64() {return;}
+static inline void sub_overflow() {return;}
+static inline void sub_overflow64() {return;}
 
-static void 
+static inline void 
 ADD (R5900_Core *ee, Instruction *i) 
 {
     // @@Incomplete: The add instruction must signal an exception on overflow
@@ -498,7 +505,7 @@ ADD (R5900_Core *ee, Instruction *i)
     intlog("ADD [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);   
 }
 
-static void 
+static inline void 
 ADDU (R5900_Core *ee, Instruction *i) 
 {
     int32_t result          = ee->reg.r[i->rs].SW[0] + ee->reg.r[i->rt].SW[0];
@@ -506,7 +513,7 @@ ADDU (R5900_Core *ee, Instruction *i)
     intlog("ADDU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 ADDI (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = ee->reg.r[i->rs].SD[0] + i->sign_imm;
@@ -515,7 +522,7 @@ ADDI (R5900_Core *ee, Instruction *i)
     intlog("ADDI: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, i->sign_imm);
 }
 
-static void 
+static inline void 
 ADDIU (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = ee->reg.r[i->rs].SD[0] + i->sign_imm;
@@ -523,21 +530,21 @@ ADDIU (R5900_Core *ee, Instruction *i)
     intlog("ADDIU: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, i->sign_imm);
 }
 
-static void 
+static inline void 
 DADDU (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rs].SD[0] + ee->reg.r[i->rt].SD[0];
     intlog("DADDU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);  
 }
 
-static void
+static inline void
 DADDIU (R5900_Core *ee, Instruction *i)
 {
     ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].SD[0] + i->sign_imm;
     intlog("DADDIU [{:d}] [{:d}] [{:#x}]\n", i->rt, i->rs, i->sign_imm);  
 }
 
-static void 
+static inline void 
 SUB (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = ee->reg.r[i->rs].SW[0] - ee->reg.r[i->rt].SW[0];
@@ -547,7 +554,7 @@ SUB (R5900_Core *ee, Instruction *i)
     intlog("SUB [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);    
 }
 
-static void 
+static inline void 
 SUBU (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = ee->reg.r[i->rs].SW[0] - ee->reg.r[i->rt].SW[0];
@@ -555,7 +562,7 @@ SUBU (R5900_Core *ee, Instruction *i)
     intlog("SUBU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);    
 }
 
-static void 
+static inline void 
 MULT (R5900_Core *ee, Instruction *i) 
 {
     s64 w1 = (s64)ee->reg.r[i->rs].SW[0];
@@ -572,7 +579,7 @@ MULT (R5900_Core *ee, Instruction *i)
     intlog("MULT [{:d}] [{:d}] [{:d}]\n", i->rs, i->rt, i->rd);
 }
 
-static void
+static inline void
 MULT1 (R5900_Core *ee, Instruction *i)
 {
     s32 w1 = (s32)ee->reg.r[i->rs].SW[0];
@@ -589,7 +596,7 @@ MULT1 (R5900_Core *ee, Instruction *i)
     intlog("MULT1 [{:d}] [{:d}] [{:d}]\n", i->rs, i->rt, i->rd);
 }
 
-static void 
+static inline void 
 MADDU (R5900_Core *ee, u32 instruction)
 {
     errlog("LOL\n");
@@ -597,7 +604,7 @@ MADDU (R5900_Core *ee, u32 instruction)
     printf("lol");
 }
 
-static void
+static inline void
 DIV (R5900_Core *ee,Instruction *i)
 {
     if (ee->reg.r[i->rt].UD == 0) {
@@ -614,7 +621,7 @@ DIV (R5900_Core *ee,Instruction *i)
     intlog("DIV [{:d}] [{:d}]\n", i->rs, i->rt);
 }
 
-static void 
+static inline void 
 DIVU (R5900_Core *ee, Instruction *i) 
 {
     s64 w1 = (s64)ee->reg.r[i->rs].SW[0];
@@ -633,7 +640,7 @@ DIVU (R5900_Core *ee, Instruction *i)
     intlog("DIVU [{:d}] [{:d}]\n", i->rs, i->rt);
 }
 
-static void
+static inline void
 DIVU1 (R5900_Core *ee,Instruction *i)
 {
     s32 w1 = ee->reg.r[i->rs].SW[0];
@@ -657,28 +664,28 @@ DIVU1 (R5900_Core *ee,Instruction *i)
 /*****************************
 
 ******************************/
-static void 
+static inline void 
 AND (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rs].UD[0] & ee->reg.r[i->rt].UD[0];
     intlog("AND [{:d}] [{:d}] [{:d}] \n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 ANDI (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] & (u64)i->imm; 
     intlog("ANDI: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, (u64)i->imm);
 }
 
-static void 
+static inline void 
 OR (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].SD[0] = ee->reg.r[i->rs].SD[0] | ee->reg.r[i->rt].SD[0];
     intlog("OR [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 ORI (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] | (u64)i->imm; 
@@ -686,14 +693,14 @@ ORI (R5900_Core *ee, Instruction *i)
 }
 
 /* @Temporary: No XOR instruction? */
-static void
+static inline void
 XORI (R5900_Core *ee, Instruction *i)
 {
     ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] ^ (u64)i->imm;
     intlog("XORI [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, (u64)i->imm);
 }
 
-static void 
+static inline void 
 NOR (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].SD[0] = ~(ee->reg.r[i->rs].SD[0] | ee->reg.r[i->rt].SD[0]);
@@ -701,7 +708,7 @@ NOR (R5900_Core *ee, Instruction *i)
     intlog("NOR [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 SLL (R5900_Core *ee, Instruction *i) 
 {
     u32 sa                  = i->sa;
@@ -710,7 +717,7 @@ SLL (R5900_Core *ee, Instruction *i)
     intlog("SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
 }
 
-static void 
+static inline void 
 SLLV (R5900_Core *ee, Instruction *i) 
 {
     u32 sa                  = ee->reg.r[i->rs].SW[0] & 0x1F;
@@ -719,14 +726,14 @@ SLLV (R5900_Core *ee, Instruction *i)
     intlog("SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, sa);
 }
 
-static void 
+static inline void 
 DSLL (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rt].UD[0] << i->sa;
     intlog("DSLL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
 }
 
-static void
+static inline void
 DSLLV (R5900_Core *ee, Instruction *i)
 {
     s32 sa                  = ee->reg.r[i->rs].UW[0] & 0x3F;
@@ -734,7 +741,7 @@ DSLLV (R5900_Core *ee, Instruction *i)
     intlog("DSLLV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs); 
 }
 
-static void 
+static inline void 
 SRL (R5900_Core *ee, Instruction *i) 
 {
     u32 result              = (ee->reg.r[i->rt].UW[0] >> i->sa);
@@ -743,7 +750,7 @@ SRL (R5900_Core *ee, Instruction *i)
     intlog("SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
 }
 
-static void 
+static inline void 
 SRLV (R5900_Core *ee, Instruction *i) 
 {
     u32 sa                  = ee->reg.r[i->rs].SW[0] & 0x1F;
@@ -752,7 +759,7 @@ SRLV (R5900_Core *ee, Instruction *i)
     intlog("SRLV source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, sa);
 }
 
-static void 
+static inline void 
 SRA (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = (ee->reg.r[i->rt].SW[0]) >> (s32)i->sa;
@@ -761,7 +768,7 @@ SRA (R5900_Core *ee, Instruction *i)
     intlog("SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, (s32)i->sa);
 }
 
-static void
+static inline void
 SRAV (R5900_Core *ee, Instruction *i)
 {
     u32 sa                  = ee->reg.r[i->rs].UB[0] & 0x1F;
@@ -771,7 +778,7 @@ SRAV (R5900_Core *ee, Instruction *i)
     intlog("SRAV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs);
 }
 
-static void 
+static inline void 
 DSRAV (R5900_Core *ee, Instruction *i)
 {
     u32 sa                  = ee->reg.r[i->rs].UW[0] & 0x3F;
@@ -780,7 +787,7 @@ DSRAV (R5900_Core *ee, Instruction *i)
     intlog("DSRAV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs);
 }
 
-static void 
+static inline void 
 DSRA32 (R5900_Core *ee, Instruction *i) 
 {
     u32 s                   = i->sa + 32;
@@ -790,7 +797,7 @@ DSRA32 (R5900_Core *ee, Instruction *i)
     intlog("DSRA32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
 }
 
-static void 
+static inline void 
 DSLL32 (R5900_Core *ee, Instruction *i) 
 {
     u32 s                   = i->sa + 32;
@@ -799,7 +806,7 @@ DSLL32 (R5900_Core *ee, Instruction *i)
     intlog("DSLL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
 }
 
-static void 
+static inline void 
 DSRL (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rt].UD[0] >> i->sa;
@@ -807,7 +814,7 @@ DSRL (R5900_Core *ee, Instruction *i)
     intlog("DSRL source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, i->sa);
 }
 
-static void 
+static inline void 
 DSRL32 (R5900_Core *ee, Instruction *i) 
 {
     u32 s                   = i->sa + 32;
@@ -816,7 +823,7 @@ DSRL32 (R5900_Core *ee, Instruction *i)
     intlog("DSRL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
 }
 
-static void 
+static inline void 
 SLT (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = ee->reg.r[i->rs].SD[0] < ee->reg.r[i->rt].SD[0] ? 1 : 0;
@@ -824,7 +831,7 @@ SLT (R5900_Core *ee, Instruction *i)
     intlog("SLT [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 SLTU (R5900_Core *ee, Instruction *i) 
 {
     u32 result              = (ee->reg.r[i->rs].UD[0] < ee->reg.r[i->rt].UD[0]) ? 1 : 0;
@@ -833,7 +840,7 @@ SLTU (R5900_Core *ee, Instruction *i)
     intlog("SLTU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 SLTI (R5900_Core *ee, Instruction *i) 
 {
     s32 result              = (ee->reg.r[i->rs].SD[0] < (s32)i->sign_imm) ? 1 : 0;
@@ -842,7 +849,7 @@ SLTI (R5900_Core *ee, Instruction *i)
     intlog("SLTI [{:d}] [{:d}], [{:#x}]\n", i->rt, i->rs, i->sign_imm);
 }
 
-static void 
+static inline void 
 SLTIU (R5900_Core *ee, Instruction *i) 
 {
     u32 result              = (ee->reg.r[i->rs].UD[0] < (u64)i->sign_imm) ? 1 : 0;
@@ -884,7 +891,7 @@ branch_likely (R5900_Core *ee, bool is_branching, u32 offset)
     }
 }
 
-static void 
+static inline void 
 J (R5900_Core *ee, Instruction *i) 
 {
     u32 offset = ((ee->pc + 4) & 0xF0000000) + (i->instr_index << 2);
@@ -892,7 +899,7 @@ J (R5900_Core *ee, Instruction *i)
     intlog("J [{:#x}]\n", offset);
 }
 
-static void 
+static inline void 
 JR(R5900_Core *ee, Instruction *i) 
 {
     // @TODO: Check if the LSB is 0
@@ -900,7 +907,7 @@ JR(R5900_Core *ee, Instruction *i)
     intlog("JR source: [{:d}] pc_dest: [{:#x}]\n", i->rs, ee->reg.r[i->rs].UW[0]);
 }
 
-static void 
+static inline void 
 JAL(R5900_Core *ee, Instruction *i) 
 {
     u32 instr_index     = i->instr_index;
@@ -912,7 +919,7 @@ JAL(R5900_Core *ee, Instruction *i)
     intlog("JAL [{:#x}] \n", target_address);   
 }
 
-static void 
+static inline void 
 JALR(R5900_Core *ee, Instruction *i) 
 {
     u32 return_addr = ee->pc + 8;
@@ -928,7 +935,7 @@ JALR(R5900_Core *ee, Instruction *i)
     intlog("JALR [{:d}]\n", i->rs);
 }
 
-static void 
+static inline void 
 BNE(R5900_Core *ee, Instruction *i) 
 {
     s32 imm         = i->sign_imm << 2;
@@ -939,7 +946,7 @@ BNE(R5900_Core *ee, Instruction *i)
     intlog("BNE [{:d}] [{:d}], [{:#x}]\n", i->rt, i->rs, imm);
 }
 
-static void 
+static inline void 
 BEQ(R5900_Core *ee, Instruction *i) 
 {
     s32 imm         = i->sign_imm << 2;
@@ -950,7 +957,7 @@ BEQ(R5900_Core *ee, Instruction *i)
     intlog("BEQ [{:d}] [{:d}] [{:#x}] \n", i->rs, i->rt, imm);
 }
 
-static void 
+static inline void 
 BEQL(R5900_Core *ee, Instruction *i) 
 {
     s32 imm         = i->sign_imm << 2;
@@ -961,7 +968,7 @@ BEQL(R5900_Core *ee, Instruction *i)
     intlog("BEQL [{:d}] [{:d}] [{:#x}]\n", i->rs, i->rt, imm);    
 }
 
-static void 
+static inline void 
 BNEL(R5900_Core *ee, Instruction *i) 
 {
     s32 imm         = i->sign_imm << 2;
@@ -972,7 +979,7 @@ BNEL(R5900_Core *ee, Instruction *i)
     intlog("BNEL [{:d}] [{:d}] [{:#x}]\n", i->rs, i->rt, imm);
 }
 
-static void 
+static inline void 
 BLEZ (R5900_Core *ee, Instruction *i) 
 {
     s32 offset      = (i->sign_offset << 2);
@@ -983,7 +990,7 @@ BLEZ (R5900_Core *ee, Instruction *i)
     intlog("BLEZ [{:d}] [{:#x}]\n", i->rs, offset); 
 }
 
-static void 
+static inline void 
 BLEZL (R5900_Core *ee, Instruction *i) 
 {
     s32 offset      = (i->sign_offset << 2);
@@ -994,7 +1001,7 @@ BLEZL (R5900_Core *ee, Instruction *i)
     intlog("BLEZ [{:d}] [{:#x}]\n", i->rs, offset); 
 }
 
-static void 
+static inline void 
 BLTZ (R5900_Core *ee, Instruction *i) 
 {
     s32 offset      = i->sign_offset << 2;
@@ -1005,7 +1012,7 @@ BLTZ (R5900_Core *ee, Instruction *i)
     intlog("BLTZ [{:d}] [{:#x}] \n", i->rs, offset);
 }
 
-static void
+static inline void
 BGTZ (R5900_Core *ee, Instruction *i)
 {
     s32 offset      = i->sign_offset << 2;
@@ -1016,7 +1023,7 @@ BGTZ (R5900_Core *ee, Instruction *i)
     intlog("BGTZ [{:d}] [{:#x}] \n", i->rs, offset);
 }
 
-static void 
+static inline void 
 BGEZ (R5900_Core *ee, Instruction *i) 
 {
     s32 offset      = i->sign_offset << 2;
@@ -1030,8 +1037,8 @@ BGEZ (R5900_Core *ee, Instruction *i)
 /*******************************************
  * Miscellaneous Instructions
 *******************************************/
-// @@Implementation @@Debug: We have no debugger yet so theres no need to implement this now
-static void 
+// @@Implementation We have no debugger yet so theres no need to implement this now
+static inline void 
 BREAKPOINT(R5900_Core *ee, u32 instruction) 
 {
     // intlog("BREAKPOINT\n");
@@ -1043,7 +1050,7 @@ BREAKPOINT(R5900_Core *ee, u32 instruction)
 // @@Note: Issued after every MTC0 write The PS2 possibly executes millions of memory loads / stores per second, 
 // which is entirely feasible in hardware. But a complete pain in software as that would completely kill performance
 // May be cool to implement this for accuracy since that is the purpose of the emulator
-static void 
+static inline void 
 SYNC(R5900_Core *ee, u32 instruction) 
 {
     // intlog("SYNC\n");
@@ -1052,7 +1059,7 @@ SYNC(R5900_Core *ee, u32 instruction)
 /*******************************************
  * COP0 Instructions
 *******************************************/
-static void 
+static inline void 
 MFC0 (R5900_Core *ee, Instruction *i) 
 {
     u32 cop0            = i->rd;
@@ -1062,17 +1069,44 @@ MFC0 (R5900_Core *ee, Instruction *i)
     // intlog("MFC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
 }
 
-static void 
+static inline void 
 MTC0 (R5900_Core *ee, Instruction *i) 
 {
     u32 cop0             = i->rd;
     u32 gpr              = i->rt;
-    ee->cop0.regs[cop0]  = ee->reg.r[gpr].SW[0];
+
+    if(cop0 == 12) {
+        ee->cop0.status.IE    = (ee->reg.r[gpr].SW[0] >> 0) & 0x1;
+        ee->cop0.status.EXL   = (ee->reg.r[gpr].SW[0] >> 1) & 0x1;
+        ee->cop0.status.ERL   = (ee->reg.r[gpr].SW[0] >> 2) & 0x1;
+        ee->cop0.status.KSU   = (ee->reg.r[gpr].SW[0] >> 3) & 0x1;
+        ee->cop0.status.IM_2  = (ee->reg.r[gpr].SW[0] >> 10) & 0x1;
+        ee->cop0.status.IM_3  = (ee->reg.r[gpr].SW[0] >> 11) & 0x1;
+        ee->cop0.status.BEM   = (ee->reg.r[gpr].SW[0] >> 12) & 0x1;
+        ee->cop0.status.IM_7  = (ee->reg.r[gpr].SW[0] >> 15) & 0x1;
+        ee->cop0.status.EIE   = (ee->reg.r[gpr].SW[0] >> 16) & 0x1;
+        ee->cop0.status.EDI   = (ee->reg.r[gpr].SW[0] >> 17) & 0x1;
+        ee->cop0.status.CH    = (ee->reg.r[gpr].SW[0] >> 18) & 0x1;
+        ee->cop0.status.BEV   = (ee->reg.r[gpr].SW[0] >> 22) & 0x1;
+        ee->cop0.status.DEV   = (ee->reg.r[gpr].SW[0] >> 23) & 0x1;
+        ee->cop0.status.CU    = (ee->reg.r[gpr].SW[0] >> 28) & 0xF;
+    } else if (cop0 == 13) {
+        ee->cop0.cause.ex_code       = (ee->reg.r[gpr].SW[0] >> 2)  & 0x1F; 
+        ee->cop0.cause.int0_pending  = (ee->reg.r[gpr].SW[0] >> 10) & 0x1;
+        ee->cop0.cause.int1_pending  = (ee->reg.r[gpr].SW[0] >> 11) & 0x1;
+        ee->cop0.cause.timer_pending = (ee->reg.r[gpr].SW[0] >> 15) & 0x1;
+        ee->cop0.cause.EXC2          = (ee->reg.r[gpr].SW[0] >> 16) & 0x3;
+        ee->cop0.cause.CE            = (ee->reg.r[gpr].SW[0] >> 28) & 0x3;
+        ee->cop0.cause.BD2           = (ee->reg.r[gpr].SW[0] >> 30) & 0x1;
+        ee->cop0.cause.BD            = (ee->reg.r[gpr].SW[0] >> 31) & 0x1;
+    } else {
+        ee->cop0.regs[cop0] = ee->reg.r[gpr].SW[0];
+    }     
 
     // intlog("MTC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
 }
 
-static void
+static inline void
 ERET (R5900_Core *ee, u32 instruction) 
 {
     //@@Removal @@Implementation: This could be shortened down a fair bit with just an mfc0 instruction
@@ -1080,14 +1114,14 @@ ERET (R5900_Core *ee, u32 instruction)
 }
 
 // @@Implemtation: implement TLB
-static void 
+static inline void 
 TLBWI (R5900_Core *ee, u32 instruction, int index) 
 {
     //TLB_Entry current = TLBS.at(index);
     // intlog("TLBWI not yet implemented\n");
 }
 
-static void 
+static inline void 
 CACHE_IXIN (R5900_Core *ee, u32 instruction) 
 {
     // intlog("Invalidate instruction cache");
@@ -1157,40 +1191,6 @@ set_kernel_mode (COP0_Registers *cop0)
     };
 }
 
-inline void 
-cop0_status_write (COP0_Status *s, u32 data) 
-{
-    s->IE       = (data >> 0) & 0x1;
-    s->EXL      = (data >> 1) & 0x1;
-    s->ERL      = (data >> 2) & 0x1;
-    s->KSU      = (data >> 3) & 0x1;
-    s->IM_2     = (data >> 10) & 0x1;
-    s->IM_3     = (data >> 11) & 0x1;
-    s->BEM      = (data >> 12) & 0x1;
-    s->IM_7     = (data >> 15) & 0x1;
-    s->EIE      = (data >> 16) & 0x1;
-    s->EDI      = (data >> 17) & 0x1;
-    s->CH       = (data >> 18) & 0x1;
-    s->BEV      = (data >> 22) & 0x1;
-    s->DEV      = (data >> 23) & 0x1;
-    s->CU       = (data >> 28) & 0xF;
-    s->value    = data;
-}
-
-inline void 
-cop0_cause_write (COP0_Cause *c, u32 data) 
-{
-    c->ex_code          = (data >> 2)  & 0x1F; 
-    c->int0_pending     = (data >> 10) & 0x1;
-    c->int1_pending     = (data >> 11) & 0x1;
-    c->timer_pending    = (data >> 15) & 0x1;
-    c->EXC2             = (data >> 16) & 0x3;
-    c->CE               = (data >> 28) & 0x3;
-    c->BD2              = (data >> 30) & 0x1;
-    c->BD               = (data >> 31) & 0x1;
-    c->value            = data;
-}
-
 inline void
 cop0_timer_compare_check (R5900_Core *ee)
 {
@@ -1203,7 +1203,7 @@ cop0_timer_compare_check (R5900_Core *ee)
 /*******************************************
  * EE Instructions
 *******************************************/
-static void 
+static inline void 
 MOVN (R5900_Core *ee, Instruction *i)
 {
     if (ee->reg.r[i->rt].UD[0] != 0) {
@@ -1212,7 +1212,7 @@ MOVN (R5900_Core *ee, Instruction *i)
     intlog("MOVN [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 MOVZ (R5900_Core *ee, Instruction *i) 
 {
     if (ee->reg.r[i->rt].SD[0] == 0) {
@@ -1222,35 +1222,35 @@ MOVZ (R5900_Core *ee, Instruction *i)
     intlog("MOVZ [{:d}] [{:d}] [{:d}]\n",i->rd, i->rs, i->rt);
 }
 
-static void 
+static inline void 
 MFLO (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->LO;
     intlog("MFLO [{:d}] \n", i->rd);
 }
 
-static void 
+static inline void 
 MFLO1 (R5900_Core *ee, Instruction *i)
 {
     ee->reg.r[i->rd].UD[0] = ee->LO1;
     intlog("MFLO_1 [{:d}]\n", i->rd);
 }
 
-static void 
+static inline void 
 MFHI (R5900_Core *ee, Instruction *i) 
 {
     ee->reg.r[i->rd].UD[0] = ee->HI;
     intlog("MFHI [{:d}]\n", i->rd);
 }
 
-static void
+static inline void
 MTLO (R5900_Core *ee, Instruction *i) 
 {
     ee->LO = ee->reg.r[i->rs].UD[0];
     intlog("MTLO [{:d}]\n", i->rs);
 }
 
-static void
+static inline void
 MTHI (R5900_Core *ee, Instruction *i) 
 {
     ee->HI = ee->reg.r[i->rs].UD[0];
@@ -1479,9 +1479,8 @@ r5900_cycle(R5900_Core *ee)
     ee->cop0.regs[9]    += 1;
     ee->reg.r[0].SD[0]  = 0;
 
-    cop0_status_write(&ee->cop0.status, ee->cop0.regs[12]);
-    cop0_cause_write(&ee->cop0.cause, ee->cop0.regs[13]);
-    set_kernel_mode(&ee->cop0);
+    // @Speed: These functions emit a ungodly amount of assembly. Fix!!!
+    // set_kernel_mode(&ee->cop0);
 }
 
 void 

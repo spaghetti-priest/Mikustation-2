@@ -42,7 +42,7 @@ end_of_transfer()
         dmac.interrupt_status.channel_status[2] = true;
         bool int1 = (dmac.interrupt_status.channel_status[2] & dmac.interrupt_status.channel_mask[2]) != 0;
         check_interrupt(int1, false, true);
-        printf("End of transfer\n");
+        syslog("End of transfer\n");
     }
 }
 

@@ -31,6 +31,8 @@ typedef struct _SDL_Context_ {
     bool left_down;
 } SDL_Context;
 
+// @Cleanup: This has become redundant
+
 typedef struct Range {
     uint32_t start;
     uint32_t size;

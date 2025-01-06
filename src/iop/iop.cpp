@@ -971,8 +971,8 @@ iop_cycle()
 	iop.next_instruction 	= iop_core_load_32(iop.pc + 4);
 	decode_and_execute(iop.current_instruction);
 	iop.pc += 4;
-    iop_cop0_write_status(&iop.cop0.status, iop.reg[12]);
-    iop_cop0_write_cause(&iop.cop0.cause, iop.reg[13]);
+    // iop_cop0_write_status(&iop.cop0.status, iop.reg[12]);
+    // iop_cop0_write_cause(&iop.cop0.cause, iop.reg[13]);
 }
 
 void

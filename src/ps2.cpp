@@ -37,6 +37,7 @@ ___________________________________________________________
 #include "../include/iop/iop_dmac.h"
 
 
+#include "SDL2/include/SDL_Timer.h"
 u32 MCH_RICM    = 0, MCH_DRD    = 0;
 u8 _rdram_sdevid = 0;
 
@@ -239,11 +240,14 @@ ee_load_8 (u32 address)
 {
     uint8_t r = 0;
 
-    if (BIOS.contains(address)) 
+    // if (RDRAM.contains(address))
+    if (address < 0x10000000)
+        return *(u8*)&_rdram_[address & 0x01FFFFFF];
+
+    // if (BIOS.contains(address)) 
+    if (address >= 0x1FC00000 && address < 0x20000000) 
         return *(u8*)&_bios_memory_[address & 0x3FFFFF];
     
-    if (RDRAM.contains(address))
-        return *(u8*)&_rdram_[address];
 
     errlog("[ERROR]: Could not read load_memory8() at address [{:#09x}]\n", address);    
 
@@ -255,13 +259,15 @@ ee_load_16 (u32 address)
 {
     uint16_t r = 0;
 
-    if (BIOS.contains(address)) 
-        return *(u16*)&_bios_memory_[address & 0x3FFFFF];
-   
-    if (RDRAM.contains(address)) 
-        return *(u16*)&_rdram_[address];
+    if (address < 0x10000000)
+        return *(u16*)&_rdram_[address & 0x01FFFFFF];
 
-    if (IOP_RAM.contains(address)) 
+    // if (BIOS.contains(address)) 
+    if (address >= 0x1FC00000 && address < 0x20000000) 
+        return *(u16*)&_bios_memory_[address & 0x3FFFFF];
+
+    // if (IOP_RAM.contains(address)) 
+    if (address >= 0x1C000000 && address < 0x1C200000)
         return *(u16*)&_iop_ram_[address & 0x1FFFFF];
 
     if (address == 0x1a000006) 
@@ -276,7 +282,19 @@ u32
 ee_load_32 (u32 address) 
 {
     uint32_t r = 0;
+
+    // if (address < 0x10000000)
+    if (address < 0x10000000) 
+        return *(uint32_t*)&_rdram_[address & 0x01FFFFFF];
     
+    // if (BIOS.contains(address)) 
+    if (address >= 0x1FC00000 && address < 0x20000000) 
+        return *(uint32_t*)&_bios_memory_[address & 0x3FFFFF];
+
+    // if (IOP_RAM.contains(address))
+    if (address >= 0x1C000000 && address < 0x1C200000)
+       return *(u32*)&_iop_ram_[address & 0x1FFFFF];
+
     switch(address) 
     {
         case 0x10002010:
@@ -331,31 +349,22 @@ ee_load_32 (u32 address)
         } break;
     }
 
-    if (address >= 0x1000F200 && address <= 0x1000F260)
-        return sif_read(address);
+    if (address >= 0x10008000 && address < 0x1000f590)
+        return dmac_read(address);
 
-    if (GS_REGISTERS.contains(address))
-        return gs_read_32_priviledged(address);
-
-    //if ((address & 0xFFFFF000) == 0x10003000)
     if ((address >= 0x10003000) && (address <= 0x100030A0))
         return gif_read(address);
 
-    if (address >= 0x10008000 && address < 0x1000f590)
-        return dmac_read(address);
+    if (address >= 0x1000F200 && address <= 0x1000F260)
+        return sif_read(address);
+
+    // if (GS_REGISTERS.contains(address))
+    if (address >= 0x12000000 && address < 0x12002000)
+        return gs_read_32_priviledged(address);
 
     if (address >= 0x10000000 && address <= 0x10001840)
         return timer_read(address);
     
-    if (IOP_RAM.contains(address))
-       return *(u32*)&_iop_ram_[address & 0x1FFFFF];
-
-    if (BIOS.contains(address)) 
-        return *(uint32_t*)&_bios_memory_[address & 0x3FFFFF];
-
-    if (RDRAM.contains(address)) 
-        return *(uint32_t*)&_rdram_[address];
-
     errlog("[ERROR]: Could not read load_memory32() at address [{:#09x}]\n", address);
     
     return r;
@@ -365,10 +374,11 @@ u64
 ee_load_64 (u32 address) 
 {
     uint64_t r = 0;
-    if (RDRAM.contains(address)) 
-        return *(uint64_t*)&_rdram_[address];
+    if (address < 0x10000000)
+        return *(uint64_t*)&_rdram_[address & 0x01FFFFFF];
 
-    if (GS_REGISTERS.contains(address))
+    // if (GS_REGISTERS.contains(address))
+    if (address >= 0x12000000 && address < 0x12002000)
         return gs_read_64_priviledged(address);
     
     if (address == 0x10006000 || address == 0x10006008) {
@@ -391,8 +401,8 @@ u128 ee_load_128() {
 void 
 ee_store_8 (u32 address, u8 value) 
 {
-    if (RDRAM.contains(address)) {
-        *(u8*)&_rdram_[address] = value;
+    if (address < 0x10000000){
+        *(u8*)&_rdram_[address & 0x01FFFFFF] = value;
         return;
     }
 
@@ -401,7 +411,8 @@ ee_store_8 (u32 address, u8 value)
         return;
     };
 
-    if (IOP_RAM.contains(address)) {
+    // if (IOP_RAM.contains(address)) {
+    if (address >= 0x1C000000 && address < 0x1C200000) {
        *(u8*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
@@ -412,8 +423,8 @@ ee_store_8 (u32 address, u8 value)
 void 
 ee_store_16 (u32 address, u16 value) 
 {
-    if (RDRAM.contains(address)) {
-        *(u16*)&_rdram_[address] = value;
+    if (address < 0x10000000) {
+        *(u16*)&_rdram_[address & 0x01FFFFFF] = value;
         return;
     }
 
@@ -422,7 +433,8 @@ ee_store_16 (u32 address, u16 value)
         return;
     };
     
-    if (IOP_RAM.contains(address)) {
+    // if (IOP_RAM.contains(address)) {
+    if (address >= 0x1C000000 && address < 0x1C200000) {
        *(u16*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
@@ -433,6 +445,12 @@ ee_store_16 (u32 address, u16 value)
 void 
 ee_store_32 (u32 address, u32 value) 
 {
+
+    if (address < 0x10000000){
+        *(u32*)&_rdram_[address & 0x01FFFFFF] = value;
+        return;
+    }
+
     switch (address)
     {
         case 0x10002000:
@@ -487,6 +505,16 @@ ee_store_32 (u32 address, u32 value)
         return;
     }
     
+    if (address >= 0x10008000 && address < 0x1000f000) {
+       dmac_write(address, value);
+       return;
+    }
+    
+    if ((address >= 0x10003000) && (address <= 0x100030A0)) {
+        gif_write(address, value);
+        return;
+    }
+    
     //@@Note: Not sure what is this is
     if (address == 0x1000f500) return;
 
@@ -495,20 +523,10 @@ ee_store_32 (u32 address, u32 value)
         return;
     }
 
-    if (GS_REGISTERS.contains(address)) {
+    // if (GS_REGISTERS.contains(address)) {
+    if (address >= 0x12000000 && address < 0x12002000) {
         gs_write_32_priviledged(address, value);
         return;
-    }
-
-    //if (address && 0xFFFFF000 == 0x10003000 || address == 0x10006000) {
-    if ((address >= 0x10003000) && (address <= 0x100030A0)) {
-        gif_write(address, value);
-        return;
-    }
-
-    if (address >= 0x10008000 && address < 0x1000f000) {
-       dmac_write(address, value);
-       return;
     }
 
     if (address >= 0x10000000 && address <= 0x10001840) {
@@ -516,12 +534,8 @@ ee_store_32 (u32 address, u32 value)
         return;
     }
 
-    if (RDRAM.contains(address)) {
-        *(u32*)&_rdram_[address] = value;
-        return;
-    }
-
-    if (IOP_RAM.contains(address)) {
+    // if (IOP_RAM.contains(address)) {
+    if (address >= 0x1C000000 && address < 0x1C200000) {
        *(u32*)&_iop_ram_[address & 0x1FFFFF] = value;
         return;
     }
@@ -532,12 +546,13 @@ ee_store_32 (u32 address, u32 value)
 void 
 ee_store_64 (u32 address, u64 value) 
 {
-    if (RDRAM.contains(address)) {
-        *(u64*)&_rdram_[address] = value;
+    if (address < 0x10000000){
+        *(u64*)&_rdram_[address & 0x01FFFFFF] = value;
         return;
     }
 
-    if (GS_REGISTERS.contains(address)) {
+    // if (GS_REGISTERS.contains(address)) {
+    if (address >= 0x12000000 && address < 0x12002000) {
         gs_write_64_priviledged(address, value);
         return;
     }
@@ -575,7 +590,7 @@ ee_store_64 (u32 address, u64 value)
         //@HACK 
         *(u64*)&_vu0_data_memory_[address & 0x3FFF] = value;
         return;
-    }   
+    }
 
     /* @@Move @@Incomplete: This is a 128 bit move this should be moved into a different function */
     if (address == 0x10004000 || address == 0x10004008) {
@@ -591,7 +606,6 @@ ee_store_64 (u32 address, u64 value)
 
     errlog("[ERROR]: Could not write store_memory64() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
-
 void ee_store_128 (u32 address, u128 value) {}
 
 u32 
@@ -632,7 +646,7 @@ swap_framebuffers (SDL_Context *context)
     // @Fix: Pitch is giving me a headache I can see the light in the future
     SDL_UnlockSurface(context->surface);
 
-    u32 mem_size = context->backbuffer->w * context->backbuffer->h * sizeof(u32);
+    u32 mem_size = context->backbuffer->w * sizeof(u32) * context->backbuffer->h;
     memcpy(context->surface->pixels, context->backbuffer->pixels, mem_size);
 
     SDL_LockSurface(context->surface);
@@ -667,13 +681,16 @@ main (int argc, char **argv)
 #if _WIN32 || _WIN64
     // const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
     const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph39001.bin";
+    // const char* elf_filename = "..\\Mikustation-2\\data\\3stars\\3stars.elf";
     // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
     // const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
     const char* elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02b\\demo2b.elf";
+    // const char* elf_filename = "..\\Mikustation-2\\data\\1987.elf";
 #else
     const char *bios_filename = "../data/bios/scph10000.bin";
 #endif    
     
+    // @Incomplete: Create a Virtual Memmory map for the VM and map these mallocs to the virtual memory
     _bios_memory_       = (u8 *)malloc(sizeof(u8) * MEGABYTES(4));
     _rdram_             = (u8 *)malloc(sizeof(u8) * MEGABYTES(32));
     _iop_ram_           = (u8 *)malloc(sizeof(u8) * MEGABYTES(2));
@@ -716,7 +733,7 @@ main (int argc, char **argv)
                             0);
     
     renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_RenderSetLogicalSize(renderer, 640, 480);
+    // SDL_RenderSetLogicalSize(renderer, 640, 480);
     
     texture = SDL_CreateTexture(renderer,
                                 backbuffer.pixel_format, 
@@ -736,18 +753,23 @@ main (int argc, char **argv)
         .window     = window,
         .renderer   = renderer,
         .texture    = texture,
-        .surface    = surface,
         .backbuffer = &backbuffer,
+        .surface    = surface,
     };
+
+    // u64 begin_time = 0, end_time = 0, delta_time = 0;
 
     while (running) {
         instructions_run = 0;  
         // @@Note: In dobiestation and chonkystation there is a random instruction limit in order to 
         // synch the ee and iop cycle rate by 1/8 it looks like an arbitrary number.      
         while (instructions_run < 1000000) {
-            /* Step Through Playstation 2 Pipeline */
+            // @Note: This is a performance critical loop so no branching should exist here however the dmac and the iop operate and
+            // half and 1/8 the speed of the ee but since we're not emulating the iop and dmac sufficently we can just ignore these
+            // until a scheduler is written and can be performed better
             r5900_cycle(&ee);
-            if (instructions_run % 2 == 0) { dmac_cycle(); } 
+            // if (instructions_run % 2 == 0) { dmac_cycle(); } 
+            dmac_cycle(); 
             timer_tick();
             if (instructions_run % 8 == 0) { iop_cycle(); }
             instructions_run++;            
@@ -760,7 +782,6 @@ main (int argc, char **argv)
                 swap_framebuffers(&main_context);
             }
             // request_interrupt(INT_VB_OFF);
-        
         }
 #if 1
         /* Emulator Step Through*/
