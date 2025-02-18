@@ -89,4 +89,41 @@ union CPU_Types {
     s8   SB[16];
 };
 
+typedef struct _Vector3_ {
+    s32 x, y, z;
+} v3;
+
+typedef union _Vector2_ {
+    struct {
+        s32 x, y;
+    };
+    struct {
+        s32 u, v;
+    };
+} v2;
+
+typedef union _Vector4_ {
+    struct {
+        s32 x, y, z, w;
+    };
+    struct {
+        s32 r, g, b, a;
+    };
+} v4;
+
+typedef struct Instruction_t {
+    u8 opcode;
+    u8 rd;
+    u8 rt;
+    u8 rs;
+    u8 base;
+    u32 sa;
+
+    u16 imm;
+    s16 sign_imm;
+    u16 offset;
+    s16 sign_offset;
+    u32 instr_index;
+} Instruction;
+
 #endif

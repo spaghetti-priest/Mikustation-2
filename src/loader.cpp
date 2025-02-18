@@ -29,7 +29,10 @@ load_elf(R5900_Core *ee, const char *path)
 	u8 *elf;
 	u64 addr = 0;
 
-	assert(f && "File name or Path for ELF file cannot be found");
+	if (!f) {
+		errlog("[ERROR]: File name or Path for ELF file cannot be found\n");
+		return false;
+	}
 
 	fseek(f, 0, SEEK_END);
 	size_t file_size = ftell(f);
@@ -116,7 +119,7 @@ struct romdir_entry {
 	u32 file_size; 	 	//Size of the file itself
 };
 
-int 
+bool 
 read_bios (const char *filename, u8 *bios_memory) 
 {
     size_t file_size = 0;

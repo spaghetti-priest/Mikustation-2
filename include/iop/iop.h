@@ -88,36 +88,6 @@ typedef struct _R5000Core_ {
     u32 current_instruction;
     u32 next_instruction;
 } R5000_Core;
-
-inline void
-iop_cop0_write_cause (IOP_COP0_Cause *cause, u32 data)
-{
-    cause->excode                    = (data >> 0)  & 0x1F;
-    cause->interrupt_pending_field   = (data >> 1)  & 0xFF;
-    cause->coprocessor_error         = (data >> 28) & 0x3;
-    cause->branch_delay_pointer      = (data << 31);
-}
-
-inline void 
-iop_cop0_write_status (IOP_COP0_Status *status, u32 data)
-{
-    status->current_interrupt     = (data >> 0) & 0x1;
-    status->current_kernel_mode   = (data >> 1) & 0x1;
-    status->previous_interrupt    = (data >> 2) & 0x1;
-    status->previous_kernel_mode  = (data >> 3) & 0x1;
-    status->old_interrupt         = (data >> 4) & 0x1;
-    status->old_kernel            = (data >> 5) & 0x1;
-    status->interrupt_mask        = ((data >> 8) & 0xFF);
-    status->isolate_cache         = (data >> 16) & 0x1;
-    status->swapped_cache         = (data >> 17) & 0x1;
-    status->cache_parity_bit      = (data >> 18) & 0x1;
-    status->last_load_operation   = (data >> 19) & 0x1;
-    status->cache_parity_error    = (data >> 20) & 0x1;
-    status->TLB_shutdown          = (data >> 21) & 0x1;
-    status->boot_exception_vector = (data >> 22) & 0x1;
-    status->reverse_endianess     = (data >> 25) & 0x1;
-    status->cop0_enable           = (data >> 28) & 0x1;
-}
   
 // @Temporary @Note: Only using this for EE and IOP loads in the interconnect
 u32 get_iop_pc();

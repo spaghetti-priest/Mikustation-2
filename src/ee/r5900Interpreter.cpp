@@ -25,30 +25,15 @@
 #define ZeroExtend(x)
 
 //std::array<TLB_Entry, 48> TLBS;
-FILE* dis = fopen("disasm.txt", "w+");
+// FILE* dis = fopen("disasm.txt", "w+");
 
-std::ofstream console("disasm.txt", std::ios::out);
+// std::ofstream console("disasm.txt", std::ios::out);
 
-static u8 *_icache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
-static u8 *_dcache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(8));
+// static u8 *_icache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
+// static u8 *_dcache_         = (u8 *)malloc(sizeof(u8) * KILOBYTES(8));
 static u8 *_scratchpad_     = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
  //Range SCRATCHPAD = Range(0x70000000, KILOBYTES(16));
-
-typedef struct Instruction_t {
-    u8 opcode;
-    u8 rd;
-    u8 rt;
-    u8 rs;
-    u8 base;
-    u32 sa;
-
-    u16 imm;
-    s16 sign_imm;
-    u16 offset;
-    s16 sign_offset;
-    u32 instr_index;
-} Instruction;
 
 void
 dump_all_ee_registers(R5900_Core *ee)
@@ -177,11 +162,13 @@ ee_core_store_64 (u32 address, u64 value)
 
 static inline void ee_core_store_128() {return;}
 
-/*******************************************
- * Load and Store Instructions
-*******************************************/
 // @@Note: Fuck everything I said previously. On the r5900load delay slots are optional
 static void load_delay() {}
+
+enum Access {
+    _LOAD,
+    _STORE,
+};
 
 enum Type {
     _HALF,
@@ -190,131 +177,74 @@ enum Type {
     _QUAD,
 };
 
-static inline void check_address_error_exception (R5900_Core *ee, Type type, u32 vaddr)
+enum Sign {
+    _UNSIGN,
+    _SIGN,
+};
+
+static inline bool check_address_error_exception (R5900_Core *ee, Access access, Type type, u32 vaddr)
 {
+    bool err = false;
     u32 low_bits = 0;
     // If the exception system becomes a problem to debug just add more types to the type enum 
     // to have it point to the location of the functoin caller or something else more efficient 
-    char *location = 0;
+    const char *acc = 0;
+    const char *location = 0;
+    switch(access)
+    {
+        case _LOAD:
+            acc = "Load";        
+        break;
+
+        case _STORE:
+            acc = "Store";
+        break;
+    };
+
     switch(type)
     {
-        case _HALF:     low_bits = vaddr & 0x1; break;
-        case _WORD:     low_bits = vaddr & 0x3; break;
-        case _DOUBLE:   low_bits = vaddr & 0x7; break;
-        case _QUAD:     low_bits = vaddr & 0xF; break;
+        case _HALF: 
+            low_bits = vaddr & 0x1;
+            location = "Half";
+        break;
+        
+        case _WORD:     
+            low_bits = vaddr & 0x3;
+            location = "Word"; 
+        break;
+        
+        case _DOUBLE:   
+            low_bits = vaddr & 0x7;
+            location = "Double"; 
+        break;
+        
+        case _QUAD:    
+            low_bits = vaddr & 0xF;
+            location = "Quad"; 
+        break;
     };
 
     if (low_bits != 0) {
-        errlog("[ERROR] Load/Store Address is not properly aligned {:#08x}\n", vaddr);
-        Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
-        ee->pc = handle_exception_level_1(&ee->cop0, &exc, ee->pc, ee->is_branching);
+        errlog("[ERROR] {:s}_{:s} is not properly aligned. Vaddr: [{:#08x}]\n", acc, location, vaddr);
+        Exception exc   = get_exception(V_COMMON, __ADDRESS_ERROR);
+        ee->pc          = handle_exception_level_1(&ee->cop0, &exc, ee->pc, ee->is_branching);
+        err             = true;
     }
-}
 
-static inline void 
-LUI (R5900_Core *ee, Instruction *i) 
-{
-    s64 imm                 = (s64)(s32)((i->imm) << 16);
-    ee->reg.r[i->rt].UD[0]  = imm;
-
-    intlog("LUI [{:d}] [{:#x}]\n", i->rt, imm);
-    // printf("LUI [{%d}] [{%#08x}]\n", rt, imm);
-}
-
-static inline void 
-LB (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-
-    ee->reg.r[i->rt].SD[0] = (s64)ee_core_load_8(vaddr);
-    intlog("LB [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);  
-}
-
-static inline void 
-LBU (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    ee->reg.r[i->rt].UD[0] = (u64)ee_core_load_8(vaddr);
-    intlog("LBU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);    
-}
-
-static inline void
-LH (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _HALF, vaddr);
-
-    ee->reg.r[i->rt].SD[0] = (s64)ee_core_load_16(vaddr);
-    intlog("LH [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);    
-}
-
-static inline void
-LHU (R5900_Core *ee, Instruction *i)
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-
-    check_address_error_exception(ee, _HALF, vaddr);
-
-    ee->reg.r[i->rt].UD[0] = (u64)ee_core_load_16(vaddr);
-    intlog("LHU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-LW (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _WORD, vaddr);
-
-    ee->reg.r[i->rt].SD[0] = (s64)ee_core_load_32(vaddr);
-    intlog("LW [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-    // printf("LW [{%d}] [{%#08x}] [{%d}] \n", rt, (s32)i->sign_offset, base);
-}
-
-static inline void 
-LWC1 (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _WORD, vaddr);
-
-    u32 data = (u32)ee_core_load_32(vaddr);
-
-    cop1_setFPR(i->rt, data);
-    intlog("LWC1 [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-LWU (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-
-    check_address_error_exception(ee, _WORD, vaddr);
-   
-    ee->reg.r[i->rt].SD[0] = (u64)ee_core_load_32(vaddr);
-    intlog("LWU [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-LD (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _DOUBLE, vaddr);
-
-    ee->reg.r[i->rt].UD[0] = ee_core_load_64(vaddr);
-    intlog("LD [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
+    return err;
 }
 
 /* This is an interesting and clear implemtation from Dobiestation */
+
+static const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+static const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+static const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
+static const u8 SDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+
 static const u64 LDL_MASK[8] =
 {   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
     0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
 };
-
-static const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
 
 static const u64 LDR_MASK[8] = 
 {
@@ -322,541 +252,21 @@ static const u64 LDR_MASK[8] =
     0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
 };
 
-static const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
-
-static inline void 
-LDL (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr           = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    u32 aligned_vaddr   = vaddr & ~0x7;
-    u32 shift           = vaddr & 0x7;
-    
-    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
-    u64 result          = (ee->reg.r[i->rt].UD[0] & LDL_MASK[shift] | aligned_vaddr << LDL_SHIFT[shift]);
-    ee->reg.r[i->rt].UD[0] = result;
-    intlog("LDL [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-LDR (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr           = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    u32 aligned_vaddr   = vaddr & ~0x7;
-    u32 shift           = vaddr & 0x7;
-    
-    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
-    u64 result          = (ee->reg.r[i->rt].UD[0] & LDR_MASK[shift] | aligned_vaddr << LDR_SHIFT[shift]);
-    ee->reg.r[i->rt].UD[0] = result;
-    intlog("LDR [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
-    printf("LDR [{%d}] [{%#x}] [{%d}]\n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-LQ (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _QUAD, vaddr);
-
-    ee->reg.r[i->rt].UD[0] = ee_core_load_64(vaddr);
-    ee->reg.r[i->rt].UD[1] = ee_core_load_64(vaddr + 8);
-    // intlog("LQ [{:d}] [{:#x}] [{:d}]\n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-SB (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    s8 value    = ee->reg.r[i->rt].SB[0];
-
-    ee_core_store_8(vaddr, value);
-    intlog("SB [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-SH (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    s16 value   = ee->reg.r[i->rt].SH[0];
-
-    check_address_error_exception(ee, _HALF, vaddr);
-
-    ee_core_store_16(vaddr, value);
-    intlog("SH [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs); 
-}
-
-static inline void 
-SW (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    s32 value = ee->reg.r[i->rt].SW[0];
-    
-    check_address_error_exception(ee, _WORD, vaddr);
-
-    ee_core_store_32(vaddr, value);
-    intlog("SW [{:d}] [{:#x}] [{:d}] \n", i->rt, i->sign_offset, i->rs);
-    // printf("SW [{%d}] [{%#08x}] [{%d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-static inline void 
-SWC1 (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    
-    check_address_error_exception(ee, _WORD, vaddr);
-
-    ee_core_store_32(vaddr, cop1_getFPR(i->rt));
-    intlog("SWC1 [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs); 
-}
-
-static inline void 
-SD (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr   = ee->reg.r[i->rs].UW[0] + (s32)i->sign_offset;
-    u64 value   = ee->reg.r[i->rt].UD[0];
-  
-    check_address_error_exception(ee, _DOUBLE, vaddr);
-
-    ee_core_store_64(vaddr, value);   
- 
-    // intlog("SD [{:d}] [{:#x}] [{:d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-    // printf("SD [{%d}] [{%#08x}] [{%d}] \n", i->rt, (s32)i->sign_offset, i->rs);
-}
-
-/* This is an interesting and clear implemtation from Dobiestation */
-static const u64 SDL_MASK[8] =
-{   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
-    0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
-};
-
-static const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
-
 static const u64 SDR_MASK[8] = 
 {
     0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL, 
     0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL      
 };
 
-static const u8 SDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
+static const u64 SDL_MASK[8] =
+{   0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+    0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+};
 
-static inline void 
-SDL (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr           = ee->reg.r[i->rs].UW[0] + i->sign_offset;
-    u32 aligned_vaddr   = vaddr & ~0x7;
-    u32 shift           = vaddr & 0x7;
-    
-    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
-    u64 result          = (ee->reg.r[i->rt].UD[0] & SDL_MASK[shift] | aligned_vaddr << SDL_SHIFT[shift]);
-    ee_core_store_64(aligned_vaddr, result);
-    intlog("SDL [{:d}] [{:#x}] [{:d}]\n", i->rt, i->sign_offset, i->rs);
-    printf("SDL [{%d}] [{%#x}] [{%d}]\n", i->rt, i->sign_offset, i->rs);
-}
-
-static inline void 
-SDR (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr           = ee->reg.r[i->rs].UW[0] + i->sign_offset;
-    u32 aligned_vaddr   = vaddr & ~0x7;
-    u32 shift           = vaddr & 0x7;
-    
-    u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
-    u64 result          = (ee->reg.r[i->rt].UD[0] & SDR_MASK[shift] | aligned_vaddr << SDR_SHIFT[shift]);
-    ee_core_store_64(aligned_vaddr, result);
-    intlog("SDR [{:d}] [{:#x}] [{:d}]\n", i->rt, i->sign_offset, i->rs);
-    printf("SDR [{%d}] [{%#x}] [{%d}]\n", i->rt, i->sign_offset, i->rs);
-}
-
-//@@Incomplete: Change this to using uint128 data structure
-static inline void 
-SQ (R5900_Core *ee, Instruction *i) 
-{
-    u32 vaddr   = ee->reg.r[i->rs].UW[0] + i->sign_offset;
-    u64 lov     = ee->reg.r[i->rt].UD[0];
-    u64 hiv     = ee->reg.r[i->rt].UD[1];
-   
-    check_address_error_exception(ee, _QUAD, vaddr);
-
-    ee_core_store_64(vaddr, lov);       
-    ee_core_store_64(vaddr + 8, hiv);       
-    // intlog("SQ [{:d}] [{:#x}] [{:d}] \n", i->rt, i->sign_offset, base);
-}
-
-/*******************************************
-* Computational ALU Instructions
-* Arithmetic
-• Logical
-• Shift
-• Multiply
-• Divide
-*******************************************/
 static inline void add_overflow() {return;}
 static inline void add_overflow64() {return;}
 static inline void sub_overflow() {return;}
 static inline void sub_overflow64() {return;}
-
-static inline void 
-ADD (R5900_Core *ee, Instruction *i) 
-{
-    // @@Incomplete: The add instruction must signal an exception on overflow
-    // but we have no overflow detection for now
-    int temp                = ee->reg.r[i->rs].SW[0] + ee->reg.r[i->rt].SW[0];
-    ee->reg.r[i->rd].SD[0]  = (s64)temp;
-    intlog("ADD [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);   
-}
-
-static inline void 
-ADDU (R5900_Core *ee, Instruction *i) 
-{
-    int32_t result          = ee->reg.r[i->rs].SW[0] + ee->reg.r[i->rt].SW[0];
-    ee->reg.r[i->rd].UD[0]  = result;
-    intlog("ADDU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-ADDI (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = ee->reg.r[i->rs].SD[0] + i->sign_imm;
-    ee->reg.r[i->rt].SD[0]  = result;
-    /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
-    intlog("ADDI: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, i->sign_imm);
-}
-
-static inline void 
-ADDIU (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = ee->reg.r[i->rs].SD[0] + i->sign_imm;
-    ee->reg.r[i->rt].SD[0]  = result;
-    intlog("ADDIU: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, i->sign_imm);
-}
-
-static inline void 
-DADDU (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rs].SD[0] + ee->reg.r[i->rt].SD[0];
-    intlog("DADDU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);  
-}
-
-static inline void
-DADDIU (R5900_Core *ee, Instruction *i)
-{
-    ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].SD[0] + i->sign_imm;
-    intlog("DADDIU [{:d}] [{:d}] [{:#x}]\n", i->rt, i->rs, i->sign_imm);  
-}
-
-static inline void 
-SUB (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = ee->reg.r[i->rs].SW[0] - ee->reg.r[i->rt].SW[0];
-    ee->reg.r[i->rd].UD[0]  = (s64)result;
-
-    /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
-    intlog("SUB [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);    
-}
-
-static inline void 
-SUBU (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = ee->reg.r[i->rs].SW[0] - ee->reg.r[i->rt].SW[0];
-    ee->reg.r[i->rd].UD[0]  = (u64)result;
-    intlog("SUBU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);    
-}
-
-static inline void 
-MULT (R5900_Core *ee, Instruction *i) 
-{
-    s64 w1 = (s64)ee->reg.r[i->rs].SW[0];
-    s64 w2 = (s64)ee->reg.r[i->rt].SW[0];
-    s64 prod = (w1 * w2);
-    
-    ee->LO = (s32)(prod & 0xFFFFFFFF);
-    ee->HI = (s32)(prod >> 32);
-    // @@Note: C790 apparently states that the chip does not always call mflo everytime
-    // during a 3 operand mult
-    // But we could always use mflo because of the pipeline interlock 
-    ee->reg.r[i->rd].SD[0] = ee->LO;
-
-    intlog("MULT [{:d}] [{:d}] [{:d}]\n", i->rs, i->rt, i->rd);
-}
-
-static inline void
-MULT1 (R5900_Core *ee, Instruction *i)
-{
-    s32 w1 = (s32)ee->reg.r[i->rs].SW[0];
-    s32 w2 = (s32)ee->reg.r[i->rt].SW[0];
-    s64 prod = (s64)(w1 * w2);
-    
-    ee->LO1 = (s32)(prod & 0xFFFFFFFF);
-    ee->HI1 = (s32)(prod >> 32);
-    // @@Note: C790 apparently states that the chip does not always call mflo everytime
-    // during a 3-operand mult
-    // But we could always use mflo because of the pipeline interlock 
-    ee->reg.r[i->rd].SD[0] = ee->LO1;
-
-    intlog("MULT1 [{:d}] [{:d}] [{:d}]\n", i->rs, i->rt, i->rd);
-}
-
-static inline void 
-MADDU (R5900_Core *ee, u32 instruction)
-{
-    errlog("LOL\n");
-    // intlog("MADDU\n");
-    printf("lol");
-}
-
-static inline void
-DIV (R5900_Core *ee,Instruction *i)
-{
-    if (ee->reg.r[i->rt].UD == 0) {
-        ee->LO = (int)0xffffffff;
-        ee->HI = ee->reg.r[i->rs].UD[0];
-        errlog("[ERROR]: Tried to Divide by zero\n");
-        //return;
-    }
-    s32 d = ee->reg.r[i->rs].SW[0] / ee->reg.r[i->rt].SW[0];
-    s32 q = ee->reg.r[i->rs].SW[0] % ee->reg.r[i->rt].SW[0];
-
-    ee->LO = (s64)d;
-    ee->HI = (s64)q;
-    intlog("DIV [{:d}] [{:d}]\n", i->rs, i->rt);
-}
-
-static inline void 
-DIVU (R5900_Core *ee, Instruction *i) 
-{
-    s64 w1 = (s64)ee->reg.r[i->rs].SW[0];
-    s64 w2 = (s64)ee->reg.r[i->rt].SW[0];
-
-    if (w2 == 0) {
-        errlog("[ERROR] tried to divide by 0, result is Undefined\n");
-        //return;
-    } 
-    // @@Note: Sign extend by 64?
-    s64 q = (s32)(w1 / w2);
-    ee->LO = q;
-    s64 r = (s32)(w1 % w2);
-    ee->HI = r;
-
-    intlog("DIVU [{:d}] [{:d}]\n", i->rs, i->rt);
-}
-
-static inline void
-DIVU1 (R5900_Core *ee,Instruction *i)
-{
-    s32 w1 = ee->reg.r[i->rs].SW[0];
-    s32 w2 = ee->reg.r[i->rt].SW[0];
-
-    if (w2 == 0) {
-        ee->LO1 = (int)0xffffffff;
-        ee->HI1 = ee->reg.r[i->rs].UD[0];
-        errlog("[ERROR] tried to divide by 0, result is Undefined\n");
-        //exit(1);
-        //return;
-    } 
-
-    s64 q  = (w1 / w2);
-    ee->LO1 = q;
-    s64 r  = (w1 % w2);
-    ee->HI1 = r;
-
-    intlog("DIVU_1 [{:d}] [{:d}]\n", i->rs, i->rt);
-}
-/*****************************
-
-******************************/
-static inline void 
-AND (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rs].UD[0] & ee->reg.r[i->rt].UD[0];
-    intlog("AND [{:d}] [{:d}] [{:d}] \n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-ANDI (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] & (u64)i->imm; 
-    intlog("ANDI: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, (u64)i->imm);
-}
-
-static inline void 
-OR (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].SD[0] = ee->reg.r[i->rs].SD[0] | ee->reg.r[i->rt].SD[0];
-    intlog("OR [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-ORI (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] | (u64)i->imm; 
-    intlog("ORI: [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, (u64)i->imm);
-}
-
-/* @Temporary: No XOR instruction? */
-static inline void
-XORI (R5900_Core *ee, Instruction *i)
-{
-    ee->reg.r[i->rt].UD[0] = ee->reg.r[i->rs].UD[0] ^ (u64)i->imm;
-    intlog("XORI [{:d}] [{:d}] [{:#x}] \n", i->rt, i->rs, (u64)i->imm);
-}
-
-static inline void 
-NOR (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].SD[0] = ~(ee->reg.r[i->rs].SD[0] | ee->reg.r[i->rt].SD[0]);
-    // assert(1);
-    intlog("NOR [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-SLL (R5900_Core *ee, Instruction *i) 
-{
-    u32 sa                  = i->sa;
-    ee->reg.r[i->rd].SD[0]  = (u64)((s32)ee->reg.r[i->rt].UW[0] << i->sa);
-
-    intlog("SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
-}
-
-static inline void 
-SLLV (R5900_Core *ee, Instruction *i) 
-{
-    u32 sa                  = ee->reg.r[i->rs].SW[0] & 0x1F;
-    ee->reg.r[i->rd].SD[0]  = (s64)(ee->reg.r[i->rt].SW[0] << sa);
-
-    intlog("SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, sa);
-}
-
-static inline void 
-DSLL (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rt].UD[0] << i->sa;
-    intlog("DSLL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
-}
-
-static inline void
-DSLLV (R5900_Core *ee, Instruction *i)
-{
-    s32 sa                  = ee->reg.r[i->rs].UW[0] & 0x3F;
-    ee->reg.r[i->rd].UD[0]  = ee->reg.r[i->rt].UD[0] << sa;
-    intlog("DSLLV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs); 
-}
-
-static inline void 
-SRL (R5900_Core *ee, Instruction *i) 
-{
-    u32 result              = (ee->reg.r[i->rt].UW[0] >> i->sa);
-    ee->reg.r[i->rd].SD[0]  = (s32)result;
-
-    intlog("SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, i->sa);
-}
-
-static inline void 
-SRLV (R5900_Core *ee, Instruction *i) 
-{
-    u32 sa                  = ee->reg.r[i->rs].SW[0] & 0x1F;
-    ee->reg.r[i->rd].SD[0]  = (s64)(ee->reg.r[i->rt].SW[0] >> sa);
-
-    intlog("SRLV source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, sa);
-}
-
-static inline void 
-SRA (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = (ee->reg.r[i->rt].SW[0]) >> (s32)i->sa;
-    ee->reg.r[i->rd].SD[0]  = result;
-
-    intlog("SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", i->rd, i->rt, (s32)i->sa);
-}
-
-static inline void
-SRAV (R5900_Core *ee, Instruction *i)
-{
-    u32 sa                  = ee->reg.r[i->rs].UB[0] & 0x1F;
-    s32 result              = ee->reg.r[i->rt].SW[0] >> sa;
-    ee->reg.r[i->rd].SD[0]  = (s64)result;
-
-    intlog("SRAV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs);
-}
-
-static inline void 
-DSRAV (R5900_Core *ee, Instruction *i)
-{
-    u32 sa                  = ee->reg.r[i->rs].UW[0] & 0x3F;
-    ee->reg.r[i->rd].SD[0]  = ee->reg.r[i->rt].SD[0] >> sa;
-
-    intlog("DSRAV [{:d}] [{:d}] [{:d}]\n", i->rd, i->rt, i->rs);
-}
-
-static inline void 
-DSRA32 (R5900_Core *ee, Instruction *i) 
-{
-    u32 s                   = i->sa + 32;
-    s64 result              = ee->reg.r[i->rt].SD[0] >> s;
-    ee->reg.r[i->rd].SD[0]  = result;
-
-    intlog("DSRA32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
-}
-
-static inline void 
-DSLL32 (R5900_Core *ee, Instruction *i) 
-{
-    u32 s                   = i->sa + 32;
-    ee->reg.r[i->rd].UD[0]  = ee->reg.r[i->rt].UD[0] << s;
-
-    intlog("DSLL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
-}
-
-static inline void 
-DSRL (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rt].UD[0] >> i->sa;
-
-    intlog("DSRL source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, i->sa);
-}
-
-static inline void 
-DSRL32 (R5900_Core *ee, Instruction *i) 
-{
-    u32 s                   = i->sa + 32;
-    ee->reg.r[i->rd].UD[0]  = ee->reg.r[i->rt].UD[0] >> s;
-
-    intlog("DSRL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", i->rd, i->rt, s);
-}
-
-static inline void 
-SLT (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = ee->reg.r[i->rs].SD[0] < ee->reg.r[i->rt].SD[0] ? 1 : 0;
-    ee->reg.r[i->rd].SD[0]  = result;
-    intlog("SLT [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-SLTU (R5900_Core *ee, Instruction *i) 
-{
-    u32 result              = (ee->reg.r[i->rs].UD[0] < ee->reg.r[i->rt].UD[0]) ? 1 : 0;
-    ee->reg.r[i->rd].UD[0]  = result;
-    
-    intlog("SLTU [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-SLTI (R5900_Core *ee, Instruction *i) 
-{
-    s32 result              = (ee->reg.r[i->rs].SD[0] < (s32)i->sign_imm) ? 1 : 0;
-    ee->reg.r[i->rt].SD[0]  = result;
-    
-    intlog("SLTI [{:d}] [{:d}], [{:#x}]\n", i->rt, i->rs, i->sign_imm);
-}
-
-static inline void 
-SLTIU (R5900_Core *ee, Instruction *i) 
-{
-    u32 result              = (ee->reg.r[i->rs].UD[0] < (u64)i->sign_imm) ? 1 : 0;
-    ee->reg.r[i->rt].UD[0]  = result;
-    
-    intlog("SLTIU [{:d}] [{:d}] [{:#x}]\n", i->rt, i->rs, (u64)i->sign_imm);
-}
 
 /*******************************************
  * Jump and Branch Instructions
@@ -891,242 +301,6 @@ branch_likely (R5900_Core *ee, bool is_branching, u32 offset)
     }
 }
 
-static inline void 
-J (R5900_Core *ee, Instruction *i) 
-{
-    u32 offset = ((ee->pc + 4) & 0xF0000000) + (i->instr_index << 2);
-    jump_to(ee, offset);
-    intlog("J [{:#x}]\n", offset);
-}
-
-static inline void 
-JR(R5900_Core *ee, Instruction *i) 
-{
-    // @TODO: Check if the LSB is 0
-    jump_to(ee, ee->reg.r[i->rs].UW[0]);
-    intlog("JR source: [{:d}] pc_dest: [{:#x}]\n", i->rs, ee->reg.r[i->rs].UW[0]);
-}
-
-static inline void 
-JAL(R5900_Core *ee, Instruction *i) 
-{
-    u32 instr_index     = i->instr_index;
-    u32 target_address  = ((ee->pc + 4) & 0xF0000000) + (instr_index << 2);
-
-    jump_to(ee, target_address); 
-    ee->reg.r[31].UD[0]  = ee->pc + 8;
-
-    intlog("JAL [{:#x}] \n", target_address);   
-}
-
-static inline void 
-JALR(R5900_Core *ee, Instruction *i) 
-{
-    u32 return_addr = ee->pc + 8;
-
-    if (i->rd != 0) {
-        ee->reg.r[i->rd].UD[0] = return_addr;
-    } else {
-        ee->reg.r[31].UD[0] = return_addr;
-    }
-
-    jump_to(ee, ee->reg.r[i->rs].UW[0]);
-
-    intlog("JALR [{:d}]\n", i->rs);
-}
-
-static inline void 
-BNE(R5900_Core *ee, Instruction *i) 
-{
-    s32 imm         = i->sign_imm << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] != ee->reg.r[i->rt].SD[0];
-
-    branch(ee, condition, imm);
-
-    intlog("BNE [{:d}] [{:d}], [{:#x}]\n", i->rt, i->rs, imm);
-}
-
-static inline void 
-BEQ(R5900_Core *ee, Instruction *i) 
-{
-    s32 imm         = i->sign_imm << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] == ee->reg.r[i->rt].SD[0];
-
-    branch(ee, condition, imm);
-
-    intlog("BEQ [{:d}] [{:d}] [{:#x}] \n", i->rs, i->rt, imm);
-}
-
-static inline void 
-BEQL(R5900_Core *ee, Instruction *i) 
-{
-    s32 imm         = i->sign_imm << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] == ee->reg.r[i->rt].SD[0];
-
-    branch_likely(ee, condition, imm);
-
-    intlog("BEQL [{:d}] [{:d}] [{:#x}]\n", i->rs, i->rt, imm);    
-}
-
-static inline void 
-BNEL(R5900_Core *ee, Instruction *i) 
-{
-    s32 imm         = i->sign_imm << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] != ee->reg.r[i->rt].SD[0];
-
-    branch_likely(ee, condition, imm);
-
-    intlog("BNEL [{:d}] [{:d}] [{:#x}]\n", i->rs, i->rt, imm);
-}
-
-static inline void 
-BLEZ (R5900_Core *ee, Instruction *i) 
-{
-    s32 offset      = (i->sign_offset << 2);
-    bool condition  = ee->reg.r[i->rs].SD[0] <= 0;
-
-    branch(ee, condition, offset);
-
-    intlog("BLEZ [{:d}] [{:#x}]\n", i->rs, offset); 
-}
-
-static inline void 
-BLEZL (R5900_Core *ee, Instruction *i) 
-{
-    s32 offset      = (i->sign_offset << 2);
-    bool condition  = ee->reg.r[i->rs].SD[0] <= 0;
-    
-    branch_likely(ee, condition, offset);
-    
-    intlog("BLEZ [{:d}] [{:#x}]\n", i->rs, offset); 
-}
-
-static inline void 
-BLTZ (R5900_Core *ee, Instruction *i) 
-{
-    s32 offset      = i->sign_offset << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] < 0;
-    
-    branch(ee, condition, offset);
-
-    intlog("BLTZ [{:d}] [{:#x}] \n", i->rs, offset);
-}
-
-static inline void
-BGTZ (R5900_Core *ee, Instruction *i)
-{
-    s32 offset      = i->sign_offset << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] > 0;
-
-    branch(ee, condition, offset);
-    
-    intlog("BGTZ [{:d}] [{:#x}] \n", i->rs, offset);
-}
-
-static inline void 
-BGEZ (R5900_Core *ee, Instruction *i) 
-{
-    s32 offset      = i->sign_offset << 2;
-    bool condition  = ee->reg.r[i->rs].SD[0] >= 0;
-
-    branch(ee, condition, offset);
-
-    intlog("BGEZ [{:d}] [{:#x}] \n", i->rs, offset);    
-}
-
-/*******************************************
- * Miscellaneous Instructions
-*******************************************/
-// @@Implementation We have no debugger yet so theres no need to implement this now
-static inline void 
-BREAKPOINT(R5900_Core *ee, u32 instruction) 
-{
-    // intlog("BREAKPOINT\n");
-}
-
-/*******************************************
- * SYNCHRONOUS Instructions
-*******************************************/
-// @@Note: Issued after every MTC0 write The PS2 possibly executes millions of memory loads / stores per second, 
-// which is entirely feasible in hardware. But a complete pain in software as that would completely kill performance
-// May be cool to implement this for accuracy since that is the purpose of the emulator
-static inline void 
-SYNC(R5900_Core *ee, u32 instruction) 
-{
-    // intlog("SYNC\n");
-}
-
-/*******************************************
- * COP0 Instructions
-*******************************************/
-static inline void 
-MFC0 (R5900_Core *ee, Instruction *i) 
-{
-    u32 cop0            = i->rd;
-    u32 gpr             = i->rt;
-    ee->reg.r[gpr].SD[0] = ee->cop0.regs[cop0];
-
-    // intlog("MFC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
-}
-
-static inline void 
-MTC0 (R5900_Core *ee, Instruction *i) 
-{
-    u32 cop0             = i->rd;
-    u32 gpr              = i->rt;
-
-    if(cop0 == 12) {
-        ee->cop0.status.IE    = (ee->reg.r[gpr].SW[0] >> 0) & 0x1;
-        ee->cop0.status.EXL   = (ee->reg.r[gpr].SW[0] >> 1) & 0x1;
-        ee->cop0.status.ERL   = (ee->reg.r[gpr].SW[0] >> 2) & 0x1;
-        ee->cop0.status.KSU   = (ee->reg.r[gpr].SW[0] >> 3) & 0x1;
-        ee->cop0.status.IM_2  = (ee->reg.r[gpr].SW[0] >> 10) & 0x1;
-        ee->cop0.status.IM_3  = (ee->reg.r[gpr].SW[0] >> 11) & 0x1;
-        ee->cop0.status.BEM   = (ee->reg.r[gpr].SW[0] >> 12) & 0x1;
-        ee->cop0.status.IM_7  = (ee->reg.r[gpr].SW[0] >> 15) & 0x1;
-        ee->cop0.status.EIE   = (ee->reg.r[gpr].SW[0] >> 16) & 0x1;
-        ee->cop0.status.EDI   = (ee->reg.r[gpr].SW[0] >> 17) & 0x1;
-        ee->cop0.status.CH    = (ee->reg.r[gpr].SW[0] >> 18) & 0x1;
-        ee->cop0.status.BEV   = (ee->reg.r[gpr].SW[0] >> 22) & 0x1;
-        ee->cop0.status.DEV   = (ee->reg.r[gpr].SW[0] >> 23) & 0x1;
-        ee->cop0.status.CU    = (ee->reg.r[gpr].SW[0] >> 28) & 0xF;
-    } else if (cop0 == 13) {
-        ee->cop0.cause.ex_code       = (ee->reg.r[gpr].SW[0] >> 2)  & 0x1F; 
-        ee->cop0.cause.int0_pending  = (ee->reg.r[gpr].SW[0] >> 10) & 0x1;
-        ee->cop0.cause.int1_pending  = (ee->reg.r[gpr].SW[0] >> 11) & 0x1;
-        ee->cop0.cause.timer_pending = (ee->reg.r[gpr].SW[0] >> 15) & 0x1;
-        ee->cop0.cause.EXC2          = (ee->reg.r[gpr].SW[0] >> 16) & 0x3;
-        ee->cop0.cause.CE            = (ee->reg.r[gpr].SW[0] >> 28) & 0x3;
-        ee->cop0.cause.BD2           = (ee->reg.r[gpr].SW[0] >> 30) & 0x1;
-        ee->cop0.cause.BD            = (ee->reg.r[gpr].SW[0] >> 31) & 0x1;
-    } else {
-        ee->cop0.regs[cop0] = ee->reg.r[gpr].SW[0];
-    }     
-
-    // intlog("MTC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
-}
-
-static inline void
-ERET (R5900_Core *ee, u32 instruction) 
-{
-    //@@Removal @@Implementation: This could be shortened down a fair bit with just an mfc0 instruction
-    ee->pc = ee->cop0.EPC;
-}
-
-// @@Implemtation: implement TLB
-static inline void 
-TLBWI (R5900_Core *ee, u32 instruction, int index) 
-{
-    //TLB_Entry current = TLBS.at(index);
-    // intlog("TLBWI not yet implemented\n");
-}
-
-static inline void 
-CACHE_IXIN (R5900_Core *ee, u32 instruction) 
-{
-    // intlog("Invalidate instruction cache");
-}
-
 #define BIOS_HLE
 #ifndef BIOS_HLE
 static void
@@ -1138,7 +312,6 @@ SYSCALL (R5900_Core *ee, u32 instruction)
 }
 
 #else
-
 /* 
 From:   https://www.psdevwiki.com/ps2/Syscalls 
         https://psi-rockin.github.io/ps2tek/#bioseesyscalls
@@ -1169,7 +342,6 @@ SYSCALL (R5900_Core *ee)
         }
     }
 }
-
 #endif
 
 inline void 
@@ -1184,7 +356,8 @@ set_kernel_mode (COP0_Registers *cop0)
         return;
     }
    
-    switch (mode) {
+    switch (mode) 
+    {
         case __KERNEL_MODE:         cop0->status.KSU = __KERNEL_MODE; break;
         case __SUPERVISOR_MODE:     cop0->status.KSU = __SUPERVISOR_MODE; break;
         case __USER_MODE:           cop0->status.KSU = __USER_MODE; break;
@@ -1199,62 +372,6 @@ cop0_timer_compare_check (R5900_Core *ee)
         ee->cop0.cause.timer_pending = 1;
         ee->cop0.status.IM_7 = 1;
     }
-}
-/*******************************************
- * EE Instructions
-*******************************************/
-static inline void 
-MOVN (R5900_Core *ee, Instruction *i)
-{
-    if (ee->reg.r[i->rt].UD[0] != 0) {
-        ee->reg.r[i->rd].UD[0] = ee->reg.r[i->rs].UD[0];
-    }
-    intlog("MOVN [{:d}] [{:d}] [{:d}]\n", i->rd, i->rs, i->rt);
-}
-
-static inline void 
-MOVZ (R5900_Core *ee, Instruction *i) 
-{
-    if (ee->reg.r[i->rt].SD[0] == 0) {
-        ee->reg.r[i->rd].SD[0] = ee->reg.r[i->rs].SD[0];
-    }
-
-    intlog("MOVZ [{:d}] [{:d}] [{:d}]\n",i->rd, i->rs, i->rt);
-}
-
-static inline void 
-MFLO (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->LO;
-    intlog("MFLO [{:d}] \n", i->rd);
-}
-
-static inline void 
-MFLO1 (R5900_Core *ee, Instruction *i)
-{
-    ee->reg.r[i->rd].UD[0] = ee->LO1;
-    intlog("MFLO_1 [{:d}]\n", i->rd);
-}
-
-static inline void 
-MFHI (R5900_Core *ee, Instruction *i) 
-{
-    ee->reg.r[i->rd].UD[0] = ee->HI;
-    intlog("MFHI [{:d}]\n", i->rd);
-}
-
-static inline void
-MTLO (R5900_Core *ee, Instruction *i) 
-{
-    ee->LO = ee->reg.r[i->rs].UD[0];
-    intlog("MTLO [{:d}]\n", i->rs);
-}
-
-static inline void
-MTHI (R5900_Core *ee, Instruction *i) 
-{
-    ee->HI = ee->reg.r[i->rs].UD[0];
-    intlog("MTHI [{:d}]\n", i->rs);
 }
 
 void 
@@ -1276,26 +393,81 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
     };
 
     int opcode = instruction >> 26;
-    switch (opcode) {
-        case COP0:
+    switch (opcode) 
+    {
+/*
+*-----------------------------------------------------------------------------
+* COP0 Instructions
+*-----------------------------------------------------------------------------
+*/
+        case INSTR_COP0:
         {
             int fmt = instruction >> 21 & 0x3F;
+            if(fmt == 0x10) return; // @Hack: putting this here so that it doesnt spam console
             switch (fmt) 
             {
-                case 0x000000: MFC0(ee, &instr);  break;
-                case 0x000004: MTC0(ee, &instr);  break;
-                case 0x10000:
+                case 0x00:
                 {
-                    case 0x000010: 
-                    {
-                        int index = ee->cop0.regs[0];
-                        TLBWI(ee, instruction, index);
-                    } break;
+                    u32 cop0                = instr.rd;
+                    u32 gpr                 = instr.rt;
+                    ee->reg.r[gpr].SD[0]    = ee->cop0.regs[cop0];
+                    // intlog("MFC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
+                } break;
 
-                    case 0x011000:
+                case 0x04:
+                {
+                    u32 cop0    = instr.rd;
+                    s32 gpr     = ee->reg.r[instr.rt].SW[0];
+
+                    if(cop0 == 12) {
+                        ee->cop0.status.IE              = (gpr >> 0) & 0x1;
+                        ee->cop0.status.EXL             = (gpr >> 1) & 0x1;
+                        ee->cop0.status.ERL             = (gpr >> 2) & 0x1;
+                        ee->cop0.status.KSU             = (gpr >> 3) & 0x1;
+                        ee->cop0.status.IM_2            = (gpr >> 10) & 0x1;
+                        ee->cop0.status.IM_3            = (gpr >> 11) & 0x1;
+                        ee->cop0.status.BEM             = (gpr >> 12) & 0x1;
+                        ee->cop0.status.IM_7            = (gpr >> 15) & 0x1;
+                        ee->cop0.status.EIE             = (gpr >> 16) & 0x1;
+                        ee->cop0.status.EDI             = (gpr >> 17) & 0x1;
+                        ee->cop0.status.CH              = (gpr >> 18) & 0x1;
+                        ee->cop0.status.BEV             = (gpr >> 22) & 0x1;
+                        ee->cop0.status.DEV             = (gpr >> 23) & 0x1;
+                        ee->cop0.status.CU              = (gpr >> 28) & 0xF;
+                    } else if (cop0 == 13) {
+                        ee->cop0.cause.ex_code          = (gpr >> 2)  & 0x1F; 
+                        ee->cop0.cause.int0_pending     = (gpr >> 10) & 0x1;
+                        ee->cop0.cause.int1_pending     = (gpr >> 11) & 0x1;
+                        ee->cop0.cause.timer_pending    = (gpr >> 15) & 0x1;
+                        ee->cop0.cause.EXC2             = (gpr >> 16) & 0x3;
+                        ee->cop0.cause.CE               = (gpr >> 28) & 0x3;
+                        ee->cop0.cause.BD2              = (gpr >> 30) & 0x1;
+                        ee->cop0.cause.BD               = (gpr >> 31) & 0x1;
+                    } else {
+                        ee->cop0.regs[cop0] = gpr;
+                    }     
+                    // intlog("MTC0 GPR: [{:d}] COP0: [{:d}]\n", gpr, cop0);
+                } break;
+
+                case 0x08:
+                {
+                    int tlb = instruction & 0x3F;
+                    switch(tlb)
                     {
-                        ERET(ee, instruction);
-                    } break;
+                        case 0x2:
+                        {
+                            // @@Implemtation: implement TLB
+                            int index = ee->cop0.regs[0];
+                            //TLB_Entry current = TLBS.at(index);
+                            // intlog("TLBWI not yet implemented\n");
+                        } break;
+
+                        case 0x18:
+                        {
+                            ee->pc = ee->cop0.EPC;
+                            intlog("ERET");
+                        } break;
+                    }
                 } break;
 
                 default:
@@ -1305,50 +477,312 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
             }
         } break;
 
-        case COP1: { cop1_decode_and_execute(ee, instruction); } break;
+/*
+*-----------------------------------------------------------------------------
+* COP1 Instructions
+*-----------------------------------------------------------------------------
+*/
+        case INSTR_COP1: { cop1_decode_and_execute(ee, instruction); } break;
 
-        case SPECIAL:
+/*
+*-----------------------------------------------------------------------------
+* Special Instructions
+*-----------------------------------------------------------------------------
+*/
+        case INSTR_SPECIAL:
         {
-            u32 special = instruction & 0x3F;
+            u32 special = instruction & 0x3F; // DSRA32 is 63 so make it up to 64
             switch(special) 
             {
-                case 0x00000000:    SLL(ee, &instr);    break;
-                case 0x0000003f:    DSRA32(ee, &instr); break;
-                case 0x00000008:    JR(ee, &instr);     break;
-                case 0x0000000f:    SYNC(ee, instruction);   break;
-                case 0x00000009:    JALR(ee, &instr);   break;
-                case 0x0000002d:    DADDU(ee, &instr);  break;
-                case 0x00000025:    OR(ee, &instr);     break;
-                case 0x00000018:    MULT(ee, &instr);   break;
-                case 0x0000001B:    DIVU(ee, &instr);   break;
-                case 0x0000000D:    BREAKPOINT(ee, instruction);break;
-                case 0x00000012:    MFLO(ee, &instr);   break;
-                case 0x0000002B:    SLTU(ee, &instr);   break;
-                case 0x00000038:    DSLL(ee, &instr);   break;
-                case 0x0000003C:    DSLL32(ee, &instr); break;
-                case 0x0000003A:    DSRL(ee, &instr);   break;
-                case 0x0000003E:    DSRL32(ee, &instr); break;
-                case 0x00000024:    AND(ee, &instr);    break;
-                case 0x00000002:    SRL(ee, &instr);    break;
-                case 0x00000003:    SRA(ee, &instr);    break;
-                case 0x000000A:     MOVZ(ee, &instr);   break;
-                case 0x0000022:     SUB(ee, &instr);    break;
-                case 0x0000023:     SUBU(ee, &instr);   break;
-                case 0x0000010:     MFHI(ee, &instr);   break;
-                case 0x0000020:     ADD(ee, &instr);    break;
-                case 0x000002A:     SLT(ee, &instr);    break;
-                case 0x0000004:     SLLV(ee, &instr);   break;
-                case 0x0000006:     SRLV(ee, &instr);   break;
-                case 0x0000027:     NOR(ee, &instr);    break;
-                case 0x0000021:     ADDU(ee, &instr);   break;
-                case 0x000000B:     MOVN(ee, &instr);   break;
-                case 0x000001A:     DIV(ee, &instr);    break;
-                case 0x0000007:     SRAV(ee, &instr);   break;
-                case 0x0000017:     DSRAV(ee, &instr);  break;
-                case 0x0000014:     DSLLV(ee, &instr);  break;
-                case 0x000000C:     SYSCALL(ee);        break;
-                case 0x0000011:     MTHI(ee, &instr);   break;
-                case 0x0000013:     MTLO(ee, &instr);   break;
+                case 0x00: 
+                {
+                    u32 sa                      = instr.sa;
+                    ee->reg.r[instr.rd].SD[0]   = (u64)((s32)ee->reg.r[instr.rt].UW[0] << instr.sa);
+                    intlog("SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, instr.sa);
+                } break;
+
+                case 0x02: 
+                {
+                    u32 result                  = (ee->reg.r[instr.rt].UW[0] >> instr.sa);
+                    ee->reg.r[instr.rd].SD[0]   = (s32)result;
+                    intlog("SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, instr.sa);
+                } break;
+
+                case 0x03: 
+                {
+                    s32 result                  = (ee->reg.r[instr.rt].SW[0]) >> (s32)instr.sa;
+                    ee->reg.r[instr.rd].SD[0]   = result;
+                    intlog("SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, (s32)instr.sa);
+                } break;
+
+                case 0x04: 
+                {
+                    u32 sa                      = ee->reg.r[instr.rs].SW[0] & 0x1F;
+                    ee->reg.r[instr.rd].SD[0]   = (s64)(ee->reg.r[instr.rt].SW[0] << sa);
+                    intlog("SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, sa);
+                } break;
+
+                case 0x06: 
+                {
+                    u32 sa                      = ee->reg.r[instr.rs].SW[0] & 0x1F;
+                    ee->reg.r[instr.rd].SD[0]   = (s64)(ee->reg.r[instr.rt].SW[0] >> sa);
+                    intlog("SRLV source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, sa);
+                } break;
+
+                case 0x07: 
+                {
+                    u32 sa                      = ee->reg.r[instr.rs].UB[0] & 0x1F;
+                    s32 result                  = ee->reg.r[instr.rt].SW[0] >> sa;
+                    ee->reg.r[instr.rd].SD[0]   = (s64)result;
+                    intlog("SRAV [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rt, instr.rs);
+                } break;
+
+                case 0x08: 
+                {
+                    // @TODO: Check if the LSB is 0
+                    jump_to(ee, ee->reg.r[instr.rs].UW[0]);
+                    intlog("JR source: [{:d}] pc_dest: [{:#x}]\n", instr.rs, ee->reg.r[instr.rs].UW[0]);
+                } break;
+
+                case 0x09: 
+                {
+                    u32 return_addr = ee->pc + 8;
+                    
+                    if (instr.rd != 0) {
+                        ee->reg.r[instr.rd].UD[0] = return_addr;
+                    } else {
+                        ee->reg.r[31].UD[0] = return_addr;
+                    }
+
+                    jump_to(ee, ee->reg.r[instr.rs].UW[0]);
+
+                    intlog("JALR [{:d}]\n", instr.rs); 
+                } break;
+
+                case 0x0A: 
+                {
+                    if (ee->reg.r[instr.rt].SD[0] == 0) {
+                        ee->reg.r[instr.rd].SD[0] = ee->reg.r[instr.rs].SD[0];
+                    }
+                    intlog("MOVZ [{:d}] [{:d}] [{:d}]\n",instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x0B: 
+                {
+                    if (ee->reg.r[instr.rt].UD[0] != 0) {
+                        ee->reg.r[instr.rd].UD[0] = ee->reg.r[instr.rs].UD[0];
+                    }
+                    intlog("MOVN [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x0C: 
+                {
+                   SYSCALL(ee); 
+                } break;
+
+                case 0x0D: 
+                {
+                    // @@Implementation We have no debugger yet so theres no need to implement this now
+                    // intlog("BREAKPOINT\n");
+                } break;
+
+                case 0x0F: 
+                {
+                    // @@Note: Issued after every MTC0 write The PS2 possibly executes millions of memory loads / stores per second, 
+                    // which is entirely feasible in hardware. But a complete pain in software as that would completely kill performance
+                    // May be cool to implement this for accuracy since that is the purpose of the emulator
+                    // intlog("SYNC\n");
+                } break;
+
+                case 0x10: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->HI;
+                    intlog("MFHI [{:d}]\n", instr.rd);
+                } break;
+
+                case 0x11: 
+                {
+                    ee->HI = ee->reg.r[instr.rs].UD[0];
+                    intlog("MTHI [{:d}]\n", instr.rs);
+                } break;
+
+                case 0x12: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->LO;
+                    intlog("MFLO [{:d}] \n", instr.rd);
+                } break;
+
+                case 0x13: 
+                {
+                    ee->LO = ee->reg.r[instr.rs].UD[0];
+                    intlog("MTLO [{:d}]\n", instr.rs);
+                } break;
+
+                case 0x14: 
+                {
+                    s32 sa                      = ee->reg.r[instr.rs].UW[0] & 0x3F;
+                    ee->reg.r[instr.rd].UD[0]   = ee->reg.r[instr.rt].UD[0] << sa;
+                    intlog("DSLLV [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rt, instr.rs); 
+                } break;
+
+                case 0x17: 
+                {
+                    u32 sa                      = ee->reg.r[instr.rs].UW[0] & 0x3F;
+                    ee->reg.r[instr.rd].SD[0]   = ee->reg.r[instr.rt].SD[0] >> sa;
+                    intlog("DSRAV [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rt, instr.rs);
+                } break;
+
+                case 0x18: 
+                {
+                    s64 w1      = (s64)ee->reg.r[instr.rs].SW[0];
+                    s64 w2      = (s64)ee->reg.r[instr.rt].SW[0];
+                    s64 prod    = (w1 * w2);
+                    
+                    ee->LO      = (s32)(prod & 0xFFFFFFFF);
+                    ee->HI      = (s32)(prod >> 32);
+                    // @@Note: C790 apparently states that the chip does not always call mflo everytime
+                    // during a 3 operand mult
+                    // But we could always use mflo because of the pipeline interlock 
+                    ee->reg.r[instr.rd].SD[0] = ee->LO;
+                    intlog("MULT [{:d}] [{:d}] [{:d}]\n", instr.rs, instr.rt, instr.rd);
+                } break;
+
+                case 0x1A: 
+                {
+                    if (ee->reg.r[instr.rt].UD == 0) {
+                        ee->LO = (int)0xffffffff;
+                        ee->HI = ee->reg.r[instr.rs].UD[0];
+                        errlog("[ERROR]: Tried to Divide by zero\n");
+                        //return;
+                    }
+                    s32 d   = ee->reg.r[instr.rs].SW[0] / ee->reg.r[instr.rt].SW[0];
+                    s32 q   = ee->reg.r[instr.rs].SW[0] % ee->reg.r[instr.rt].SW[0];
+                    ee->LO  = (s64)d;
+                    ee->HI  = (s64)q;
+                    intlog("DIV [{:d}] [{:d}]\n", instr.rs, instr.rt);
+                } break;
+
+                case 0x1B: 
+                {
+                    s64 w1 = (s64)ee->reg.r[instr.rs].SW[0];
+                    s64 w2 = (s64)ee->reg.r[instr.rt].SW[0];
+
+                    if (w2 == 0) {
+                        errlog("[ERROR] tried to divide by 0, result is Undefined\n");
+                        //return;
+                    } 
+                    // @@Note: Sign extend by 64?
+                    s64 q   = (s32)(w1 / w2);
+                    ee->LO  = q;
+                    s64 r   = (s32)(w1 % w2);
+                    ee->HI  = r;
+                    intlog("DIVU [{:d}] [{:d}]\n", instr.rs, instr.rt);
+                } break;
+
+                case 0x20: 
+                {
+                    // @@Incomplete: The add instruction must signal an exception on overflow
+                    // but we have no overflow detection for now
+                    int temp                    = ee->reg.r[instr.rs].SW[0] + ee->reg.r[instr.rt].SW[0];
+                    ee->reg.r[instr.rd].SD[0]   = (s64)temp;
+                    intlog("ADD [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);   
+                } break;
+
+                case 0x21: 
+                {
+                    s32 result                  = ee->reg.r[instr.rs].SW[0] + ee->reg.r[instr.rt].SW[0];
+                    ee->reg.r[instr.rd].UD[0]   = result;
+                    intlog("ADDU [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x22: 
+                {
+                    s32 result                  = ee->reg.r[instr.rs].SW[0] - ee->reg.r[instr.rt].SW[0];
+                    ee->reg.r[instr.rd].UD[0]   = (s64)result;
+
+                    /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
+                    intlog("SUB [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x23: 
+                {
+                    s32 result                  = ee->reg.r[instr.rs].SW[0] - ee->reg.r[instr.rt].SW[0];
+                    ee->reg.r[instr.rd].UD[0]   = (u64)result;
+                    intlog("SUBU [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);  
+                } break;
+
+                case 0x24: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->reg.r[instr.rs].UD[0] & ee->reg.r[instr.rt].UD[0];
+                    intlog("AND [{:d}] [{:d}] [{:d}] \n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x25: 
+                {
+                    ee->reg.r[instr.rd].SD[0] = ee->reg.r[instr.rs].SD[0] | ee->reg.r[instr.rt].SD[0];
+                    intlog("OR [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x27: 
+                {
+                    ee->reg.r[instr.rd].SD[0] = ~(ee->reg.r[instr.rs].SD[0] | ee->reg.r[instr.rt].SD[0]);
+                    // assert(1);
+                    intlog("NOR [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x2A: 
+                {
+                    s32 result                  = ee->reg.r[instr.rs].SD[0] < ee->reg.r[instr.rt].SD[0] ? 1 : 0;
+                    ee->reg.r[instr.rd].SD[0]   = result;
+                    intlog("SLT [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x2B: 
+                {
+                    u32 result                  = (ee->reg.r[instr.rs].UD[0] < ee->reg.r[instr.rt].UD[0]) ? 1 : 0;
+                    ee->reg.r[instr.rd].UD[0]   = result;
+                    intlog("SLTU [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);
+                } break;
+
+                case 0x2D: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->reg.r[instr.rs].SD[0] + ee->reg.r[instr.rt].SD[0];
+                    intlog("DADDU [{:d}] [{:d}] [{:d}]\n", instr.rd, instr.rs, instr.rt);  
+                } break;
+
+                case 0x38: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->reg.r[instr.rt].UD[0] << instr.sa;
+                    intlog("DSLL source: [{:d}] dest: [{:d}] [{:#x}]\n", instr.rd, instr.rt, instr.sa);
+                } break;
+                
+                case 0x3A: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->reg.r[instr.rt].UD[0] >> instr.sa;
+                    intlog("DSRL source: [{:d}] dest: [{:d}] s: [{:#x}] \n", instr.rd, instr.rt, instr.sa);
+                } break;
+
+                case 0x3C: 
+                {
+                    u32 s                       = instr.sa + 32;
+                    ee->reg.r[instr.rd].UD[0]   = ee->reg.r[instr.rt].UD[0] << s;
+                    intlog("DSLL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", instr.rd, instr.rt, s);
+                } break;
+
+                case 0x3E: 
+                {
+                    u32 s                       = instr.sa + 32;
+                    ee->reg.r[instr.rd].UD[0]   = ee->reg.r[instr.rt].UD[0] >> s;
+                    intlog("DSRL32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", instr.rd, instr.rt, s);
+                } break;
+
+                case 0x3F:
+                {
+                    u32 s = instr.sa + 32;
+                    s64 result = ee->reg.r[instr.rt].SD[0] >> s;
+                    ee->reg.r[instr.rd].SD[0] = result;
+                    intlog("DSRA32 source: [{:d}] dest: [{:d}] s: [{:#x}] \n", instr.rd, instr.rt, s);
+                } break;
 
                 default: 
                 {
@@ -1356,55 +790,66 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
                 } break;
             }
         } break;
-
-        case 0b001010:  SLTI(ee, &instr);   break;
-        case 0b000101:  BNE(ee, &instr);    break;
-        case 0b000010:  J(ee, &instr);      break;
-        case 0b001111:  LUI(ee, &instr);    break;
-        case 0b001100:  ANDI(ee, &instr);   break;
-        case 0b001101:  ORI(ee, &instr);    break;
-        case 0b001000:  ADDI(ee, &instr);   break;
-        case 0b001001:  ADDIU(ee, &instr);  break;
-        case 0b101011:  SW(ee, &instr);     break;
-        case 0b111111:  SD(ee, &instr);     break;
-        case 0b101100:  SDL(ee, &instr);    break;
-        case 0b101101:  SDR(ee, &instr);    break;
-        case 0b000011:  JAL(ee, &instr);    break;
-        case 0b000100:  BEQ(ee, &instr);    break;
-        case 0b010100:  BEQL(ee, &instr);   break;
-        case 0b001011:  SLTIU(ee, &instr);  break;
-        case 0b010101:  BNEL(ee, &instr);   break;
-        case 0b100011:  LW(ee, &instr);     break;
-        case 0b110001:  LWC1(ee, &instr);   break;
-        case 0b100111:  LWU(ee, &instr);    break;
-        case 0b100000:  LB(ee, &instr);     break;
-        case 0b111001:  SWC1(ee, &instr);   break;
-        case 0b100100:  LBU(ee, &instr);    break;
-        case 0b000110:  BLEZ(ee, &instr);   break;
-        case 0b010110:  BLEZL(ee, &instr);  break;
-        case 0b110111:  LD(ee, &instr);     break;
-        case 0b011010:  LDL(ee, &instr);    break;
-        case 0b011011:  LDR(ee, &instr);    break;
-        case 0b101000:  SB(ee, &instr);     break;
-        case 0b101001:  SH(ee, &instr);     break;
-        case 0b100001:  LH(ee, &instr);     break;
-        case 0b100101:  LHU(ee, &instr);    break;
-        case 0b000111:  BGTZ(ee, &instr);   break;
-        case 0b001110:  XORI(ee, &instr);   break;
-        case 0b011001:  DADDIU(ee, &instr); break;
-        case 0b101111:  CACHE_IXIN(ee, instruction); break;
-        case 0b011111:  SQ(ee, &instr);     break;
-        case 0b011110:  LQ(ee, &instr);     break;
-        case MMI:
+/*
+*-----------------------------------------------------------------------------
+* MMI Instructions
+*-----------------------------------------------------------------------------
+*/
+        case INSTR_MMI:
         {
             int fmt = instruction & 0x3f;
             switch(fmt) 
             {
-                case 0x00000001: MADDU(ee, instruction); break;
-                case 0x00000012: MFLO1(ee, &instr); break;
-                case 0x0000001B: DIVU1(ee, &instr); break;
-                case 0x00000018: MULT1(ee, &instr); break;
-                case 0x00000029:
+                case 0x01: 
+                {
+                    errlog("LOL\n");
+                    // intlog("MADDU\n");
+                    printf("lol");
+                } break; 
+
+                case 0x12: 
+                {
+                    ee->reg.r[instr.rd].UD[0] = ee->LO1;
+                    intlog("MFLO_1 [{:d}]\n", instr.rd);
+                } break; 
+ 
+                case 0x18: 
+                {
+                    s32 w1 = (s32)ee->reg.r[instr.rs].SW[0];
+                    s32 w2 = (s32)ee->reg.r[instr.rt].SW[0];
+                    s64 prod = (s64)(w1 * w2);
+                    
+                    ee->LO1 = (s32)(prod & 0xFFFFFFFF);
+                    ee->HI1 = (s32)(prod >> 32);
+                    // @@Note: C790 apparently states that the chip does not always call mflo everytime
+                    // during a 3-operand mult
+                    // But we could always use mflo because of the pipeline interlock 
+                    ee->reg.r[instr.rd].SD[0] = ee->LO1;
+
+                    intlog("MULT1 [{:d}] [{:d}] [{:d}]\n", instr.rs, instr.rt, instr.rd);
+                } break; 
+
+                case 0x1B: 
+                {
+                    s32 w1 = ee->reg.r[instr.rs].SW[0];
+                    s32 w2 = ee->reg.r[instr.rt].SW[0];
+
+                    if (w2 == 0) {
+                        ee->LO1 = (int)0xffffffff;
+                        ee->HI1 = ee->reg.r[instr.rs].UD[0];
+                        errlog("[ERROR] tried to divide by 0, result is Undefined\n");
+                        //exit(1);
+                    } 
+
+                    s64 q   = (w1 / w2);
+                    ee->LO1 = q;
+                    s64 r   = (w1 % w2);
+                    ee->HI1 = r;
+
+                    intlog("DIVU_1 [{:d}] [{:d}]\n", instr.rs, instr.rt);
+                } break; 
+
+                case 0x29:
                 {
                     // intlog("Dunno what this is\n");
                 } break;
@@ -1416,24 +861,418 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
             }
 
         } break;
-
-        /***************************
-        *       REGIMM
-        ***************************/
-        case REGIMM: 
+/*
+*-----------------------------------------------------------------------------
+* REGIMM Instructions
+*-----------------------------------------------------------------------------
+*/
+        case INSTR_REGIMM: 
         {
             int function = instruction >> 16 & 0x1f;
             switch(function) 
             {
-                case 0b00000: BLTZ(ee, &instr); break;
-                case 0b00001: BGEZ(ee, &instr); break;
+                case 0x00: 
+                {
+                    s32 offset      = instr.sign_offset << 2;
+                    bool condition  = ee->reg.r[instr.rs].SD[0] < 0;
+                    branch(ee, condition, offset);
+
+                    intlog("BLTZ [{:d}] [{:#x}] \n", instr.rs, offset); 
+                } break;
+
+                case 0x01: 
+                {
+                    s32 offset      = instr.sign_offset << 2;
+                    bool condition  = ee->reg.r[instr.rs].SD[0] >= 0;
+                    branch(ee, condition, offset);
+
+                    intlog("BGEZ [{:d}] [{:#x}] \n", instr.rs, offset);  
+                } break;
+
                 default:
                 {
                     errlog("[ERROR]: Could not interpret REGIMM instruction [{:#09x}]\n", function);
                 } break;
             }
         } break;
+/*
+*-----------------------------------------------------------------------------
+* Normal Instructions
+*-----------------------------------------------------------------------------
+*/
+        case 0x02:
+        {
+            u32 offset = ((ee->pc + 4) & 0xF0000000) + (instr.instr_index << 2);
+            jump_to(ee, offset);
+            intlog("J [{:#x}]\n", offset);
+        } break;
 
+        case 0x03:
+        {
+            u32 instr_index     = instr.instr_index;
+            u32 target_address  = ((ee->pc + 4) & 0xF0000000) + (instr_index << 2);
+
+            jump_to(ee, target_address); 
+            ee->reg.r[31].UD[0]  = ee->pc + 8;
+
+            intlog("JAL [{:#x}] \n", target_address);   
+        } break;
+
+        case 0x04:
+        {
+            s32 imm         = instr.sign_imm << 2;
+            bool condition  = ee->reg.r[instr.rs].SD[0] == ee->reg.r[instr.rt].SD[0];
+
+            branch(ee, condition, imm);
+
+            intlog("BEQ [{:d}] [{:d}] [{:#x}] \n", instr.rs, instr.rt, imm);
+        } break;
+
+        case 0x05:
+        {
+            s32 imm         = instr.sign_imm << 2;
+            bool condition  = ee->reg.r[instr.rs].SD[0] != ee->reg.r[instr.rt].SD[0];
+
+            branch(ee, condition, imm);
+
+            intlog("BNE [{:d}] [{:d}], [{:#x}]\n", instr.rt, instr.rs, imm);
+        } break;
+
+        case 0x06:
+        {
+            s32 offset      = (instr.sign_offset << 2);
+            bool condition  = ee->reg.r[instr.rs].SD[0] <= 0;
+
+            branch(ee, condition, offset);
+
+            intlog("BLEZ [{:d}] [{:#x}]\n", instr.rs, offset); 
+        } break;
+
+        case 0x07:
+        {
+            s32 offset      = instr.sign_offset << 2;
+            bool condition  = ee->reg.r[instr.rs].SD[0] > 0;
+
+            branch(ee, condition, offset);
+            
+            intlog("BGTZ [{:d}] [{:#x}] \n", instr.rs, offset);
+        } break;
+
+        case 0x08:
+        {
+            s32 result                  = ee->reg.r[instr.rs].SD[0] + instr.sign_imm;
+            ee->reg.r[instr.rt].SD[0]   = result;
+            /* @@Incomplete: No 2 complement Arithmetic Overflow error implementation*/
+            intlog("ADDI: [{:d}] [{:d}] [{:#x}] \n", instr.rt, instr.rs, instr.sign_imm);
+        } break;
+
+        case 0x09:
+        {
+            s32 result                  = ee->reg.r[instr.rs].SD[0] + instr.sign_imm;
+            ee->reg.r[instr.rt].SD[0]   = result;
+            intlog("ADDIU: [{:d}] [{:d}] [{:#x}] \n", instr.rt, instr.rs, instr.sign_imm);
+        } break;
+
+        case 0x0A:
+        {
+            s32 result                  = (ee->reg.r[instr.rs].SD[0] < (s32)instr.sign_imm) ? 1 : 0;
+            ee->reg.r[instr.rt].SD[0]   = result;
+            
+            intlog("SLTI [{:d}] [{:d}], [{:#x}]\n", instr.rt, instr.rs, instr.sign_imm);
+        } break;
+
+        case 0x0B:
+        {
+            u32 result                  = (ee->reg.r[instr.rs].UD[0] < (u64)instr.sign_imm) ? 1 : 0;
+            ee->reg.r[instr.rt].UD[0]   = result;
+            
+            intlog("SLTIU [{:d}] [{:d}] [{:#x}]\n", instr.rt, instr.rs, (u64)instr.sign_imm);
+        } break;
+
+        case 0x0C:
+        {
+            ee->reg.r[instr.rt].UD[0] = ee->reg.r[instr.rs].UD[0] & (u64)instr.imm; 
+            intlog("ANDI: [{:d}] [{:d}] [{:#x}] \n", instr.rt, instr.rs, (u64)instr.imm);
+        } break;
+
+        case 0x0D:
+        {
+            ee->reg.r[instr.rt].UD[0] = ee->reg.r[instr.rs].UD[0] | (u64)instr.imm; 
+            intlog("ORI: [{:d}] [{:d}] [{:#x}] \n", instr.rt, instr.rs, (u64)instr.imm);
+        } break;
+
+        case 0x0E:
+        {
+            ee->reg.r[instr.rt].UD[0] = ee->reg.r[instr.rs].UD[0] ^ (u64)instr.imm;
+            intlog("XORI [{:d}] [{:d}] [{:#x}] \n", instr.rt, instr.rs, (u64)instr.imm);
+        } break;
+
+        case 0x0F:
+        {
+            s64 imm                     = (s64)(s32)((instr.imm) << 16);
+            ee->reg.r[instr.rt].UD[0]   = imm;
+
+            intlog("LUI [{:d}] [{:#x}]\n", instr.rt, imm);
+            // printf("LUI [{%d}] [{%#08x}]\n", rt, imm);
+        } break;
+
+        case 0x14:
+        {
+            s32 imm         = instr.sign_imm << 2;
+            bool condition  = ee->reg.r[instr.rs].SD[0] == ee->reg.r[instr.rt].SD[0];
+
+            branch_likely(ee, condition, imm);
+
+            intlog("BEQL [{:d}] [{:d}] [{:#x}]\n", instr.rs, instr.rt, imm);  
+        } break;
+
+        case 0x15:
+        {
+            s32 imm         = instr.sign_imm << 2;
+            bool condition  = ee->reg.r[instr.rs].SD[0] != ee->reg.r[instr.rt].SD[0];
+
+            branch_likely(ee, condition, imm);
+
+            intlog("BNEL [{:d}] [{:d}] [{:#x}]\n", instr.rs, instr.rt, imm);
+        } break;
+
+        case 0x16:
+        {
+            s32 offset      = (instr.sign_offset << 2);
+            bool condition  = ee->reg.r[instr.rs].SD[0] <= 0;
+            
+            branch_likely(ee, condition, offset);
+            
+            intlog("BLEZL [{:d}] [{:#x}]\n", instr.rs, offset); 
+        } break;
+
+        case 0x19:
+        {
+            ee->reg.r[instr.rt].UD[0] = ee->reg.r[instr.rs].SD[0] + instr.sign_imm;
+            intlog("DADDIU [{:d}] [{:d}] [{:#x}]\n", instr.rt, instr.rs, instr.sign_imm); 
+        } break;
+
+        case 0x1A:
+        {
+            u32 vaddr           = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x7;
+            u32 shift           = vaddr & 0x7;
+            
+            u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+            u64 result          = (ee->reg.r[instr.rt].UD[0] & LDL_MASK[shift] | aligned_vaddr << LDL_SHIFT[shift]);
+            ee->reg.r[instr.rt].UD[0] = result;
+            intlog("LDL [{:d}] [{:#x}] [{:d}]\n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x1B:
+        {
+            u32 vaddr           = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x7;
+            u32 shift           = vaddr & 0x7;
+            
+            u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+            u64 result          = (ee->reg.r[instr.rt].UD[0] & LDR_MASK[shift] | aligned_vaddr << LDR_SHIFT[shift]);
+            ee->reg.r[instr.rt].UD[0] = result;
+            intlog("LDR [{:d}] [{:#x}] [{:d}]\n", instr.rt, (s32)instr.sign_offset, instr.rs);
+            printf("LDR [{%d}] [{%#x}] [{%d}]\n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x1E:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _LOAD, _QUAD, vaddr))
+                return;
+
+            ee->reg.r[instr.rt].UD[0] = ee_core_load_64(vaddr);
+            ee->reg.r[instr.rt].UD[1] = ee_core_load_64(vaddr + 8);
+            // intlog("LQ [{:d}] [{:#x}] [{:d}]\n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x1F:
+        {
+            u32 vaddr   = ee->reg.r[instr.rs].UW[0] + instr.sign_offset;
+            u64 lov     = ee->reg.r[instr.rt].UD[0];
+            u64 hiv     = ee->reg.r[instr.rt].UD[1];
+           
+            if (check_address_error_exception(ee, _STORE, _QUAD, vaddr))
+                return;
+
+            ee_core_store_64(vaddr, lov);       
+            ee_core_store_64(vaddr + 8, hiv);       
+            // intlog("SQ [{:d}] [{:#x}] [{:d}] \n", instr.rt, instr.sign_offset, base);
+        } break;
+
+        case 0x20:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+
+            ee->reg.r[instr.rt].SD[0] = (s64)ee_core_load_8(vaddr);
+            intlog("LB [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);  
+        } break;
+
+        case 0x21:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _LOAD, _HALF, vaddr))
+                return;
+
+            ee->reg.r[instr.rt].SD[0] = (s64)ee_core_load_16(vaddr);
+            intlog("LH [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);   
+        } break;
+
+        case 0x23:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _LOAD, _WORD, vaddr))
+                return;
+
+            ee->reg.r[instr.rt].SD[0] = (s64)ee_core_load_32(vaddr);
+            intlog("LW [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x24:
+        {
+            u32 vaddr                   = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            ee->reg.r[instr.rt].UD[0]   = (u64)ee_core_load_8(vaddr);
+            intlog("LBU [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs); 
+        } break;
+
+        case 0x25:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+
+            if (check_address_error_exception(ee, _LOAD, _HALF, vaddr))
+                return;
+
+            ee->reg.r[instr.rt].UD[0] = (u64)ee_core_load_16(vaddr);
+            intlog("LHU [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x27:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+
+            if (check_address_error_exception(ee, _LOAD, _WORD, vaddr))
+                return;
+           
+            ee->reg.r[instr.rt].SD[0] = (u64)ee_core_load_32(vaddr);
+            intlog("LWU [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x28:
+        {
+            u32 vaddr   = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            s8 value    = ee->reg.r[instr.rt].SB[0];
+
+            ee_core_store_8(vaddr, value);
+            intlog("SB [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x29:
+        {
+            u32 vaddr   = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            s16 value   = ee->reg.r[instr.rt].SH[0];
+
+            if (check_address_error_exception(ee, _STORE, _HALF, vaddr))
+                return;
+
+            ee_core_store_16(vaddr, value);
+            intlog("SH [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs); 
+        } break;
+
+        case 0x2B:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            s32 value = ee->reg.r[instr.rt].SW[0];
+            
+            if (check_address_error_exception(ee, _STORE, _WORD, vaddr))
+                return;
+
+            ee_core_store_32(vaddr, value);
+            intlog("SW [{:d}] [{:#x}] [{:d}] \n", instr.rt, instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x2C:
+        {
+            u32 vaddr           = ee->reg.r[instr.rs].UW[0] + instr.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x7;
+            u32 shift           = vaddr & 0x7;
+            
+            u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+            u64 result          = (ee->reg.r[instr.rt].UD[0] & SDL_MASK[shift] | aligned_vaddr << SDL_SHIFT[shift]);
+            ee_core_store_64(aligned_vaddr, result);
+            intlog("SDL [{:d}] [{:#x}] [{:d}]\n", instr.rt, instr.sign_offset, instr.rs);
+            printf("SDL [{%d}] [{%#x}] [{%d}]\n", instr.rt, instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x2D:
+        {
+            u32 vaddr           = ee->reg.r[instr.rs].UW[0] + instr.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x7;
+            u32 shift           = vaddr & 0x7;
+            
+            u64 aligned_dword   = ee_core_load_64(aligned_vaddr);
+            u64 result          = (ee->reg.r[instr.rt].UD[0] & SDR_MASK[shift] | aligned_vaddr << SDR_SHIFT[shift]);
+            ee_core_store_64(aligned_vaddr, result);
+            intlog("SDR [{:d}] [{:#x}] [{:d}]\n", instr.rt, instr.sign_offset, instr.rs);
+            printf("SDR [{%d}] [{%#x}] [{%d}]\n", instr.rt, instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x2F:
+        {
+            // intlog("Invalidate instruction cache");
+        } break;
+
+        case 0x31:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _LOAD, _WORD, vaddr))
+                return;
+
+            u32 data = (u32)ee_core_load_32(vaddr);
+
+            cop1_setFPR(instr.rt, data);
+            intlog("LWC1 [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x37:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _LOAD, _DOUBLE, vaddr))
+                return;
+
+            ee->reg.r[instr.rt].UD[0] = ee_core_load_64(vaddr);
+            intlog("LD [{:d}] [{:#x}] [{:d}]\n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
+
+        case 0x39:
+        {
+            u32 vaddr = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            
+            if (check_address_error_exception(ee, _STORE, _WORD, vaddr))
+                return;
+
+            ee_core_store_32(vaddr, cop1_getFPR(instr.rt));
+            intlog("SWC1 [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs); 
+        } break;
+
+        case 0x3F:
+        {
+            u32 vaddr   = ee->reg.r[instr.rs].UW[0] + (s32)instr.sign_offset;
+            u64 value   = ee->reg.r[instr.rt].UD[0];
+          
+            if (check_address_error_exception(ee, _STORE, _DOUBLE, vaddr))
+                return;
+
+            ee_core_store_64(vaddr, value);   
+         
+            // intlog("SD [{:d}] [{:#x}] [{:d}] \n", instr.rt, (s32)instr.sign_offset, instr.rs);
+        } break;
 
         default: 
         {
@@ -1477,7 +1316,7 @@ r5900_cycle(R5900_Core *ee)
 
     ee->pc              += 4;
     ee->cop0.regs[9]    += 1;
-    ee->reg.r[0].SD[0]  = 0;
+    ee->reg.r[0].SD[0]  = 0; 
 
     // @Speed: These functions emit a ungodly amount of assembly. Fix!!!
     // set_kernel_mode(&ee->cop0);
@@ -1487,6 +1326,6 @@ void
 r5900_shutdown()
 {
     free(_scratchpad_);
-    fclose(dis);
-    console.close();
+    //fclose(dis);
+    //console.close();
 }

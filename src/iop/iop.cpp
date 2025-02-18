@@ -92,585 +92,6 @@ iop_core_store_32 (u32 addr, u32 value)
 *******************************************/
 static inline void check_addresss_error_exception() {};
 
-static void 
-LB (u32 instruction)
-{
-	u16 base        = instruction >> 21 & 0x1f;
-    u16 rt          = instruction >> 16 & 0x1f;
-    s32 offset      = (s16)(instruction & 0xFFFF);
-    u32 vaddr       = iop.reg[base] + offset;
-
-    iop.reg[rt] = (s64)iop_core_load_8(vaddr);
-    intlog("I-LB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);   
-}
-
-static void 
-LBU (u32 instruction)
-{
-	u16 base        = instruction >> 21 & 0x1f;
-    u16 rt          = instruction >> 16 & 0x1f;
-    s32 offset      = (s16)(instruction & 0xFFFF);
-    u32 vaddr       = iop.reg[base] + offset;
-    
-    iop.reg[rt] = (u64)iop_core_load_8(vaddr);
-    intlog("I-LBU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
-} 
-
-static void 
-LH (u32 instruction)
-{
-    s32 offset  = (s16)(instruction & 0xFFFF);
-    u16 base    = instruction >> 21 & 0x1F;
-    u16 rt      = instruction >> 16 & 0x1F;
-    u32 vaddr   = iop.reg[base] + offset;
-    /* @Implementation: Should this be a boolean? */
-    u8 low_bit  = vaddr & 0b1;
-
-    if (low_bit != 0) {
-    	/* 	
-    		@@@Incomplete: This is the exception vector system for the EE and not
-    	 	the IOP. The development is for the IOP COP0 is not finished so this
-    		just only asserts 
-    	 */
-
-        //errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
-        //Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
-        //handle_exception_level_1(ee, &exc);
-        assert(1);
-    }
-    iop.reg[rt] = (s64)iop_core_load_16(vaddr);
-
-    intlog("I-LH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base); 
-} 
-
-static void 
-LHU (u32 instruction)
-{
-	s32 offset  = (s16)(instruction & 0xFFFF);
-    u16 rt      = (instruction >> 16) & 0x1F;
-    u16 base    = (instruction >> 21) & 0x1F;
-    u32 vaddr   = iop.reg[base] + offset;
-    /* @Implementation: Should this be a boolean? */
-    u8 low_bit  = vaddr & 0x1;
-
-    if (low_bit != 0) {
-    	assert(1);
-    }
-    iop.reg[rt] = (u64)iop_core_load_16(vaddr);
-    intlog("I-LHU [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
-} 
-
-static void 
-LW (u32 instruction)
-{
-	s32 offset  = (s16)(instruction & 0xFFFF);
-    u16 base    = instruction >> 21 & 0x1F;
-    u16 rt      = instruction >> 16 & 0x1F;
-    u32 vaddr   = iop.reg[base] + offset;
-    u8 low_bits = vaddr & 0x3;
-    
-    if (low_bits != 0) {
-    	assert(1);
-    }
- //   iop.reg[rt] = (s64)ee_load_32(vaddr);
-    iop.reg[rt] = (s64)iop_core_load_32(translate_address(vaddr));
-    intlog("I-LW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
-}
-
-static void 
-LWL (u32 instruction)
-{
-    const u32 LWL_MASK[8] =
-    {   
-    	0x00ffffffULL, 0x0000ffffULL, 0x000000ffULL, 0x00000000ULL,
-    };
-
-    const u8 LWL_SHIFT[4] = {24, 16, 8, 0};
-
-    u16 base    		= instruction >> 21 & 0x1f;
-    u16 rt      		= instruction >> 16 & 0x1f;
-    s16 offset  		= (s16)(instruction & 0xFFFF);
-    
-    u32 vaddr           = iop.reg[base] + offset;
-    u32 aligned_vaddr   = vaddr & ~0x3;
-    u32 shift           = vaddr & 0x3;
-    
-    u32 aligned_dword 	= iop_core_load_32(aligned_vaddr);
-    u32 result 			= (iop.reg[rt] & LWL_MASK[shift] | aligned_vaddr << LWL_SHIFT[shift]);
-    iop.reg[rt] 		= result;
-
-    intlog("I-LWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
-}
-
-static void 
-LWR (u32 instruction)
-{
-    const u32 LWR_MASK[8] =
-    {   
-        0x00000000ULL, 0xff000000ULL, 0xffff0000ULL, 0xffffff00ULL, 
-    };
-
-    const u8 LWR_SHIFT[4] = {0, 8, 16, 24};
-
-    u16 base    		= instruction >> 21 & 0x1f;
-    u16 rt      		= instruction >> 16 & 0x1f;
-    s16 offset  		= (s16)(instruction & 0xFFFF);
-    
-    u32 vaddr           = iop.reg[base] + offset;
-    u32 aligned_vaddr   = vaddr & ~0x3;
-    u32 shift           = vaddr & 0x3;
-    
-    u32 aligned_dword 	= iop_core_load_32(aligned_vaddr);
-    u32 result 			= (iop.reg[rt] & LWR_MASK[shift] | aligned_vaddr << LWR_SHIFT[shift]);
-    iop.reg[rt] 		= result;
-
-    intlog("I-LDR [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
-} 
-
-static void 
-LUI (u32 instruction)
-{
-	//s32 imm     = (s32)(s16)((instruction & 0xFFFF) << 16);
-    u32 imm     = ((instruction & 0xFFFF) << 16);
-    u16 rt      = instruction >> 16 & 0x1F;
-    iop.reg[rt] = imm;
-
- //   intlog("I-LUI [{:d}] [{:#x}]\n", rt, imm); 
-} 
-
-static void 
-SB (u32 instruction)
-{
-	s32 offset  = (s16)(instruction & 0xFFFF);
-    u16 rt      = (instruction >> 16) & 0x1F;
-    u16 base    = (instruction >> 21) & 0x1F;
-    u32 vaddr   = iop.reg[base] + offset;
-    s8 value    = (s8)iop.reg[rt];
-
-    iop_core_store_8(vaddr, value);
-
- //   intlog("I-SB [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
-} 
-
-static void 
-SH (u32 instruction)
-{
-	s32 offset      = (s16)(instruction & 0xFFFF);
-    u16 rt          = (instruction >> 16) & 0x1F;
-    u16 base        = (instruction >> 21) & 0x1F;
-    u32 vaddr       = iop.reg[base] + offset;
-    s16 value       = iop.reg[rt];
-    u8 low_bits     = vaddr & 0x1;
-
-    if (low_bits != 0) {
-      assert(1);
-    }
-
-    iop_core_store_16(vaddr, value);
-    intlog("I-SH [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
-}
-
-static void 
-SW (u32 instruction)
-{
-	s16 offset  = (s16)(instruction & 0xFFFF);
-    u16 base    = instruction >> 21 & 0x1F;
-    u16 rt      = instruction >> 16 & 0x1F;
-    u32 vaddr   = iop.reg[base] + offset;
-    s32 value   = iop.reg[rt];
-    u8 low_bits = vaddr & 0x3;
-    
-    if (low_bits != 0) {
-    	assert(1);
-    }
-
-    iop_core_store_32(vaddr, value);
-    intlog("I-SW [{:d}] [{:#x}] [{:d}] \n", rt, offset, base);
-}
-
-static void 
-SWL (u32 instruction)
-{
-	const u32 SWL_MASK[8] =
-    {   
-    	0x00ffffffULL, 0x0000ffffULL, 0x000000ffULL, 0x00000000ULL,
-    };
-
-    const u8 SWL_SHIFT[4] = {24, 16, 8, 0};
-
-    u16 base    		= instruction >> 21 & 0x1f;
-    u16 rt      		= instruction >> 16 & 0x1f;
-    s16 offset  		= (s16)(instruction & 0xFFFF);
-    
-    u32 vaddr           = iop.reg[base] + offset;
-    u32 aligned_vaddr   = vaddr & ~0x3;
-    u32 shift           = vaddr & 0x3;
-
-//	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
-    u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
-    u32 result 			= (iop.reg[rt] & SWL_MASK[shift] | aligned_vaddr << SWL_SHIFT[shift]);
-    //iop_core_store_32(aligned_vaddr, aligned_dword);
-    iop_core_store_32(aligned_vaddr, result);
-    intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
-} 
-
-static void 
-SWR (u32 instruction)
-{	
-    const u32 SWR_MASK[8] =
-    {   
-        0x00000000ULL, 0xff000000ULL, 0xffff0000ULL, 0xffffff00ULL, 
-    };
-
-    const u8 SWR_SHIFT[4] = {0, 8, 16, 24};
-
-    u16 base    		= instruction >> 21 & 0x1f;
-    u16 rt      		= instruction >> 16 & 0x1f;
-    s16 offset  		= (s16)(instruction & 0xFFFF);
-    
-    u32 vaddr           = iop.reg[base] + offset;
-    u32 aligned_vaddr   = vaddr & ~0x3;
-    u32 shift           = vaddr & 0x3;
-
-//	u32 aligned_dword 	= ee_load_32(aligned_vaddr);
-    u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
-    u32 result 			= (iop.reg[rt] & SWR_MASK[shift] | aligned_vaddr << SWR_SHIFT[shift]);
-    //iop_core_store_32(aligned_vaddr, aligned_dword);
-    iop_core_store_32(aligned_vaddr, result);
-    intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", rt, offset, base);
-} 
-
-/*******************************************
-* Computational ALU Instructions
-* Arithmetic
-• Logical
-• Shift
-• Multiply
-• Divide
-*******************************************/
-
-static void
-ADD (u32 instruction)
-{
-	u16 rd = instruction >> 11 & 0x1F;
-	u16 rt = instruction >> 16 & 0x1F;
-	u16 rs = instruction >> 21 & 0x1F;
-	iop.reg[rd] = iop.reg[rs] + iop.reg[rt];
-	
-	/* @@Incomplete: No overflow detection for now */
-    intlog("I-ADD [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);   
-} 
-
-static void
-ADDI (u32 instruction)
-{
-	u16 imm = instruction & 0xFFFF;
-	u16 rt 	= instruction >> 16 & 0x1F;
-	u16 rs 	= instruction >> 21 & 0x1F;
-	iop.reg[rt] = imm + iop.reg[rs];
-
-	/* @@Incomplete: No overflow detection for now */
-    intlog("I-ADDI [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);  
-} 
-
-static void
-ADDU (u32 instruction)
-{
-	u16 rd = instruction >> 11 & 0x1F;
-	u16 rt = instruction >> 16 & 0x1F;
-	u16 rs = instruction >> 21 & 0x1F;
-	iop.reg[rd] = iop.reg[rs] + iop.reg[rt];
-    intlog("I-ADDU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
-}
-
-static void
-ADDIU (u32 instruction)
-{
-	u16 rt 	= instruction >> 16 & 0x1F;
-	u16 rs 	= instruction >> 21 & 0x1F;
-	auto imm = (u32)(s16)(instruction & 0xFFFF);
-	
-	iop.reg[rt] = imm + iop.reg[rs];
- //   intlog("I-ADDIU: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
-}
-
-static void
-SUB (u32 instruction)
-{
-	u16 rd = instruction >> 11 & 0x1F;
-	u16 rt = instruction >> 16 & 0x1F;
-	u16 rs = instruction >> 21 & 0x1F;
-	iop.reg[rd] = iop.reg[rs] - iop.reg[rt];
-
-	/* @@Incomplete: No overflow detection for now */
-    intlog("I-SUB [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
-}
-
-static void
-SUBU (u32 instruction)
-{
-	u16 rd         = instruction >> 11 & 0x1F;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rd]    = iop.reg[rs] - iop.reg[rt];
-    
-    intlog("I-SUBU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt); 
-}
-
-static void 
-AND(u32 instruction)
-{
-	u16 rd         = instruction >> 11 & 0x1F;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rd]    = iop.reg[rs] & iop.reg[rt];
-    
-    intlog("I-AND [{:d}] [{:d}] [{:d}] \n", rd, rs, rt);
-}
-
-static void 
-ANDI (u32 instruction)
-{
-	u16 imm        = instruction & 0xFFFF;
-	u16 rt 	       = instruction >> 16 & 0x1F;
-	u16 rs 	       = instruction >> 21 & 0x1F;
-	iop.reg[rt]    = imm & iop.reg[rs];
-    
-    intlog("I-ANDI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
-}
-
-static void
-OR (u32 instruction)
-{
-	u16 rd         = instruction >> 11 & 0x1F;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rd]    = iop.reg[rs] | iop.reg[rt];
-    
-    intlog("I-OR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
-}
-
-static void
-ORI (u32 instruction)
-{
-	u16 imm        = instruction & 0xFFFF;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rt]    = imm | iop.reg[rs];
-
-    intlog("I-ORI: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
-}
-
-static void
-XOR (u32 instruction)
-{
-	u16 rd = instruction >> 11 & 0x1F;
-	u16 rt = instruction >> 16 & 0x1F;
-	u16 rs = instruction >> 21 & 0x1F;
-	iop.reg[rd] = iop.reg[rs] ^ iop.reg[rt];
-	intlog("I-XOR\n");
-}
-
-static void
-XORI (u32 instruction)
-{
-	u16 imm        = instruction & 0xFFFF;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rt]    = imm ^ iop.reg[rs];
-
-    intlog("I-XORI [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);;
-}
-
-static void
-NOR (u32 instruction)
-{
-	u16 rd         = instruction >> 11 & 0x1F;
-	u16 rt         = instruction >> 16 & 0x1F;
-	u16 rs         = instruction >> 21 & 0x1F;
-	iop.reg[rd]    = ~(iop.reg[rs] | iop.reg[rt]);
-
-    intlog("I-NOR [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
-}
-
-static void 
-MULT (u32 instruction)
-{
-	u16 rt 				= instruction >> 16 & 0x1F;
-	u16 rs 				= instruction >> 21 & 0x1F;
-	const auto product 	= (s64)(s32)(iop.reg[rs] * iop.reg[rt]);
-
-	iop.LO = product & 0xFFFFFFFF;
-	iop.HI = product >> 32;
-
-    intlog("I-MULT [{:d}] [{:d}]\n", rs, rt);
-} 
-
-static void 
-MULTU (u32 instruction)
-{
-	u16 rt 				= instruction >> 16 & 0x1F;
-	u16 rs 				= instruction >> 21 & 0x1F;
-	const auto product 	= (u64)(iop.reg[rs] * iop.reg[rt]);
-	
-	iop.LO = product & 0xFFFFFFFF;
-	iop.HI = product >> 32;
-
-    intlog("I-MULTU [{:d}] [{:d}]\n", rs, rt);
-}   
-
-static void 
-DIV (u32 instruction)
-{
-	u16 rt 	= instruction >> 16 & 0x1F;
-	u16 rs 	= instruction >> 21 & 0x1F;
-
-	iop.LO = (s32)(iop.reg[rs] / iop.reg[rt]);
-	iop.HI = (s32)(iop.reg[rs] & iop.reg[rt]);
-	
-    /* @Incomplete: Result is undefined if rt is zero */
-    intlog("I-DIV [{:d}] [{:d}]\n", rs, rt);
-} 
-
-static void 
-DIVU (u32 instruction)
-{
-	u16 rt 	= instruction >> 16 & 0x1F;
-	u16 rs 	= instruction >> 21 & 0x1F;
-
-    //@error: handle divison by zero
-	iop.LO = (iop.reg[rs] / iop.reg[rt]);
-	iop.HI = (iop.reg[rs] & iop.reg[rt]);
-	
-    /* @Incomplete: Result is undefined if rt is zero */
-    intlog("I-DIVU [{:d}] [{:d}]\n", rs, rt);
-}
-
-static void 
-SRL (u32 instruction)
-{
-    u16 sa 		= instruction >> 6 & 0x1F;
-    u16 rd 		= instruction >> 11 & 0x1F;
-    u16 rt 		= instruction >> 16 & 0x1F;
-    u16 result 	= (iop.reg[rt] >> sa);
-    
-    iop.reg[rd] = (s32)result;
-
-    intlog("I-SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
-} 
-
-static void 
-SRLV (u32 instruction)
-{
-    printf("SRLV\n");
-} 
-
-static void 
-SRA (u32 instruction)
-{
-    s16 sa      = instruction >> 6 & 0x1F;
-    u16 rd      = instruction >> 11 & 0x1F;
-    u16 rt      = instruction >> 16 & 0x1F;
-    s16 result  = (iop.reg[rt]) >> sa;
-    
-    iop.reg[rd] = result;
-
-    intlog("I-SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
-} 
-
-static void 
-SRAV (u32 instruction)
-{
-    u16 rs = (instruction >> 21) & 0x1F;
-    u16 rt = (instruction >> 16) & 0x1F;
-    u16 rd = (instruction >> 11) & 0x1F;
-    u16 sa = iop.reg[rs] & 0x1F;
-    
-    auto result 	= (s32)(iop.reg[rt] >> sa);
-    iop.reg[rd] 	= (s64)result;
-    
-    intlog("I-SRAV [{:d}] [{:d}] [{:d}]\n", rd, rt, rs);
-
-}
-
-static void 
-SLL (u32 instruction)
-{
-    u16 sa = instruction >> 6 & 0x1F;
-    u16 rd = instruction >> 11 & 0x1F;
-    u16 rt = instruction >> 16 & 0x1F;
-    iop.reg[rd] = (u32)((s16)iop.reg[rt] << sa);
-    
-    intlog("I-SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
-} 
-
-static void 
-SLLV (u32 instruction)
-{
-    u16 rd = instruction >> 11 & 0x1F;
-    u16 rt = instruction >> 16 & 0x1F;
-    u16 rs = instruction >> 21 & 0x1F;
-    u16 sa = iop.reg[rs] & 0x1F;
-
-    iop.reg[rd] = (s32)(iop.reg[rt] << sa);
-    //intlog("I-SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
-}
-
-static void 
-SLT (u32 instruction)
-{
-    u16 rd = instruction >> 11 & 0x1F;
-    u16 rt = instruction >> 16 & 0x1F;
-    u16 rs = instruction >> 21 & 0x1F;
-
-    auto result = iop.reg[rs] < iop.reg[rt] ? 1 : 0;
-    iop.reg[rd] = result;
-
-    intlog("I-SLT [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
-} 
-
-static void 
-SLTI (u32 instruction)
-{
-    s16 imm = (s16)(instruction & 0xFFFF);
-    u16 rt  = instruction >> 16 & 0x1F;
-    u16 rs  = instruction >> 21 & 0x1F;
-
-    auto result = (iop.reg[rs] < (s32)imm) ? 1 : 0;
-    iop.reg[rt] = result;
-	
-    intlog("I-SLTI [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
-}
-
-static void 
-SLTU (u32 instruction)
-{
-    u16 rs = (instruction >> 21) & 0x1F;
-    u16 rt = (instruction >> 16) & 0x1F;
-    u16 rd = (instruction >> 11) & 0x1F;
-    uint32_t result = (iop.reg[rs] < iop.reg[rt]) ? 1 : 0;
-    iop.reg[rd] = result;
-	
-    intlog("I-SLTU [{:d}] [{:d}] [{:d}]\n", rd, rs, rt);
-
-} 
-
-static void 
-SLTIU (u32 instruction)
-{
-    s32 imm = (s16)(instruction & 0xFFFF);
-    u16 rs = instruction >> 21 & 0x1f;
-    u16 rt = instruction >> 16 & 0x1f;
-
-    u32 result = (iop.reg[rs] < imm) ? 1 : 0;
-    iop.reg[rt] = result;
-
-    intlog("I-SLTIU [{:d}] [{:d}] [{:#x}]\n", rt, rs, imm);
-}
-
-/*******************************************
- * Jump and Branch Instructions
-*******************************************/
 //void op_bcond();
 static inline void 
 jump_to (s32 address) 
@@ -690,175 +111,6 @@ branch (bool is_branching, u32 offset)
     }
 }
 
-static void 
-J (u32 instruction)
-{
-	u32 instr_index = (instruction & 0x3FFFFFF);
-    u32 offset      = ((iop.pc + 4) & 0xF0000000) + (instr_index << 2);
-    jump_to(offset);
-    
-    intlog("I-J [{:#x}]\n", offset);
-} 
-
-static void 
-JR (u32 instruction)
-{
-	u16 source = instruction >> 21 & 0x1F;
-    //@Temporary: check the 2 lsb if 0
-    jump_to(iop.reg[source]);
-	
-     intlog("I-JR source: [{:d}] pc_dest: [{:#x}]\n", source, iop.reg[source]);
-} 
-
-static void 
-JAL (u32 instruction)
-{
-	u32 instr_index     = (instruction & 0x3FFFFFF);
-    u32 target_address  = ((iop.pc + 4) & 0xF0000000) + (instr_index << 2);
-    iop.reg[31]  		= iop.pc + 8;
-    jump_to(target_address); 
-
-    intlog("I-JAL [{:#x}] \n", target_address);  
-}
-
-static void 
-JALR (u32 instruction)
-{
-	u16 rs = instruction >> 21 & 0x1f;
-    u16 rd = instruction >> 11 & 0x1f;
-    u32 return_addr = iop.pc + 8;
-
-    if (rd != 0) { iop.reg[rd] = return_addr; } 
-    else 		 { iop.reg[31] = return_addr; }
-    jump_to(iop.reg[rs]);
-	
-    intlog("I-JALR [{:d}]\n", rs);
-} 
-
-static void 
-BEQ (u32 instruction)
-{
-	s16 imm = (s16)(instruction & 0xFFFF);
-    imm     = imm << 2;
-    u16 rs  = instruction >> 21 & 0x1f;
-    u16 rt  = instruction >> 16 & 0x1f;
-
-    bool condition = iop.reg[rs] == iop.reg[rt];
-    branch(condition, imm);
-
- //   intlog("I-BEQ [{:d}] [{:d}] [{:#x}] \n", rs, rt, imm);
-} 
-
-static void 
-BLEZ (u32 instruction)
-{
-	s16 offset  = (s16)((instruction & 0xFFFF) << 2);
-    u16 rs      = instruction >> 21 & 0x1F;
-
-    bool condition = iop.reg[rs] <= 0;
-    branch(condition, offset);
-
-    intlog("I-BLEZ [{:d}] [{:#x}]\n", rs, offset); 
-} 
-
-static void 
-BGTZ (u32 instruction)
-{
-	s32 offset  = (s16)(instruction & 0xFFFF) << 2;
-    u16 rs      = instruction >> 21 & 0x1F;
-
-    bool condition = iop.reg[rs] > 0;
-    branch(condition, offset);
-
-    intlog("I-BGTZ [{:d}] [{:#x}] \n", rs, offset);
-}
-
-static void 
-BNE (u32 instruction)
-{
-	s32 imm     = (s16)(instruction & 0xFFFF);
-    imm         = (imm << 2);
-    u16 rs      = instruction >> 21 & 0x1F;
-    u16 rt      = instruction >> 16 & 0x1F;
-
-    bool condition = iop.reg[rs] != iop.reg[rt];
-    branch(condition, imm);
-
-    intlog("I-BNE [{:d}] [{:d}], [{:#x}]\n", rt, rs, imm);
-}
-
-/*******************************************
- * IOP specific instructions
-*******************************************/
-static void
-MFHI (u32 instruction)
-{
-    u16 rd          = instruction >> 11 & 0x1F;
-    iop.reg[rd]   = iop.HI;
-    
-    intlog("I-MFHI [{:d}]\n", rd);
-}
-
-static void
-MTHI (u32 instruction)
-{
-    u16 rs = instruction >> 21 & 0x1F;
-    iop.HI = iop.reg[rs];
-    
-    intlog("I-MTHI [{:d}]\n", rs);
-}
-
-static void
-MFLO (u32 instruction)
-{
-    u16 rd        = instruction >> 11 & 0x1F;
-    iop.reg[rd]   = iop.LO;
-    
-    intlog("I-MFLO[{:d}]\n", rd);
-}
-
-static void
-MTLO (u32 instruction)
-{
-    u32 rs = instruction >> 21 & 0x1F;
-    iop.LO = iop.reg[rs];
-    
-    intlog("I-MTHI [{:d}]\n", rs);
-}
-
-static void
-RFE (u32 instruction)
-{
-    iop.cop0.status.current_interrupt    = iop.cop0.status.previous_interrupt;
-    iop.cop0.status.current_kernel_mode  = iop.cop0.status.previous_kernel_mode;
-    iop.cop0.status.previous_interrupt   = iop.cop0.status.old_interrupt;
-    iop.cop0.status.previous_kernel_mode = iop.cop0.status.old_kernel;
-    intlog("I-RFE \n");
-}
-
-/*******************************************
- * IOP COP0 instructions
-*******************************************/
-static void
-MFC0 (u32 instruction)
-{
-    u16 rd          = instruction >> 11 & 0x1F;
-    u16 rt          = instruction >> 16 & 0x1F;
-    iop.reg[rt]     = iop.cop0.r[rd];
-    
-    intlog("I-MFC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
-}
-
-static void
-MTC0 (u32 instruction)
-{
-    u16 rd          = instruction >> 11 & 0x1F;
-    u16 rt          = instruction >> 16 & 0x1F;
-    iop.cop0.r[rd]  = iop.reg[rt];
-    
-    intlog("I-MTC0 GPR: [{:d}] COP0: [{:d}]\n", rt, rd);
-}
-
 /* Exception instructions. */
 //void op_break(); void op_syscall();
 
@@ -867,93 +119,571 @@ enum OPCODES : int {
 	IOP_COP0 = 0x10,
 };
 
+inline void
+iop_cop0_write_cause (IOP_COP0_Cause *cause, u32 data)
+{
+    cause->excode                    = (data >> 0)  & 0x1F;
+    cause->interrupt_pending_field   = (data >> 1)  & 0xFF;
+    cause->coprocessor_error         = (data >> 28) & 0x3;
+    cause->branch_delay_pointer      = (data << 31);
+}
+
+inline void 
+iop_cop0_write_status (IOP_COP0_Status *status, u32 data)
+{
+    status->current_interrupt     = (data >> 0) & 0x1;
+    status->current_kernel_mode   = (data >> 1) & 0x1;
+    status->previous_interrupt    = (data >> 2) & 0x1;
+    status->previous_kernel_mode  = (data >> 3) & 0x1;
+    status->old_interrupt         = (data >> 4) & 0x1;
+    status->old_kernel            = (data >> 5) & 0x1;
+    status->interrupt_mask        = ((data >> 8) & 0xFF);
+    status->isolate_cache         = (data >> 16) & 0x1;
+    status->swapped_cache         = (data >> 17) & 0x1;
+    status->cache_parity_bit      = (data >> 18) & 0x1;
+    status->last_load_operation   = (data >> 19) & 0x1;
+    status->cache_parity_error    = (data >> 20) & 0x1;
+    status->TLB_shutdown          = (data >> 21) & 0x1;
+    status->boot_exception_vector = (data >> 22) & 0x1;
+    status->reverse_endianess     = (data >> 25) & 0x1;
+    status->cop0_enable           = (data >> 28) & 0x1;
+}
+
 static void 
 decode_and_execute (u32 instruction) 
 {
     if (instruction == 0x00000000) return;
 	u32 opcode = instruction >> 26;
 
+    Instruction i = {
+        .rd          = (u8)((instruction >> 11) & 0x1F),
+        .rt          = (u8)((instruction >> 16) & 0x1F),
+        .rs          = (u8)((instruction >> 21) & 0x1F),
+        .sa          = (u32)((instruction >> 6)  & 0x1F),
+
+        .imm         = (u16)(instruction & 0xFFFF),
+        .sign_imm    = (s16)(instruction & 0xFFFF),
+        .offset      = (u16)(instruction & 0xFFFF),
+        .sign_offset = (s16)(instruction & 0xFFFF), // No real difference between imm and offset just naming conveince
+        .instr_index = (u32)(instruction & 0x3FFFFFF),
+    };
+
 	switch(opcode)
 	{
+/*
+*-----------------------------------------------------------------------------
+* Special Instructions
+*-----------------------------------------------------------------------------
+*/
 		case IOP_SPECIAL:
 		{
 			int special = instruction & 0x1F;
 			switch(special)
 			{
-				case 0x00: SLL(instruction); 	break;
-				case 0x02: SRL(instruction); 	break;
-				case 0x03: SRA(instruction); 	break;
-				case 0x04: SLLV(instruction); 	break;
-				case 0x06: SRLV(instruction); 	break;
-				case 0x07: SRAV(instruction); 	break;
+				case 0x00: 
+                {
+                    iop.reg[i.rd] = (u32)((s16)iop.reg[i.rt] << i.sa);
+                    intlog("I-SLL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, i.sa);
+                } break;
 
-				case 0x08: JR(instruction); 	break;
-				case 0x09: JALR(instruction); 	break;
+				case 0x02: 
+                {
+                    u16 result      = (iop.reg[i.rt] >> i.sa);
+                    iop.reg[i.rd]   = (s32)result;
 
-				case 0x10: MFHI(instruction); 	break;
-				case 0x11: MTHI(instruction); 	break;
-				case 0x12: MFLO(instruction); 	break;
-				case 0x13: MTLO(instruction); 	break;
+                    intlog("I-SRL source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, i.sa);
+                } break;
 
-				case 0x18: MULT(instruction); 	break;
-				case 0x19: MULTU(instruction); 	break;
-				case 0x1A: DIV(instruction); 	break;
-				case 0x1B: DIVU(instruction); 	break;
-				case 0x20: ADD(instruction); 	break;
-				case 0x21: ADDU(instruction); 	break;
-				case 0x22: SUB(instruction); 	break;
-				case 0x23: SUBU(instruction); 	break;
+				case 0x03: 
+                {
+                    s16 result      = (iop.reg[i.rt]) >> (s16)i.sa; // ?? cast by s16 
+                    iop.reg[i.rd]   = result;
 
-				case 0x24: AND(instruction);	break;
-				case 0x25: OR(instruction); 	break;
-				case 0x27: NOR(instruction);	break;
-				case 0x26: XOR(instruction);	break;
+                    intlog("I-SRA source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, i.sa);
+                } break;
 
-				case 0x2A: SLT(instruction); 	break;
-				case 0x2B: SLTU(instruction); 	break;
+				case 0x04: 
+                {
+                    u16 sa          = iop.reg[i.rs] & 0x1F;
+                    iop.reg[i.rd]   = (s32)(iop.reg[i.rt] << sa);
+                    //intlog("I-SLLV source: [{:d}] dest: [{:d}] [{:#x}]\n", rd, rt, sa);
+                } break;
+
+				case 0x06: 
+                {
+                    printf("SRLV\n");
+                } break;
+
+				case 0x07: 
+                {
+                    u16 sa          = iop.reg[i.rs] & 0x1F;
+                    auto result     = (s32)(iop.reg[i.rt] >> sa);
+                    iop.reg[i.rd]   = (s64)result;
+                    
+                    intlog("I-SRAV [{:d}] [{:d}] [{:d}]\n", rd, rt, rs);
+                } break;
+
+				case 0x08: 
+                {
+                    //@Temporary: check the 2 lsb if 0
+                    jump_to(iop.reg[i.rs]);
+                    intlog("I-JR source: [{:d}] pc_dest: [{:#x}]\n", i.rs, iop.reg[i.rs]);
+                } break;
+
+				case 0x09: 
+                {
+                    //@Temporary: check the 2 lsb if 0
+                    jump_to(iop.reg[i.rs]);
+                    intlog("I-JR source: [{:d}] pc_dest: [{:#x}]\n", i.rs, iop.reg[i.rs]);
+                } break;
+
+				case 0x10: 
+                {
+                    iop.reg[i.rd] = iop.HI;
+                    intlog("I-MFHI [{:d}]\n", rd);
+                } break;
+
+				case 0x11: 
+                {
+                    iop.HI = iop.reg[i.rs];
+                    intlog("I-MTHI [{:d}]\n", i.rs);
+                } break;
+
+				case 0x12: 
+                {
+                    iop.reg[i.rd] = iop.LO;
+                    intlog("I-MFLO[{:d}]\n", rd);
+                } break;
+
+				case 0x13: 
+                {
+                    iop.LO = iop.reg[i.rs];
+                    intlog("I-MTHI [{:d}]\n", i.rs);
+                } break;
+
+				case 0x18: 
+                {
+                    const auto product = (s64)(s32)(iop.reg[i.rs] * iop.reg[i.rt]);
+
+                    iop.LO = product & 0xFFFFFFFF;
+                    iop.HI = product >> 32;
+
+                    intlog("I-MULT [{:d}] [{:d}]\n", rs, rt);
+                } break;
+
+				case 0x19: 
+                {
+                    const auto product  = (u64)(iop.reg[i.rs] * iop.reg[i.rt]);
+                    
+                    iop.LO = product & 0xFFFFFFFF;
+                    iop.HI = product >> 32;
+
+                    intlog("I-MULTU [{:d}] [{:d}]\n", i.rs, rt);
+                } break;
+
+				case 0x1A: 
+                {
+                    iop.LO = (s32)(iop.reg[i.rs] / iop.reg[i.rt]);
+                    iop.HI = (s32)(iop.reg[i.rs] & iop.reg[i.rt]);
+                    
+                    /* @Incomplete: Result is undefined if rt is zero */
+                    intlog("I-DIV [{:d}] [{:d}]\n", i.rs, rt);
+                } break;
+
+				case 0x1B: 
+                {
+                    //@error: handle divison by zero
+                    iop.LO = (iop.reg[i.rs] / iop.reg[i.rt]);
+                    iop.HI = (iop.reg[i.rs] & iop.reg[i.rt]);
+                    
+                    /* @Incomplete: Result is undefined if rt is zero */
+                    intlog("I-DIVU [{:d}] [{:d}]\n", i.rs, rt);
+                } break;
+
+				case 0x20: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] + iop.reg[i.rt];
+                    
+                    /* @@Incomplete: No overflow detection for now */
+                    intlog("I-ADD [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);   
+                } break;
+
+				case 0x21: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] + iop.reg[i.rt];
+                    intlog("I-ADDU [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);
+                } break;
+
+				case 0x22: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] - iop.reg[i.rt];
+
+                    /* @@Incomplete: No overflow detection for now */
+                    intlog("I-SUB [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt); 
+                } break;
+
+				case 0x23: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] - iop.reg[i.rt];
+                    
+                    intlog("I-SUBU [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt); 
+                } break;
+
+				case 0x24: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] & iop.reg[i.rt];
+                    
+                    intlog("I-AND [{:d}] [{:d}] [{:d}] \n", rd, i.rs, rt);
+                } break;
+
+				case 0x25: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] | iop.reg[i.rt];
+                    
+                    intlog("I-OR [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);
+                } break;
+
+				case 0x26: 
+                {
+                    iop.reg[i.rd] = iop.reg[i.rs] ^ iop.reg[i.rt];
+                    intlog("I-XOR\n");
+                } break;
+
+				case 0x27: 
+                {
+                    iop.reg[i.rd] = ~(iop.reg[i.rs] | iop.reg[i.rt]);
+                    intlog("I-NOR [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);
+                } break;
+
+				case 0x2A: 
+                {
+                    auto result = iop.reg[i.rs] < iop.reg[i.rt] ? 1 : 0;
+                    iop.reg[i.rd] = result;
+
+                    intlog("I-SLT [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);
+                } break;
+
+				case 0x2B: 
+                {
+                    uint32_t result = (iop.reg[i.rs] < iop.reg[i.rt]) ? 1 : 0;
+                    iop.reg[i.rd] = result;
+                    
+                    intlog("I-SLTU [{:d}] [{:d}] [{:d}]\n", rd, i.rs, rt);
+                } break;
 			}
 		} break;
-
+/*
+*-----------------------------------------------------------------------------
+* COP0 Instructions
+*-----------------------------------------------------------------------------
+*/
 		case IOP_COP0:
 		{
 			int cop0 = instruction >> 21 & 0x1F;
 			switch(cop0)
 			{
-				case 0x00: MFC0(instruction); 	break;
-				case 0x04: MTC0(instruction); 	break;
-				case 0x10: RFE(instruction);	break;
+				case 0x00: 
+                {
+                    iop.reg[i.rt] = iop.cop0.r[i.rd];
+                    intlog("I-MFC0 GPR: [{:d}] COP0: [{:d}]\n", i.rt, i.rd);
+                } break;
+
+				case 0x04: 
+                {
+                    // @Implementation: Do Status and Cause write
+                    iop.cop0.r[i.rd] = iop.reg[i.rt];
+                    intlog("I-MTC0 GPR: [{:d}] COP0: [{:d}]\n", i.rt, i.rd);
+                } break;
+
+				case 0x10: 
+                {
+                    iop.cop0.status.current_interrupt    = iop.cop0.status.previous_interrupt;
+                    iop.cop0.status.current_kernel_mode  = iop.cop0.status.previous_kernel_mode;
+                    iop.cop0.status.previous_interrupt   = iop.cop0.status.old_interrupt;
+                    iop.cop0.status.previous_kernel_mode = iop.cop0.status.old_kernel;
+                    intlog("I-RFE \n");
+                } break;
 			}
 		} break;
+/*
+*-----------------------------------------------------------------------------
+* Normal Instructions
+*-----------------------------------------------------------------------------
+*/
+		case 0x02: 
+        {
+            u32 offset = ((iop.pc + 4) & 0xF0000000) + (i.instr_index << 2);
+            jump_to(offset);
+            
+            intlog("I-J [{:#x}]\n", offset);
+        } break;
 
-		case 0x02: J(instruction); 		break;
-		case 0x03: JAL(instruction); 	break;
-		case 0x04: BEQ(instruction); 	break;
-		case 0x05: BNE(instruction); 	break;
-		case 0x06: BLEZ(instruction); 	break;
-		case 0x07: BGTZ(instruction); 	break;
+		case 0x03: 
+        {
+            u32 target_address  = ((iop.pc + 4) & 0xF0000000) + (i.instr_index << 2);
+            iop.reg[31]         = iop.pc + 8;
+            jump_to(target_address); 
+
+            intlog("I-JAL [{:#x}] \n", target_address);  
+        } break;
+
+		case 0x04: 
+        {
+            // s16 imm = i.sign_imm << 2;
+            s32 imm         = i.sign_imm << 2;
+            bool condition  = iop.reg[i.rs] == iop.reg[i.rt];
+            branch(condition, imm);
+
+            intlog("I-BEQ [{:d}] [{:d}] [{:#x}] \n", i.rs, i.rt, imm);
+        } break;
+
+		case 0x05: 
+        {
+            s32 imm         = i.sign_imm << 2;
+            bool condition  = iop.reg[i.rs] != iop.reg[i.rt];
+            branch(condition, imm);
+
+            intlog("I-BNE [{:d}] [{:d}], [{:#x}]\n", i.rt, i.rs, imm);
+        } break;
+
+		case 0x06: 
+        {
+            s16 offset      = i.sign_offset << 2;
+            bool condition  = iop.reg[i.rs] <= 0;
+            branch(condition, offset);
+
+            intlog("I-BLEZ [{:d}] [{:#x}]\n", i.rs, offset); 
+        } break;
+
+		case 0x07: 
+        {
+            s32 offset      = i.sign_offset << 2;
+            bool condition  = iop.reg[i.rs] > 0;
+            branch(condition, offset);
+
+            intlog("I-BGTZ [{:d}] [{:#x}] \n", i.rs, offset);
+        } break;
 		
-		case 0x08: ADDI(instruction); 	break;
-		case 0x09: ADDIU(instruction); 	break;
+		case 0x08: 
+        {
+            iop.reg[i.rt] = i.imm + iop.reg[i.rs];
+            /* @@Incomplete: No overflow detection for now */
+            intlog("I-ADDI [{:d}] [{:d}] [{:#x}]\n", i.rt, i.rs, i.imm); 
+        } break;
 
-		case 0x0C: ANDI(instruction); 	break;
-		case 0x0D: ORI(instruction);  	break;
-		case 0x0E: XORI(instruction); 	break;
+		case 0x09: 
+        {
+            auto imm        = (u32)i.sign_imm;
+            iop.reg[i.rt]   = imm + iop.reg[i.rs];
+         //   intlog("I-ADDIU: [{:d}] [{:d}] [{:#x}] \n", rt, rs, imm);
+        } break;
+        
+        case 0x0A: 
+        {
+            auto result     = (iop.reg[i.rs] < (s32)i.sign_imm) ? 1 : 0;
+            iop.reg[i.rt]   = result;
+            
+            intlog("I-SLTI [{:d}] [{:d}], [{:#x}]\n", i.rt, i.rs, i.sign_imm);
+        } break;
 
-		case 0x0F: LUI(instruction);	break;
-		case 0x20: LB(instruction);		break;
-		case 0x21: LH(instruction);		break;
-		case 0x22: LWL(instruction);	break;
-		case 0x23: LW(instruction);		break;
-		case 0x24: LBU(instruction);	break;
-		case 0x26: LWR(instruction);	break;
-		case 0x28: SB(instruction);		break;
-		case 0x29: SH(instruction);		break;
-		case 0x2A: SWL(instruction);	break;
-		case 0x2B: SW(instruction);		break;
-		case 0x2E: SWR(instruction);	break;
-		
-		case 0x0A: SLTI(instruction); 	break;
-		case 0x0B: SLTIU(instruction); 	break;
+        case 0x0B: 
+        {
+            u32 result      = (iop.reg[i.rs] < i.sign_imm) ? 1 : 0;
+            iop.reg[i.rt]   = result;
+
+            intlog("I-SLTIU [{:d}] [{:d}] [{:#x}]\n", i.rt, i.rs, i.sign_imm);
+        } break;
+
+		case 0x0C: 
+        {
+            iop.reg[i.rt] = i.imm & iop.reg[i.rs];
+            intlog("I-ANDI: [{:d}] [{:d}] [{:#x}] \n", i.rt, i.rs, i.imm);
+        } break;
+
+		case 0x0D: 
+        {
+            iop.reg[i.rt] = i.imm | iop.reg[i.rs];
+            intlog("I-ORI: [{:d}] [{:d}] [{:#x}] \n", i.rt, i.rs, i.imm);
+        } break;
+
+		case 0x0E: 
+        {
+            iop.reg[i.rt] = i.imm ^ iop.reg[i.rs];
+            intlog("I-XORI [{:d}] [{:d}] [{:#x}] \n", i.rt, i.rs, i.imm);
+        } break;
+
+		case 0x0F: 
+        {
+            //s32 imm     = (s32)(s16)((instruction & 0xFFFF) << 16);
+            u32 imm         = i.imm << 16;
+            iop.reg[i.rt]   = imm;
+
+         //   intlog("I-LUI [{:d}] [{:#x}]\n", rt, imm); 
+        } break;
+
+		case 0x20: 
+        {
+            u32 vaddr       = iop.reg[i.rs] + i.sign_offset;
+            iop.reg[i.rt]   = (s64)iop_core_load_8(vaddr);
+            intlog("I-LB [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs);  
+        } break;
+
+		case 0x21: 
+        {
+            u32 vaddr   = iop.reg[i.rs] + i.sign_offset;
+            u8 low_bit  = vaddr & 0b1; /* @Implementation: Should this be a boolean? */
+
+            if (low_bit != 0) {
+                /*  
+                    @@@Incomplete: This is the exception vector system for the EE and not
+                    the IOP. The development is for the IOP COP0 is not finished so this
+                    just only asserts 
+                 */
+
+                //errlog("[ERROR] Vaddr is not properly aligned %#x \n", vaddr);
+                //Exception exc = get_exception(V_COMMON, __ADDRESS_ERROR);
+                //handle_exception_level_1(ee, &exc);
+                assert(1);
+            }
+            iop.reg[i.rt] = (s64)iop_core_load_16(vaddr);
+            intlog("I-LH [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs); 
+        } break;
+
+		case 0x22: 
+        {
+            const u32 LWL_MASK[8] =
+            {   
+                0x00ffffffULL, 0x0000ffffULL, 0x000000ffULL, 0x00000000ULL,
+            };
+
+            const u8 LWL_SHIFT[4] = {24, 16, 8, 0};
+
+            u32 vaddr           = iop.reg[i.rs] + i.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x3;
+            u32 shift           = vaddr & 0x3;
+            
+            u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
+            u32 result          = (iop.reg[i.rt] & LWL_MASK[shift] | aligned_vaddr << LWL_SHIFT[shift]);
+            iop.reg[i.rt]       = result;
+
+            intlog("I-LWL [{:d}] [{:#x}] [{:d}]\n", i.rt, i.sign_offset, i.rs);
+        } break;
+
+		case 0x23: 
+        {
+            u32 vaddr   = iop.reg[i.rs] + i.sign_offset;
+            u8 low_bits = vaddr & 0x3;
+            
+            if (low_bits != 0) {
+                assert(1);
+            }
+            iop.reg[i.rt] = (s64)iop_core_load_32(translate_address(vaddr));
+            intlog("I-LW [{:d}] [{:#x}] [{:d}] \n", rt, i.sign_offset, i.rs;);
+        } break;
+
+		case 0x24: 
+        {
+            u32 vaddr       = iop.reg[i.rs] + i.sign_offset;
+            iop.reg[i.rt]   = (u64)iop_core_load_8(vaddr);
+            intlog("I-LBU [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs;); 
+        } break;
+
+		case 0x26: 
+        {
+            const u32 LWR_MASK[8] =
+            {   
+                0x00000000ULL, 0xff000000ULL, 0xffff0000ULL, 0xffffff00ULL, 
+            };
+
+            const u8 LWR_SHIFT[4] = {0, 8, 16, 24};
+
+            u32 vaddr           = iop.reg[i.rs] + i.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x3;
+            u32 shift           = vaddr & 0x3;
+            
+            u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
+            u32 result          = (iop.reg[i.rt] & LWR_MASK[shift] | aligned_vaddr << LWR_SHIFT[shift]);
+            iop.reg[i.rt]       = result;
+
+            intlog("I-LDR [{:d}] [{:#x}] [{:d}]\n", i.rt, i.sign_offset, i.rs;);
+        } break;
+
+		case 0x28: 
+        {
+            u32 vaddr   = iop.reg[i.rs] + i.sign_offset;
+            s8 value    = (s8)iop.reg[i.rt];
+            iop_core_store_8(vaddr, value);
+
+         //   intlog("I-SB [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs;);
+        } break;
+        
+        case 0x29: 
+        {
+            u32 vaddr       = iop.reg[i.rs] + i.sign_offset;
+            s16 value       = iop.reg[i.rt];
+            u8 low_bits     = vaddr & 0x1;
+
+            if (low_bits != 0) {
+              assert(1);
+            }
+
+            iop_core_store_16(vaddr, value);
+            intlog("I-SH [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs;);
+        } break;
+
+		case 0x2A: 
+        {
+            const u32 SWL_MASK[8] =
+            {   
+                0x00ffffffULL, 0x0000ffffULL, 0x000000ffULL, 0x00000000ULL,
+            };
+
+            const u8 SWL_SHIFT[4] = {24, 16, 8, 0};
+
+            u32 vaddr           = iop.reg[i.rs] + i.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x3;
+            u32 shift           = vaddr & 0x3;
+
+            u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
+            u32 result          = (iop.reg[i.rt] & SWL_MASK[shift] | aligned_vaddr << SWL_SHIFT[shift]);
+            //iop_core_store_32(aligned_vaddr, aligned_dword);
+            iop_core_store_32(aligned_vaddr, result);
+            intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", i.rt, i.sign_offset, i.rs;);
+        } break;
+
+		case 0x2B: 
+        {
+            u32 vaddr   = iop.reg[i.rs] + i.sign_offset;
+            s32 value   = iop.reg[i.rt];
+            u8 low_bits = vaddr & 0x3;
+            
+            if (low_bits != 0) {
+                assert(1);
+            }
+
+            iop_core_store_32(vaddr, value);
+            intlog("I-SW [{:d}] [{:#x}] [{:d}] \n", i.rt, i.sign_offset, i.rs;);
+        } break;
+
+		case 0x2E: 
+        {
+            const u32 SWR_MASK[8] =
+            {   
+                0x00000000ULL, 0xff000000ULL, 0xffff0000ULL, 0xffffff00ULL, 
+            };
+
+            const u8 SWR_SHIFT[4] = {0, 8, 16, 24};
+
+            u32 vaddr           = iop.reg[i.rs] + i.sign_offset;
+            u32 aligned_vaddr   = vaddr & ~0x3;
+            u32 shift           = vaddr & 0x3;
+
+            u32 aligned_dword   = iop_core_load_32(aligned_vaddr);
+            u32 result          = (iop.reg[i.rt] & SWR_MASK[shift] | aligned_vaddr << SWR_SHIFT[shift]);
+            //iop_core_store_32(aligned_vaddr, aligned_dword);
+            iop_core_store_32(aligned_vaddr, result);
+            intlog("I-SWL [{:d}] [{:#x}] [{:d}]\n", i.rt, i.sign_offset, i.rs;);
+        } break;
 	};
 }
 

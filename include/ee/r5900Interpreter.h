@@ -64,9 +64,9 @@ enum Cache_Mode : int {
 };
 
 enum INSTRUCTION_TYPE : int {
-    COP0 = 0b010000, SPECIAL = 0b000000,
-    MMI  = 0b011100, REGIMM  = 0b000001,
-    COP1 = 0b010001,
+    INSTR_COP0 = 0b010000, INSTR_SPECIAL = 0b000000,
+    INSTR_MMI  = 0b011100, INSTR_REGIMM  = 0b000001,
+    INSTR_COP1 = 0b010001,
 };
 
 union COP0_Cause {
