@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ipu.h"
-#include "../include/common.h"
-#include <iostream>
+// #include "ipu.h"
+// #include "common.h"
+// #include <iostream>
 
 IPU ipu = {};
 
@@ -40,6 +40,7 @@ ipu_write_32 (u32 address, u32 value)
 			syslog("IPU_CTRL value: [{:#08x}]\n", value);
 		} break;
 	}
+	return;
 }
 
 void 
@@ -54,16 +55,17 @@ ipu_write_64 (u32 address, u64 value)
 			syslog("IPU_CMD\n");
 		} break;
 	}
+	return;
 }
 
 u32 
 ipu_read_32 (u32 address)
 {
+	u32 r = 0;
 	switch(address) 
 	{
 		case 0x10002010:
 		{
-			u32 r;
 			r |= ipu.control.input_fifo_counter 	<< 0;
 			r |= ipu.control.output_fifo_counter 	<< 4;
 			r |= ipu.control.coded_block_pattern  	<< 8;
@@ -82,7 +84,6 @@ ipu_read_32 (u32 address)
 
 		case 0x10002020:
 		{
-			u32 r;
 			r |= ipu.bitposition.bitstream_pointer << 0;
 			r |= ipu.bitposition.fifo_counter << 8;
 			r |= ipu.bitposition.fifo_pointer << 16;
@@ -90,16 +91,17 @@ ipu_read_32 (u32 address)
 			return r;
 		} break;
 	}
+	return r;
 }
 
 u64 
 ipu_read_64 (u32 address)
 {
+	u64 r = 0;
 	switch(address) 
 	{
 		case 0x10002000:
 		{
-			u64 r;
 			r |= ipu.command.read.decoded_data << 0; 
 			r |= ipu.command.read.command_busy << 63;
 			syslog("IPU_CMD\n");
@@ -108,13 +110,13 @@ ipu_read_64 (u32 address)
 		
 		case 0x10002030:
 		{
-			u64 r;
 			r |= ipu.bitstream.bstop << 0;
 			r |= ipu.bitstream.command_busy << 63;
 			syslog("IPU_TOP\n");
 			return r;
 		} break;
 	}
+	return r;
 }
 
 void ipu_fifo_write() {

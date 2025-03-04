@@ -1,9 +1,6 @@
 #ifndef GL_H
 #define GL_H
 
-#include "ps2.h"
-#include "ps2types.h"
-
 bool 	init_opengl(SDL_Context *context);
 void 	shutdown_opengl();
 void 	gl_swap_framebuffers(SDL_Context *context);

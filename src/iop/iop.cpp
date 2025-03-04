@@ -1,8 +1,6 @@
-#include <assert.h>
-
-#include "../include/common.h"
-#include "../include/iop/iop.h"
-#include "../include/ps2.h"
+// #include "common.h"
+// #include "iop.h"
+// #include "ps2.h"
 
 R5000_Core iop = {0};
 

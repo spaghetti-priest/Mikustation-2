@@ -1,10 +1,5 @@
-#pragma once
-
 #ifndef GS_H
 #define GS_H
-
-#include "ps2types.h"
-#include "ps2.h"
 /*
   00h     PRIM
   01h     RGBAQ
@@ -52,6 +47,7 @@
 /********************************
  * GS Primitives
 ********************************/		
+// typedef union PRIM PRIM;
 union PRIM {
 	struct {
 		u8 primitive_type : 3;
@@ -680,6 +676,27 @@ struct Transmission_Buffer {
     u32 address;
 };
 
+struct Vertex {
+    XYZ pos;
+    RGBAQ col;
+    ST st;
+    UV uv;
+    f32 q;
+    u8 f;
+};
+
+struct Vertex_Queue {
+    // @Remove: std is slow, but remove once it works
+    std::vector<Vertex> queue;
+    u32 size;
+};
+
+// @Remove: Unnecessary Global Variable
+static Vertex_Queue vertex_queue = {
+    .queue  = {},
+    .size   = 0,
+};
+
 typedef struct _GraphicsSynthesizer_ {
 	u32 *vram;
 	CRT_MODE crt_mode;
@@ -789,5 +806,7 @@ void 		gs_write_hwreg_software(u64 data);
 void 		gs_write_hwreg_hardware(u64 data);
 
 void 		gs_render_crt(SDL_Context *context);
+
+static void gs_write_internal(u8 address, u64 value);
 
 #endif

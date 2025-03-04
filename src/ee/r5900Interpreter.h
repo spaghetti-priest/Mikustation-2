@@ -10,7 +10,7 @@
 #endif
 */
 
-#include "../ps2types.h"
+// #include "../ps2types.h"
 
 /*
   KUSEG: 00000000h-7FFFFFFFh User segment

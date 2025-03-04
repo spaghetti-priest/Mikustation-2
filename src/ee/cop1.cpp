@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/cop1.h"
-#include "../include/common.h"
-#include <cmath>
+// #include "ee/cop1.h"
+// #include "common.h"
+// #include <cmath>
 
 COP1_Registers cop1 = {0};
 

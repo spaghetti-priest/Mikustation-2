@@ -3,14 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/dmac.h"
-#include "../include/gif.h"
-#include "../include/ps2.h"
-#include "../include/common.h"
-#include <iostream>
+// #include <iostream>
 
 DMAC dmac = {0};
-const bool stop_dma_transfer = ~0x100;
+const int stop_dma_transfer = ~0x100;
 
 void 
 dmac_reset ()

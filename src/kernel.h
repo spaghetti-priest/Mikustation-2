@@ -3,8 +3,6 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include "ps2types.h"
-
 // From: Ps2SDK
 // Used as argument for CreateThread, ReferThreadStatus
 typedef struct t_ee_thread_param

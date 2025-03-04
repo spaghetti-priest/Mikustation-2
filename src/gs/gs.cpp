@@ -3,15 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <iostream>
-#include <vector>
-#include "assert.h"
+// #include <iostream>
+// #include <vector>
+// #include "assert.h"
+// #include <queue>
 
-#include "../include/gs.h"
-#include "../include/common.h"
-#include "../include/intc.h"
-#include "../include/gl.h"
-
+#include "gs.h"
 
 alignas(16) GraphicsSynthesizer gs = {0};
 
@@ -68,7 +65,7 @@ enum Pixel_Storage_Mode : u8
     PSMZ16S     = 0x3A,
 };
 
-struct Vertex {
+/*struct Vertex {
     XYZ pos;
     RGBAQ col;
     ST st;
@@ -87,7 +84,7 @@ struct Vertex_Queue {
 static Vertex_Queue vertex_queue = {
     .queue  = {},
     .size   = 0,
-};
+};*/
 
 static inline u32
 pack_RGBA (u8 r, u8 b, u8 g, u8 a)
@@ -1186,7 +1183,7 @@ gs_write_64_priviledged (u32 address, u64 value)
     return;
 }
 
-void 
+static void 
 gs_write_internal (u8 address, u64 value) 
 {
     switch(address)

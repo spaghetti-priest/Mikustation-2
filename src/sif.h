@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ps2types.h"
+// #include "ps2types.h"
 
 #ifndef SIF_H
 #define SIF_H

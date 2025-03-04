@@ -3,7 +3,7 @@
 #ifndef DMAC_H
 #define DMAC_H
 
-#include "ps2types.h"
+// #include "ps2types.h"
 
 #define DMAC_CHANNEL_COUNT 10
 enum Channels {

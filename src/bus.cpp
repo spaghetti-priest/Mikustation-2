@@ -1,4 +1,31 @@
 //@@Temporary: @@Move: Might move this into its own Bus file
+#include "iop/iop.h"
+void 
+output_to_console (u32 value)
+{
+    //console << (char)value;
+    //console.flush();
+    if ((char)value == '#') printf("\n");
+    printf("%c", (char)value);
+}
+    
+void 
+iop_output_to_console (u32 iop_pc)
+{
+    std::string value;
+    u32 pointer     = get_iop_register(5);
+    u32 text_size   = get_iop_register(6);
+
+    while (text_size) {
+          auto c = (char)_iop_ram_[pointer & 0x1FFFFF];
+          //putc(c);
+          value += c;
+          pointer++;
+          text_size--;
+    }
+    printf("{%s}", value.c_str());
+}
+
 u8 
 iop_load_8 (u32 address)
 {

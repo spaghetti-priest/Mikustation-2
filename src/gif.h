@@ -1,10 +1,26 @@
-#pragma once
-
 #ifndef GIF_H
-#define GIF_H
 
-#include <queue>
-#include "ps2types.h"
+// #include <queue>
+
+enum Data_Modes : u8 
+{
+	PACKED 	= 0b00,
+	REGLIST = 0b01,
+	IMAGE 	= 0b10,
+	DISABLE = 0b11,
+};
+
+enum Packing_Formats : u8
+{
+	_PRIM 	= 0x00,
+	_RGBAQ 	= 0x01,
+	_ST 	= 0x02,
+	_UV 	= 0x03,
+	_XYZF 	= 0x04,
+	_XYZ 	= 0x05,
+	_FOG 	= 0x0a,
+	_A_D 	= 0x0e,
+};
 
 typedef struct GIFTag_t {
 	u16 	NLOOP : 15; // Data size
@@ -132,4 +148,5 @@ void 	gif_process_path3(u128 data);
 void 	gif_fifo_write(u32 address);
 void 	gif_fifo_read(u32 address);
 
+#define GIF_H
 #endif

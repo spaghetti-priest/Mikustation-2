@@ -1,9 +1,4 @@
-#pragma once
-
-#ifndef R5000INTERPRETER_H
-#define R5000INTERPRETER_H
-
-#include "../ps2types.h"
+#ifndef IOP_H
 
 /*
     KUSEG: 00000000h-7FFFFFFFh User segment
@@ -96,4 +91,5 @@ u32 get_iop_register(u32 r);
 void iop_cycle();
 void iop_reset();
 
+#define IOP_H
 #endif

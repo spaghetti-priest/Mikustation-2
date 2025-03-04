@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/timer.h"
-#include "../include/common.h"
-#include "../include/intc.h"
-#include "../include//ps2types.h"
-#include <iostream>
+// #include "ee/timer.h"
+// #include "common.h"
+// #include "intc.h"
+// #include "/ps2types.h"
+// #include <iostream>
 
 // @@Note: Only Timers 0 and 1 have a Tn_HOLD register
 Timer timers[4];

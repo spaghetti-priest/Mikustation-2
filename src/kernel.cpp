@@ -1,8 +1,6 @@
-#include "../include/kernel.h"
-#include "../include/common.h"
-#include "../include/gs.h"
-
-#include <vector>
+// #include "kernel.h"
+// #include "common.h"
+#include "gs/gs.h"
 
 /** Thread status */
 #define THREAD_RUN         0x01

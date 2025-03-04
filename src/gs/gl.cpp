@@ -1,7 +1,4 @@
 #include <glad/glad.h>
-#include "../include/gl.h"
-#include "../include/common.h"
-#include <iostream>
 
 struct Vram {
     unsigned int backbuffer;
@@ -131,12 +128,12 @@ gl_setup_screen_shader ()
 }
 
 void 
-gl_draw_point(v3 *pos, v4 *color)
+gl_draw_point(v3 *position, v4 *color)
 {
     OpenGL *gl = &opengl;
     float data[] = 
     {
-        (float)pos->x, (float)pos->y, (float)pos->z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w
+        (float)position->x, (float)position->y, (float)position->z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w
     };
 
     unsigned int VAO, VBO;
@@ -162,13 +159,13 @@ gl_draw_point(v3 *pos, v4 *color)
 unsigned int VAO, VBO;
 
 void 
-gl_draw_line(v3 *pos, v4 *color)
+gl_draw_line(v3 *position, v4 *color)
 {
     OpenGL *gl = &opengl;
     float data[] = 
     {
-        (float)pos[0].x, (float)pos[0].y, (float)pos[0].z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w,
-        (float)pos[1].x, (float)pos[1].y, (float)pos[1].z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w
+        (float)position[0].x, (float)position[0].y, (float)position[0].z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w,
+        (float)position[1].x, (float)position[1].y, (float)position[1].z,    (float)color->x, (float)color->y, (float)color->z, (float)color->w
     };
 
     glGenVertexArrays(1, &VAO);

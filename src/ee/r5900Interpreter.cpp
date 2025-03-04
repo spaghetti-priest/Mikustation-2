@@ -3,22 +3,22 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <assert.h>
+// #include <assert.h>
 
-#include "fmt-10.2.1/include/fmt/format-inl.h"
-#include "fmt-10.2.1/include/fmt/format.h"
-#include "fmt-10.2.1/src/format.cc"
+// #include "fmt-10.2.1/include/fmt/format-inl.h"
+// #include "fmt-10.2.1/include/fmt/format.h"
+// #include "fmt-10.2.1/src/format.cc"
 
-#include "../include/common.h"
-#include "../include/ps2.h"
-#include "../include/ee/r5900Interpreter.h"
-#include "../include/ee/cop0.h"
-#include "../include/ee/cop1.h"
-#include "../include/kernel.h"
+// #include "common.h"
+// #include "ps2.h"
+// #include "ee/r5900Interpreter.h"
+// #include "ee/cop0.h"
+// #include "ee/cop1.h"
+// #include "kernel.h"
+//#include "../bus.h"
 
 // @Cleanup
-#include <cstdint>
-#include <fstream>
+// #include <cstdint>
 
 // @Incomplete: This is not verified to work but Im putting it here anyways
 #define SignExtend(x)
@@ -39,7 +39,7 @@ void
 dump_all_ee_registers(R5900_Core *ee)
 {
     for (int i = 0; i < 32; ++i) {
-        printf("EE Register [%d] contains [%08x]\n", i, ee->reg.r[i].UD[0]);
+        printf("EE Register [%d] contains [%llx]\n", i, ee->reg.r[i].UD[0]);
     }
 }
 
@@ -867,8 +867,8 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
 */
         case INSTR_REGIMM: 
         {
-            int function = instruction >> 16 & 0x1f;
-            switch(function) 
+            int regimm_function = instruction >> 16 & 0x1f;
+            switch(regimm_function) 
             {
                 case 0x00: 
                 {
@@ -890,7 +890,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
 
                 default:
                 {
-                    errlog("[ERROR]: Could not interpret REGIMM instruction [{:#09x}]\n", function);
+                    errlog("[ERROR]: Could not interpret REGIMM instruction [{:#09x}]\n", regimm_function);
                 } break;
             }
         } break;

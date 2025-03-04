@@ -12,32 +12,61 @@ ___________________________________________________________
 * Copyright (c) 2023-2024 Xaviar Roach
 * SPD X-License-Identifier: MIT
 */
+#pragma warning(disable:4311 312)
+
+// #define global_variable static
+// #define function static
 
 #include <thread> 
 #include <typeinfo>
+#include <assert.h>
+#include <cmath>
+#include <fstream>
+#include <cstring>
+#include <queue>
 
-#include "../include/ps2types.h"
-#include "../include/common.h"
-#include "../include/ps2.h"
-#include "../include/loader.h"
-#include "../include/gif.h"
-#include "../include/sif.h"
-#include "../include/gs.h"
-#include "../include/dmac.h"
-#include "../include/intc.h"
-#include "../include/ipu.h"
-#include "../include/vu.h"
-#include "../include/vif.h"
-
-#include "../include/ee/r5900Interpreter.h"
-#include "../include/ee/cop0.h"
-#include "../include/ee/cop1.h"
-#include "../include/ee/timer.h"
-#include "../include/iop/iop.h"
-#include "../include/iop/iop_dmac.h"
-
-#include "../include/gl.h"
+#include "SDL2/include/SDL.h"
 #include "SDL2/include/SDL_Timer.h"
+
+#include "fmt-10.2.1/include/fmt/core.h"
+#include "fmt-10.2.1/include/fmt/color.h"
+#include "fmt-10.2.1/include/fmt/format-inl.h"
+#include "fmt-10.2.1/include/fmt/format.h"
+#include "fmt-10.2.1/src/format.cc"
+
+#include "ps2types.h"
+#include "common.h"
+#include "loader.h"
+#include "ps2.h"
+// #include "bus.h"
+
+#include "ee/ee_inc.h"
+#include "iop/iop_inc.h"
+
+// #include "bus.cpp"
+#include "kernel.h"
+#include "gif.h"
+#include "sif.h"
+#include "dmac.h"
+#include "intc.h"
+#include "ipu.h"
+#include "vu.h"
+#include "vif.h"
+#include "gs/gs_inc.h"
+
+#include "kernel.cpp"
+#include "ee/ee_inc.cpp"
+#include "iop/iop_inc.cpp"
+#include "loader.cpp"
+
+#include "gif.cpp"
+#include "sif.cpp"
+#include "dmac.cpp"
+#include "intc.cpp"
+#include "ipu.cpp"
+#include "vu.cpp"
+#include "vif.cpp"
+#include "gs/gs_inc.cpp"
 
 u32 MCH_RICM    = 0, MCH_DRD    = 0;
 u8 _rdram_sdevid = 0;
@@ -233,9 +262,9 @@ iop_store_32 (u32 address, u32 value)
 
 }
 
-/*******************************************
- * Load Functions
-*******************************************/
+// /*******************************************
+//  * Load Functions
+// *******************************************/
 u8 
 ee_load_8 (u32 address) 
 {

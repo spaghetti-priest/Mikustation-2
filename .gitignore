@@ -1,147 +1,84 @@
-
-x64/Debug/vc143.pdb
-x64/Debug/vc143.idb
-x64/Debug/r5900Interpreter.obj
-x64/Debug/ps2.vcxproj.FileListAbsolute.txt
-x64/Debug/ps2.tlog/ps2.lastbuildstate
-x64/Debug/ps2.tlog/lld-link.write.1.tlog
-x64/Debug/ps2.tlog/lld-link.read.1.tlog
-x64/Debug/ps2.tlog/lld-link.command.1.tlog
-x64/Debug/ps2.tlog/link.command.1.tlog
-x64/Debug/ps2.tlog/clang-cl.write.1.tlog
-x64/Debug/ps2.tlog/clang-cl.read.1.tlog
-x64/Debug/ps2.tlog/clang-cl.command.1.tlog
-x64/Debug/ps2.tlog/CL.command.1.tlog
-x64/Debug/ps2.pdb
-x64/Debug/ps2.obj
-x64/Debug/ps2.log
-x64/Debug/ps2.exe.recipe
-x64/Debug/ps2.exe
-x64/Debug/loader.obj
-x64/Debug/intc.obj
-x64/Debug/gs.obj
-x64/Debug/gif.obj
-x64/Debug/dmac.obj
-x64/Debug/cop0.obj
-x64/.DS_Store
-TODO.md
-ps2.vcxproj.user
-ps2.vcxproj.filters
-ps2.vcxproj
-Mikustation_2
-ghidra/ps2.rep/versioned/~index.dat
-ghidra/ps2.rep/versioned/~index.bak
-ghidra/ps2.rep/user/~journal.dat
-ghidra/ps2.rep/user/~journal.bak
-ghidra/ps2.rep/user/~index.dat
-ghidra/ps2.rep/user/~index.bak
-ghidra/ps2.rep/projectState
-ghidra/ps2.rep/project.prp
-ghidra/ps2.rep/idata/~index.dat
-ghidra/ps2.rep/idata/~index.bak
-ghidra/ps2.rep/idata/00/~00000000.db/db.2.gbf
-ghidra/ps2.rep/idata/00/00000000.prp
-ghidra/ps2.gpr
-disasm.txt
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].nvm
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].mec
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].bin
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].nvm
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].mec
-data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].bin
-data/bios/Sony PlayStation 2 BIOS (J)(v2.20)(2006-09-05)\[SCPH-90006\].bin
-data/bios/Sony PlayStation 2 BIOS (J)(v0.1)(2000-01-17)\[SCPH10000\].bin
-data/bios/Sony PlayStation 2 BIOS (E)(v2.20)(2006-02-10)\[SCPH-77008\].bin
-data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-11-04)\[SCPH50003\].bin
-data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-06-14)\[SCPH70008\].bin
-data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-06-14)\[SCPH70004\].bin
-data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].nvm
-data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].mec
-data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].bin
-data/bios/scph39001.NVM
-data/bios/scph39001.MEC
-data/bios/scph39001.bin
-data/bios/scph3004R.nvm
-data/bios/scph3004R.mec
-data/bios/scph3004R.bin
-data/bios/scph10000.NVM
-data/bios/scph10000.MEC
-data/bios/scph10000.bin
-data/bios/SCPH-70012_BIOS_V12_USA_200.NVM
-data/bios/SCPH-70012_BIOS_V12_USA_200.MEC
-data/bios/SCPH-70012_BIOS_V12_USA_200.bin
-data/bios/SCPH-70004_BIOS_V12_PAL_200.ROM2
-data/bios/SCPH-70004_BIOS_V12_PAL_200.ROM1
-data/bios/SCPH-70004_BIOS_V12_PAL_200.NVM
-data/bios/SCPH-70004_BIOS_V12_PAL_200.MEC
-data/bios/SCPH-70004_BIOS_V12_PAL_200.EROM
-data/bios/SCPH-70004_BIOS_V12_PAL_200.BIN
-data/bios/ROM2.BIN
-data/bios/rom1.bin
-data/bios/PS2 Bios 30004R V6 Pal.NVM
-data/bios/PS2 Bios 30004R V6 Pal.MEC
-data/bios/PS2 Bios 30004R V6 Pal.bin
-data/bios/EROM.BIN
-data/3stars/npm-logo.asm
-data/3stars/gslib01.asm
-data/3stars/font2.asm
-data/3stars/file_id.diz
-data/3stars/dmalib01.asm
-data/3stars/compile.bat
-data/3stars/3Stars.nfo
-data/3stars/3stars.elf
-data/3stars/3stars.asm
-.vs/Mikustation-2/v17/ipch/AutoPCH/ec8090528d1f8c80/INTC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/c9f7b2f22d2db3a1/DMAC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/b8a3eebdef214b38/COP0.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/b7af2f84e1a52bb0/R5900INTERPRETER.ipch
-.vs/Mikustation-2/v17/Browse.VC.db
-.vs/Mikustation-2/v17/.suo
-.vs/Mikustation-2/FileContentIndex/read.lock
-.vs/Mikustation-2/FileContentIndex/a86f493f-0b63-4409-a9f6-522b8fda6f1f.vsidx
-.vs/Mikustation-2/FileContentIndex/608c039b-fb48-46cb-9020-4ba76b7c9fbd.vsidx
-.vs/Mikustation-2/FileContentIndex/95ca31c4-8a65-4239-8fbe-6ad7aae19c02.vsidx
-.vs/Mikustation-2/FileContentIndex/97cc99cc-525d-471c-98eb-2c041aeae01b.vsidx
-.vs/Mikustation-2/FileContentIndex/c31f2f6f-5710-43f0-a5f1-bd2d1351e935.vsidx
-.vs/Mikustation-2/v17/Browse.VC.db-shm
-.vs/Mikustation-2/v17/Browse.VC.db-wal
-.vs/Mikustation-2/v17/Browse.VC.opendb
-.vs/Mikustation-2/v17/ipch/AutoPCH/2fdc6fc4725fcab5/PS2.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/3ec12cc38be63205/TIMER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/9496284cf1a740b2/GIF.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/e87551b26079b14f/COP1.ipch
-.vs/Mikustation-2/FileContentIndex/43808337-2063-49e7-8fee-93d9a98b61d1.vsidx
-.vs/Mikustation-2/FileContentIndex/9cc68292-cab3-45a4-8717-6586a9ff5f92.vsidx
-.vs/Mikustation-2/FileContentIndex/dc095e6d-e847-4369-a685-f973000c7ce1.vsidx
-.vs/Mikustation-2/FileContentIndex/ec0970f2-a26b-4473-aedd-a3353999a658.vsidx
-.vs/Mikustation-2/v17/ipch/AutoPCH/568b605853e7e47c/IPU.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/8bf62db107ea8137/VU.ipch
-x64/Debug/cop1.obj
-x64/Debug/ipu.obj
-x64/Debug/timer.obj
-x64/Debug/vu.obj
-.vs/Mikustation-2/FileContentIndex/0ea724d6-f2ae-4ed0-92d5-7c428ba1f11b.vsidx
-.vs/Mikustation-2/FileContentIndex/85e49cd9-162f-46c6-928f-ea8d492ef80c.vsidx
-.vs/Mikustation-2/FileContentIndex/9f030763-f425-4eeb-9f54-e38c64efb273.vsidx
-.vs/Mikustation-2/FileContentIndex/e74e938d-abb3-4155-abb4-5e3925d58ac3.vsidx
-.vs/Mikustation-2/v17/ipch/AutoPCH/1b7a720ddce3cc95/LOADER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/1e1074ba92ada77c/GS.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/2572bf3c3beda063/COP1.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/32043e0d95090e24/IOP.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/48a0ffb6ad080658/GS.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/4d7bda2d5528448c/COP0.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/7567a775345e6794/R5900INTERPRETER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/78e7a72499ccd5cc/IOP_DMAC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/be2264667726c61d/DMAC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/dcc9754457693aac/IOP.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/f52c450dea3c20e1/TIMER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/fcceb37e36ad3d18/IPU.ipch
 data/1987.zip
+data/3d_reflection.zip
+data/3stars/3stars.asm
+data/3stars/3stars.elf
+data/3stars/3Stars.nfo
+data/3stars/compile.bat
+data/3stars/dmalib01.asm
+data/3stars/file_id.diz
+data/3stars/font2.asm
+data/3stars/gslib01.asm
+data/3stars/npm-logo.asm
+data/bios/EROM.BIN
+data/bios/PS2 Bios 30004R V6 Pal.bin
+data/bios/PS2 Bios 30004R V6 Pal.MEC
+data/bios/PS2 Bios 30004R V6 Pal.NVM
+data/bios/rom1.bin
+data/bios/ROM2.BIN
+data/bios/SCPH-70004_BIOS_V12_PAL_200.BIN
+data/bios/SCPH-70004_BIOS_V12_PAL_200.EROM
+data/bios/SCPH-70004_BIOS_V12_PAL_200.MEC
+data/bios/SCPH-70004_BIOS_V12_PAL_200.NVM
+data/bios/SCPH-70004_BIOS_V12_PAL_200.ROM1
+data/bios/SCPH-70004_BIOS_V12_PAL_200.ROM2
+data/bios/SCPH-70012_BIOS_V12_USA_200.bin
+data/bios/SCPH-70012_BIOS_V12_USA_200.MEC
+data/bios/SCPH-70012_BIOS_V12_USA_200.NVM
+data/bios/scph10000.bin
+data/bios/scph10000.MEC
+data/bios/scph10000.NVM
+data/bios/scph3004R.bin
+data/bios/scph3004R.mec
+data/bios/scph3004R.nvm
+data/bios/scph39001.bin
+data/bios/scph39001.MEC
+data/bios/scph39001.NVM
+data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].bin
+data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].mec
+data/bios/Sony PlayStation 2 BIOS (E)(v1.6)(2001-10-04)\[SCPH30004\].nvm
+data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-06-14)\[SCPH70004\].bin
+data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-06-14)\[SCPH70008\].bin
+data/bios/Sony PlayStation 2 BIOS (E)(v2.0)(2004-11-04)\[SCPH50003\].bin
+data/bios/Sony PlayStation 2 BIOS (E)(v2.20)(2006-02-10)\[SCPH-77008\].bin
+data/bios/Sony PlayStation 2 BIOS (J)(v0.1)(2000-01-17)\[SCPH10000\].bin
+data/bios/Sony PlayStation 2 BIOS (J)(v2.20)(2006-09-05)\[SCPH-90006\].bin
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].bin
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].mec
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-02-07)\[SCPH39001\].nvm
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].bin
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].mec
+data/bios/Sony PlayStation 2 BIOS (U)(v1.6)(2002-03-19)\[SCPH39004\].nvm
+data/Bricks_v0_0_3_ps2.zip
 data/bytheway.zip
+data/cube.zip
+data/cube/cube.c
 data/FiRE.zip
 data/pillgen.zip
+data/pillgen/3dm.s
+data/pillgen/3dmath.cpp
+data/pillgen/3dmath.h
+data/pillgen/ctest.cpp
+data/pillgen/ctest.cpr
+data/pillgen/ctest.nfo
+data/pillgen/floatlib.h
+data/pillgen/fptoint.s
+data/pillgen/gen.s
+data/pillgen/generate.cpp
+data/pillgen/generate.h
+data/pillgen/gfxpipe.cpp
+data/pillgen/gfxpipe.h
+data/pillgen/hw.h
+data/pillgen/hw.s
+data/pillgen/inlinedata.c
+data/pillgen/libmf.a
+data/pillgen/Makefile
+data/pillgen/mipsregs.h
+data/pillgen/pillgen-30fps-94pills-pal.elf
+data/pillgen/pillgen-30fps-ntsc.elf
+data/pillgen/pillgen-60fps-ntsc.elf
+data/pillgen/pillgen.nfo
+data/pillgen/pillgen2.elf
 data/ps2tut.zip
-data/ps2tut/.DS_Store
 data/ps2tut/ps2tut_01/.DS_Store
 data/ps2tut/ps2tut_01/crt0.s
 data/ps2tut/ps2tut_01/defines.h
@@ -277,155 +214,8 @@ data/ps2tut/ps2tut_02d/resources/texfont2_a.bmp
 data/ps2tut/ps2tut_02d/resources/verdana.bmp
 data/ps2tut/ps2tut_02d/texfont_tc.c
 data/ps2tut/ps2tut_02d/verdana_tc.c
-ghidra/ps2.lock
-ghidra/ps2.lock~
-ghidra/ps2.rep/idata/00/~00000000.db/tmp8995909483961295019.ps
-x64/Debug/vif.obj
-x64/Debug/iop_timer.obj
-x64/Debug/iop_dmac.obj
-x64/Debug/iop.obj
-src - Shortcut.lnk
-.vs/Mikustation-2/FileContentIndex/37d65b31-ce75-43b8-a58b-984a9d3c8e97.vsidx
-.vs/Mikustation-2/FileContentIndex/3f0808ed-53e9-4112-82f5-b1e2c24ec3c3.vsidx
-.vs/Mikustation-2/FileContentIndex/e1fba4df-050e-463e-b51d-fc727ec402da.vsidx
-.vs/Mikustation-2/v17/ipch/AutoPCH/5957a770d3f5f8f6/GIF.ipch
-.vs/Mikustation-2/FileContentIndex/cb951f3d-02c8-40b8-808f-8d284826a6de.vsidx
-.vs/Mikustation-2/FileContentIndex/d2a8ead8-49b5-4a4a-bf44-76b835d89c99.vsidx
-.vs/Mikustation-2/FileContentIndex/fc4673f4-3bd7-4c50-baff-52fb01b86e30.vsidx
-.vs/Mikustation-2/v17/ipch/AutoPCH/c669d22681d2a65c/INTC.ipch
-ghidra/ps2.rep/idata/00/00000001.prp
-ghidra/ps2.rep/idata/00/~00000001.db/changeA.grf
-ghidra/ps2.rep/idata/00/~00000001.db/changeB.grf
-ghidra/ps2.rep/idata/00/~00000001.db/db.1.gbf
-ghidra/ps2.rep/idata/00/~00000001.db/snapshotA.grf
-ghidra/ps2.rep/idata/00/~00000001.db/snapshotB.grf
-ghidra/ps2.rep/idata/00/~00000001.db/tmp15214357428983807779.ps
-ghidra/ps2.rep/idata/~journal.bak
-.vs/Mikustation-2/FileContentIndex/a169fb1f-8ba6-4113-a655-a1731662a4bd.vsidx
-.vs/Mikustation-2/FileContentIndex/733b5f1d-1dde-4786-9732-220732cba646.vsidx
-.vs/Mikustation-2/FileContentIndex/3762ff7a-fec2-48a7-8d0f-0751d9f8f642.vsidx
-data/pillgen/3dm.s
-data/pillgen/3dmath.cpp
-data/pillgen/3dmath.h
-data/pillgen/ctest.cpp
-data/pillgen/ctest.cpr
-data/pillgen/ctest.nfo
-data/pillgen/floatlib.h
-data/pillgen/fptoint.s
-data/pillgen/gen.s
-data/pillgen/generate.cpp
-data/pillgen/generate.h
-data/pillgen/gfxpipe.cpp
-data/pillgen/gfxpipe.h
-data/pillgen/hw.h
-data/pillgen/hw.s
-data/pillgen/inlinedata.c
-data/pillgen/libmf.a
-data/pillgen/Makefile
-data/pillgen/mipsregs.h
-data/pillgen/pillgen-30fps-94pills-pal.elf
-data/pillgen/pillgen-30fps-ntsc.elf
-data/pillgen/pillgen-60fps-ntsc.elf
-data/pillgen/pillgen.nfo
-data/pillgen/pillgen2.elf
 data/tests/sample01/sample01.c
-ghidra/ps2.rep/user/00/~00000001.db/db.1.gbf
-ghidra/ps2.rep/user/00/00000001.prp
-ghidra/ps2.rep/idata/00/~00000002.db/db.1.gbf
-ghidra/ps2.rep/idata/00/00000002.prp
-debug.log
-.vs/Mikustation-2/v17/ipch/AutoPCH/fdd537e378f481bb/LOADER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/e3a7a9131af26d2d/KERNEL.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/ba51cf990e11ab72/R5900INTERPRETER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/8b85eb13bbc5ab54/GIF.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/776fd48fe37d7cab/DMAC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/7503adf3d775390/SIF.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/7129a0a5f5073f9b/TIMER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/3084be63c56f8557/PS2.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/28583a312e513f68/IOP_TIMER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/255e0be7868b013e/INTC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/1ffaa3358f307cae/GS.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/1c9563603552f86d/COP1.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/1bbffb535a36103e/SIF.ipch
-.vs/Mikustation-2/FileContentIndex/f49b1df9-aa85-42d5-9a13-5444bcca505d.vsidx
-.vs/Mikustation-2/FileContentIndex/da9c8c6b-eb03-4c7c-8c15-2dc3c471da7d.vsidx
-.vs/Mikustation-2/FileContentIndex/176fde8e-b23e-4d71-ba49-c64c2097c1ef.vsidx
-x64/Debug/CodeAnalysisResultManifest.txt
-x64/Debug/kernel.obj
-x64/Debug/ps2.Build.CppClean.log
-x64/Debug/ps2.ClangTidy.log
-x64/Debug/ps2.ClangTidy/compile_commands.json
-x64/Debug/sif.obj
-x64/Release/cop0.obj
-x64/Release/cop1.obj
-x64/Release/dmac.obj
-x64/Release/gif.obj
-x64/Release/gs.obj
-x64/Release/intc.obj
-x64/Release/iop.obj
-x64/Release/iop_dmac.obj
-x64/Release/iop_timer.obj
-x64/Release/ipu.obj
-x64/Release/kernel.obj
-x64/Release/loader.obj
-x64/Release/ps2.Build.CppClean.log
-x64/Release/ps2.exe
-x64/Release/ps2.exe.recipe
-x64/Release/ps2.log
-x64/Release/ps2.obj
-x64/Release/ps2.pdb
-x64/Release/ps2.tlog/clang-cl.command.1.tlog
-x64/Release/ps2.tlog/clang-cl.read.1.tlog
-x64/Release/ps2.tlog/clang-cl.write.1.tlog
-x64/Release/ps2.tlog/lld-link.command.1.tlog
-x64/Release/ps2.tlog/lld-link.read.1.tlog
-x64/Release/ps2.tlog/lld-link.write.1.tlog
-x64/Release/ps2.tlog/ps2.lastbuildstate
-x64/Release/ps2.vcxproj.FileListAbsolute.txt
-x64/Release/r5900Interpreter.obj
-x64/Release/sif.obj
-x64/Release/timer.obj
-x64/Release/vif.obj
-x64/Release/vu.obj
+ps2.vcxproj
+ps2.vcxproj.filters
+ps2.vcxproj.user
 softwarenotes.md
-.vs/Mikustation-2/FileContentIndex/4584eaca-8929-4b31-ab47-f317ae97f2bc.vsidx
-.vs/Mikustation-2/FileContentIndex/ad35a965-8f46-41cc-83d5-e37ecb405e62.vsidx
-.vs/Mikustation-2/FileContentIndex/f7341b13-08f7-4d30-9764-e51d467f2c92.vsidx
-ghidra/ps2.rep/idata/00/00000004.prp
-ghidra/ps2.rep/idata/00/~00000004.db/db.1.gbf
-ghidra/ps2.rep/idata/00/~00000004.db/db.2.gbf
-ghidra/ps2.rep/idata/00/~00000004.db/tmp2441951667596281322.ps
-ghidra/ps2.rep/user/00/~00000003.db/db.1.gbf
-ghidra/ps2.rep/user/00/00000003.prp
-.vs/Mikustation-2/v17/ipch/AutoPCH/e37f10f5e4b60983/KERNEL.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/3bd46eb742b5d1ae/IOP.ipch
-.vs/Mikustation-2/FileContentIndex/bf8d6964-7ee6-4e8a-bb4c-806ce1d0b048.vsidx
-.vs/Mikustation-2/FileContentIndex/9441ec23-28e4-4893-8d18-326232304023.vsidx
-.vs/Mikustation-2/FileContentIndex/228790a0-e54e-470a-9cc8-b7075272cd83.vsidx
-x64/Release/vc143.pdb
-x64/Release/ps2.tlog/ps2.write.1u.tlog
-x64/Release/ps2.tlog/link.write.1.tlog
-x64/Release/ps2.tlog/link.read.1.tlog
-x64/Release/ps2.tlog/link.command.1.tlog
-x64/Release/ps2.tlog/CL.write.1.tlog
-x64/Release/ps2.tlog/CL.read.1.tlog
-x64/Release/ps2.tlog/CL.command.1.tlog
-x64/Release/ps2.ipdb
-x64/Release/ps2.iobj
-x64/Debug/ps2.tlog/link.write.1.tlog
-x64/Debug/ps2.tlog/link.read.1.tlog
-x64/Debug/ps2.tlog/CL.write.1.tlog
-x64/Debug/ps2.tlog/CL.read.1.tlog
-x64/Debug/ps2.ilk
-.vs/Mikustation-2/FileContentIndex/295bbbb1-4e26-4ae3-9f17-69f10275c2b2.vsidx
-.vs/Mikustation-2/FileContentIndex/6b227fb9-8973-42d5-88de-abdcc45577e2.vsidx
-.vs/Mikustation-2/FileContentIndex/e17344de-f0d7-42ba-a905-fa1ad405cbdf.vsidx
-.vs/Mikustation-2/v17/fileList.bin
-.vs/Mikustation-2/v17/ipch/AutoPCH/1a4898dadbffe7f6/GS.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/4c27131ac9efc34b/GL.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/8f3628f8136cc8b6/IOP_TIMER.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/9543d1e7bf868583/DMAC.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/995b1e53c28b7576/COP0.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/cc16193116499914/GLAD.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/d081ce4eace356a9/GL.ipch
-.vs/Mikustation-2/v17/ipch/AutoPCH/d3c42ebec2ba8fba/GLAD.ipch

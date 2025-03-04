@@ -3,7 +3,7 @@
 #ifndef PS2TYPE_H
 #define PS2TYPE_H
 
-#include <cstring>
+// #include <cstring>
 
 //#define MIN(a, b) (a < b ? a : b)
 //#define MIN3(a, b, c) (MIN(MIN(a, b), c))
@@ -26,9 +26,6 @@ typedef signed long long    s64;
 
 typedef float f32;
 typedef double f64;
-
-#define global_variable static
-//#define function static
 
 // @Implementation @Portability: The clang compiler actually has a u128 value, MSVC and others do not, so I should
 // change this in the future 

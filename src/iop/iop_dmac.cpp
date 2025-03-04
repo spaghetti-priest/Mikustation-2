@@ -1,6 +1,6 @@
-#include "../include/iop/iop_dmac.h"
-#include "../include/ps2types.h"
-#include <iostream>
+// #include "iop_dmac.h"
+// #include "ps2types.h"
+// #include <iostream>
 
 void 
 iop_dmac_write_32 (u32 address, u32 value) 

@@ -1,8 +1,5 @@
-#pragma once
 #ifndef INTC_H
 #define INTC_H
-
-#include "ps2types.h"
 
 struct Intc_Handler
 {

@@ -1,4 +1,3 @@
-#pragma once
 #ifndef COMMON_H
 #if 0
 #include "fmt-10.2.1/include/fmt/format-inl.h"
@@ -6,11 +5,11 @@
 #include "fmt-10.2.1/src/format.cc"
 #endif
 
-#include "fmt-10.2.1/include/fmt/core.h"
-#include "fmt-10.2.1/include/fmt/color.h"
+// #include "fmt-10.2.1/include/fmt/core.h"
+// #include "fmt-10.2.1/include/fmt/color.h"
 
 // Messy system I know....
-#define DISASM 1
+#define DISASM 0
 // #define NESSENTIAL_LOGS 1 
 #define NINTERPRETER_LOGS 1
 

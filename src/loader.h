@@ -3,7 +3,6 @@
 #ifndef LOADER_H
 #define LOADER_H
 
-#include "ps2types.h"
 #include "ee/r5900Interpreter.h"
 
 // From: https://wiki.osdev.org/ELF_Tutorial

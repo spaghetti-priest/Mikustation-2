@@ -3,7 +3,7 @@
 #ifndef COP1_H
 #define COP1_H
 
-#include "r5900Interpreter.h"
+// #include "r5900Interpreter.h"
 
 union FPRreg {
 	float f;

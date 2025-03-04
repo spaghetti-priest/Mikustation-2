@@ -3,8 +3,8 @@
 #ifndef COP0_H
 #define COP0_H
 
-#include "../ps2types.h"
-#include "r5900Interpreter.h"
+// #include "../ps2types.h"
+// #include "r5900Interpreter.h"
 
 
 /*typedef struct _TLB_Entry_ {

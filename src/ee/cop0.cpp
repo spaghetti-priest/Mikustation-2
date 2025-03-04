@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/cop0.h"
+// #include "ee/cop0.h"
 
 /*void
 handle_exception_level_1 (R5900_Core *ee, Exception *exc)
@@ -34,7 +34,16 @@ handle_exception_level_1 (R5900_Core *ee, Exception *exc)
 	//ee->next_instruction = ee_load_32(ee->pc);
 }*/
 
-u32
+/*inline Exception 
+get_exception (ExceptionVectors vector, ExceptionCodes code)
+{
+    Exception r;
+    r.vector = vector != V_COMMON ? vector : V_COMMON;
+    r.code   = code;
+    return r;
+}*/
+
+static u32
 handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, u32 current_pc, bool is_branching)
 {
 	u32 return_pc 		= 0;

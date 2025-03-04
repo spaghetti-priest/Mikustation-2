@@ -3,11 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/intc.h"
-#include "../include/ps2.h"
-#include "../include/common.h"
-#include "../include/ps2types.h"
-#include <iostream>
+// #include <iostream>
 
 Intc_Handler intc_handler = {0};
 
@@ -18,7 +14,7 @@ intc_reset()
 	syslog("Resetting Interrupt Controller\n");
 }
 
-static u32
+static bool
 trigger_interrupt_int0 ()
 {
 	bool int0 	= intc_handler.mask & intc_handler.stat;
@@ -27,13 +23,15 @@ trigger_interrupt_int0 ()
 		return 0;
 	else 
 		syslog("[INT0]: Interrupt triggered\n");
+	return 1;
 }
 
 void
 request_interrupt (u32 index)
 {
 	intc_handler.stat |= 1 << index;
-	trigger_interrupt_int0();
+	// @Incomplete: Do error handling for this?
+	bool interrupt_triggered = trigger_interrupt_int0();
 }
 
 u32 

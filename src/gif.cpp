@@ -3,21 +3,20 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/gif.h"
-#include "../include/gs.h"
-#include "../include/common.h"
-#include <iostream>
-
+// #include "common.h"
+// #include <iostream>
+// #include <queue>
+// #include "ps2types.h"
 alignas(16) GIF gif;
 
-void 
+static void 
 gif_reset () 
 {
 	syslog("Resetting GIF interface\n");
 	memset(&gif, 0, sizeof(gif));
 }
 
-enum Data_Modes : u8 
+/*enum Data_Modes : u8 
 {
 	PACKED 	= 0b00,
 	REGLIST = 0b01,
@@ -36,7 +35,7 @@ enum Packing_Formats : u8
 	FOG 	= 0x0a,
 	A_D 	= 0x0e,
 };
-
+*/
 static void 
 gif_process_packed (GIF_Tag *current_tag, u128 data)
 {
@@ -52,11 +51,11 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 
 	switch(destination)
 	{
-		case PRIM: {
+		case _PRIM: {
 			gs_write_internal(0x00, data.lo);
 		} break;
 
-		case RGBAQ: {
+		case _RGBAQ: {
 			reg |= data.lo 			& 0xFF; 	   // red
 			reg |= ((data.lo >> 32) & 0xFF) >> 8;  // green 
 			reg |= ((data.hi >> 0)  & 0xFF) >> 16; // blue
@@ -65,7 +64,7 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			gs_write_internal(0x01, reg);
 		} break;
 		
-		case ST: {
+		case _ST: {
 			reg |= data.lo & 0xFFFFFFFF; // s
 			reg |= data.lo >> 32; 		 // t
 			f32 q 	= data.hi & 0xFFFFFFFF;
@@ -74,13 +73,13 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			gs_set_q(q);
 		} break;
 		
-		case UV: {
+		case _UV: {
 			reg |= (data.lo 		& 0x3FFF); 		 // u
 			reg |= ((data.lo >> 32) & 0x3FFF) >> 16; // v
 			gs_write_internal(0x03, reg);
 		} break;
 
-		case XYZF: {
+		case _XYZF: {
 			reg |= (data.lo 		& 0xFFFF); 		   // x
 			reg |= ((data.lo >> 32) & 0xFFFF) 	>> 16; // y 
 			reg |= ((data.hi >> 4) 	& 0xFFFFFF) >> 32; // z
@@ -92,7 +91,7 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			else 			gs_write_internal(0x0c, reg);
 		} break;
 
-		case XYZ: {
+		case _XYZ: {
 			reg |= (data.lo 		& 0xFFFF); 			 // x
 			reg |= ((data.lo >> 32) & 0xFFFF) 	  >> 16; // y 
 			reg |= (data.hi  		& 0xFFFFFFFF) >> 32; // z
@@ -103,12 +102,12 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 			else 			gs_write_internal(0x0d, reg);
 		} break;
 
-		case FOG: {
+		case _FOG: {
 			reg |= ((data.hi >> 36) & 0xFF) >> 56; //fog
 			gs_write_internal(0x0a, reg);
 		} break;
 		
-		case A_D: {
+		case _A_D: {
 			/* 0xA+D */
 			u8 addr 			= data.hi & 0xFF;
 			u64 packaged_data 	= data.lo;
@@ -201,13 +200,13 @@ gif_tag_unpack (u128 pack)
 	}
 }
 
-void
+static void
 gif_process_path3 (u128 data) 
 {
 	gif_tag_unpack(data);
 }
 
-u32 
+static u32 
 gif_read (u32 address)
 {
 	if (gif.ctrl.pause) {
@@ -263,7 +262,7 @@ gif_read (u32 address)
 	return 0;
 }
 
-void 
+static void 
 gif_write (u32 address, u32 value)
 {
 	switch(address)
@@ -293,13 +292,13 @@ gif_write (u32 address, u32 value)
 }
 
 //@@Incomplete: Supposed to be u128
-void 
+static void 
 gif_fifo_write (u32 address) 
 { 
 	//printf("WRITE: GIF FIFO\n");
 }
 
-void
+static void
 gif_fifo_read(u32 address)
 {
 	printf("READ: GIF FIFO\n");
