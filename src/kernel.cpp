@@ -1,6 +1,6 @@
 #include "../include/kernel.h"
 #include "../include/common.h"
-#include "../include/ee/gs.h"
+#include "../include/gs.h"
 
 #include <vector>
 

@@ -5,7 +5,7 @@
 
 #include "../include/ee/timer.h"
 #include "../include/common.h"
-#include "../include/ee/intc.h"
+#include "../include/intc.h"
 #include "../include//ps2types.h"
 #include <iostream>
 
@@ -150,7 +150,8 @@ timer_tick()
 				request_interrupt(INT_TIMER0 + i);
 			}
 
-			if (timer.mode.zero_return) timer.count.count = 0;
+			if (timer.mode.zero_return) 
+				timer.count.count = 0;
 		}
 		
 		if (timer.count.count > overflow) {

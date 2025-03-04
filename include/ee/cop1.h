@@ -27,8 +27,8 @@ union COP1_Registers {
     u32 ACCflag;
 };
 
-void cop1_setFPR(u32 index, u32 data);
-f32 cop1_getFPR(u32 index);
-void cop1_reset();
-void cop1_decode_and_execute(R5900_Core *ee, u32 instruction);
+void    cop1_setFPR(u32 index, u32 data);
+f32     cop1_getFPR(u32 index);
+void    cop1_reset();
+void    cop1_decode_and_execute(R5900_Core *ee, u32 instruction);
 #endif

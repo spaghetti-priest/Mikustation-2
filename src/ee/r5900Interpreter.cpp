@@ -235,7 +235,6 @@ static inline bool check_address_error_exception (R5900_Core *ee, Access access,
 }
 
 /* This is an interesting and clear implemtation from Dobiestation */
-
 static const u8 LDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
 static const u8 LDR_SHIFT[8] = {0, 8, 16, 24, 32, 40, 48, 56};
 static const u8 SDL_SHIFT[8] = {56, 48, 40, 32, 24, 16, 8, 0};
@@ -668,7 +667,7 @@ decode_and_execute (R5900_Core *ee, u32 instruction)
                     s64 w2 = (s64)ee->reg.r[instr.rt].SW[0];
 
                     if (w2 == 0) {
-                        errlog("[ERROR] tried to divide by 0, result is Undefined\n");
+                        errlog("[ERROR]: Tried to Divide by zero\n");
                         //return;
                     } 
                     // @@Note: Sign extend by 64?

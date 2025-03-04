@@ -84,17 +84,17 @@ struct Thread
 {
     int status;
     void *stack;
-    s32 stack_size;
-    s32 init_priority;
-    s32 current_priority;
+    int stack_size;
+    int init_priority;
+    int current_priority;
     u32 thread_id;
     void *heap_base;
 };
 
-void SetGsCrt(bool interlaced, int display_mode, bool ffmd);
-void InitMainThread(u32 gp, void *stack, s32 stack_size, char *args, s32 root, void *return_); //AKA: RFU060 or SetupThread
-void InitHeap(void *heap, s32 heap_size, void *return_); //AKA: RFU061
-void FlushCache(); 
-void GsPutIMR(u64 imr);
+void    SetGsCrt(bool interlaced, int display_mode, bool ffmd);
+void    InitMainThread(u32 gp, void *stack, int stack_size, char *args, int root, void *return_); //AKA: RFU060 or SetupThread
+void    InitHeap(void *heap, int heap_size, void *return_); //AKA: RFU061
+void    FlushCache(); 
+void    GsPutIMR(u64 imr);
 
 #endif

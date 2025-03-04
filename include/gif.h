@@ -4,22 +4,22 @@
 #define GIF_H
 
 #include <queue>
-#include "../ps2types.h"
+#include "ps2types.h"
 
 typedef struct GIFTag_t {
 	u16 	NLOOP : 15; // Data size
 	bool 	EOP;   		// End of packet
-	u32 unused : 29;
+	u32 	unused : 29;
 	bool 	PRE;   		// PRIM field enable
 	u16 	PRIM : 11;  // data sent to prim of GS
 	u8 		FLG : 2;   	// Data format
 	u8 		NREGS;  	// Number of Register descriptors
 	u64 	REGS;   	// Register descriptor 
 
-	u32 reg_count;
-	u32 data_left;
+	u32 	reg_count;
+	u32 	data_left;
 	
-	bool is_tag;
+	bool 	is_tag;
 } GIF_Tag;
 
 // @@Accuracy: Should go back and implement unused bits in these registers
@@ -125,11 +125,11 @@ typedef struct GIF_t {
 	GIF_Tag tag[4]; // GIF_TAG 0-4
 } GIF;
 
-void gif_reset();
-u32  gif_read (u32 address);
-void gif_write (u32 address, u32 value);
-void gif_process_path3(u128 data);
-void gif_fifo_write(u32 address);
-void gif_fifo_read(u32 address);
+void 	gif_reset();
+u32  	gif_read (u32 address);
+void 	gif_write (u32 address, u32 value);
+void 	gif_process_path3(u128 data);
+void 	gif_fifo_write(u32 address);
+void 	gif_fifo_read(u32 address);
 
 #endif

@@ -27,8 +27,8 @@ typedef struct _SDL_Context_ {
     SDL_Backbuffer  *backbuffer;
     SDL_Surface     *surface; 
 
-    bool running;
-    bool left_down;
+    bool            running;
+    bool            left_down;
 } SDL_Context;
 
 // @Cleanup: This has become redundant
@@ -49,25 +49,25 @@ inline bool Range::contains (uint32_t addr)
     return contains;
 }
 
-uint8_t  ee_load_8  (uint32_t address); 
-uint16_t ee_load_16 (uint32_t address); 
-uint32_t ee_load_32 (uint32_t address); 
-uint64_t ee_load_64 (uint32_t address);
-//void ee_load_128() {return;}
+uint8_t     ee_load_8  (uint32_t address); 
+uint16_t    ee_load_16 (uint32_t address); 
+uint32_t    ee_load_32 (uint32_t address); 
+uint64_t    ee_load_64 (uint32_t address);
+//void      ee_load_128() {return;}
 
-void ee_store_8  (uint32_t address, uint8_t value);
-void ee_store_16 (uint32_t address, uint16_t value);
-void ee_store_32 (uint32_t address, uint32_t value);
-void ee_store_64 (uint32_t address, uint64_t value);
+void        ee_store_8  (uint32_t address, uint8_t value);
+void        ee_store_16 (uint32_t address, uint16_t value);
+void        ee_store_32 (uint32_t address, uint32_t value);
+void        ee_store_64 (uint32_t address, uint64_t value);
 
-uint8_t  iop_load_8 (uint32_t address);
-uint16_t iop_load_16 (uint32_t address);
-uint32_t iop_load_32 (uint32_t address);
+uint8_t     iop_load_8 (uint32_t address);
+uint16_t    iop_load_16 (uint32_t address);
+uint32_t    iop_load_32 (uint32_t address);
 
-void iop_store_8 (uint32_t address, uint8_t value);
-void iop_store_16 (uint32_t address, uint16_t value);
-void iop_store_32 (uint32_t address, uint32_t value);
+void        iop_store_8 (uint32_t address, uint8_t value);
+void        iop_store_16 (uint32_t address, uint16_t value);
+void        iop_store_32 (uint32_t address, uint32_t value);
 
-uint32_t check_interrupt (bool value, bool int0_priority, bool int1_priorirty);
+uint32_t    check_interrupt (bool value, bool int0_priority, bool int1_priorirty);
  
 #endif

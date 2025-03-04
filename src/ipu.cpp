@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/ipu.h"
+#include "../include/ipu.h"
 #include "../include/common.h"
 #include <iostream>
 

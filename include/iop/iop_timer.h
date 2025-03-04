@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-enum Timers {
+enum IOP_Timers {
 	TIMER_0,
 	TIMER_1,
 	TIMER_2,
@@ -12,15 +12,15 @@ enum Timers {
 	TIMER_5,
 };
 
-union TN_COUNT {
+union IOP_TN_COUNT {
 	uint32_t value;
 };
 
-union TN_MODE {
+union IOP_TN_MODE {
 	uint32_t value;
 };
 
-union TN_TARGET {
+union IOP_TN_TARGET {
 	uint32_t value;
 };
 #endif

@@ -1,6 +1,5 @@
 #pragma once
 #ifndef COMMON_H
-#define COMMON_H
 #if 0
 #include "fmt-10.2.1/include/fmt/format-inl.h"
 #include "fmt-10.2.1/include/fmt/format.h"
@@ -37,11 +36,12 @@
 */
 typedef struct _FIFO
 {
-    int entries;
-    unsigned int current_size;
-    unsigned int max_size;
-    void *head;
-    void *tail;
+    int             entries;
+    unsigned int    current_size;
+    unsigned int    max_size;
+    void            *head;
+    void            *tail;
 } Miku_Fifo;
 
+#define COMMON_H
 #endif

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/dmac.h"
-#include "../include/ee/gif.h"
+#include "../include/dmac.h"
+#include "../include/gif.h"
 #include "../include/ps2.h"
 #include "../include/common.h"
 #include <iostream>
@@ -181,7 +181,6 @@ dmac_cycle ()
         data.lo = ee_load_64(dmac.channels[2].address);
         data.hi = ee_load_64(dmac.channels[2].address + 8);
 
-        // u8 mode = dmac.channels[2].control.mode;
         gif_process_path3(data);
 
         dmac.channels[2].address += 16;

@@ -119,35 +119,7 @@ enum OPCODES : int {
 	IOP_COP0 = 0x10,
 };
 
-inline void
-iop_cop0_write_cause (IOP_COP0_Cause *cause, u32 data)
-{
-    cause->excode                    = (data >> 0)  & 0x1F;
-    cause->interrupt_pending_field   = (data >> 1)  & 0xFF;
-    cause->coprocessor_error         = (data >> 28) & 0x3;
-    cause->branch_delay_pointer      = (data << 31);
-}
 
-inline void 
-iop_cop0_write_status (IOP_COP0_Status *status, u32 data)
-{
-    status->current_interrupt     = (data >> 0) & 0x1;
-    status->current_kernel_mode   = (data >> 1) & 0x1;
-    status->previous_interrupt    = (data >> 2) & 0x1;
-    status->previous_kernel_mode  = (data >> 3) & 0x1;
-    status->old_interrupt         = (data >> 4) & 0x1;
-    status->old_kernel            = (data >> 5) & 0x1;
-    status->interrupt_mask        = ((data >> 8) & 0xFF);
-    status->isolate_cache         = (data >> 16) & 0x1;
-    status->swapped_cache         = (data >> 17) & 0x1;
-    status->cache_parity_bit      = (data >> 18) & 0x1;
-    status->last_load_operation   = (data >> 19) & 0x1;
-    status->cache_parity_error    = (data >> 20) & 0x1;
-    status->TLB_shutdown          = (data >> 21) & 0x1;
-    status->boot_exception_vector = (data >> 22) & 0x1;
-    status->reverse_endianess     = (data >> 25) & 0x1;
-    status->cop0_enable           = (data >> 28) & 0x1;
-}
 
 static void 
 decode_and_execute (u32 instruction) 
@@ -390,8 +362,36 @@ decode_and_execute (u32 instruction)
 
 				case 0x04: 
                 {
-                    // @Implementation: Do Status and Cause write
-                    iop.cop0.r[i.rd] = iop.reg[i.rt];
+                    // @Implementation: Automatically assume we are loading COP0 for now
+                    auto cop0   = i.rd;
+                    auto gpr    = iop.reg[i.rt];
+
+                    if (cop0 == 12) {
+                        iop.cop0.status.current_interrupt       = (gpr >> 0) & 0x1;
+                        iop.cop0.status.current_kernel_mode     = (gpr >> 1) & 0x1;
+                        iop.cop0.status.previous_interrupt      = (gpr >> 2) & 0x1;
+                        iop.cop0.status.previous_kernel_mode    = (gpr >> 3) & 0x1;
+                        iop.cop0.status.old_interrupt           = (gpr >> 4) & 0x1;
+                        iop.cop0.status.old_kernel              = (gpr >> 5) & 0x1;
+                        iop.cop0.status.interrupt_mask          = (gpr >> 8) & 0xFF;
+                        iop.cop0.status.isolate_cache           = (gpr >> 16) & 0x1;
+                        iop.cop0.status.swapped_cache           = (gpr >> 17) & 0x1;
+                        iop.cop0.status.cache_parity_bit        = (gpr >> 18) & 0x1;
+                        iop.cop0.status.last_load_operation     = (gpr >> 19) & 0x1;
+                        iop.cop0.status.cache_parity_error      = (gpr >> 20) & 0x1;
+                        iop.cop0.status.TLB_shutdown            = (gpr >> 21) & 0x1;
+                        iop.cop0.status.boot_exception_vector   = (gpr >> 22) & 0x1;
+                        iop.cop0.status.reverse_endianess       = (gpr >> 25) & 0x1;
+                        iop.cop0.status.cop0_enable             = (gpr >> 28) & 0x1;
+                    } else if (cop0 == 13) {
+                        iop.cop0.cause.excode                   = (gpr >> 0)  & 0x1F;
+                        iop.cop0.cause.interrupt_pending_field  = (gpr >> 1)  & 0xFF;
+                        iop.cop0.cause.coprocessor_error        = (gpr >> 28) & 0x3;
+                        iop.cop0.cause.branch_delay_pointer     = (gpr << 31);
+                    } else {
+                        iop.cop0.r[i.rd] = iop.reg[i.rt];
+                    }
+
                     intlog("I-MTC0 GPR: [{:d}] COP0: [{:d}]\n", i.rt, i.rd);
                 } break;
 

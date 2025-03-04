@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/vif.h"
+#include "../include/vif.h"
 #include <iostream>
 
 void

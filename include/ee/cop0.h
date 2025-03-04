@@ -135,59 +135,7 @@ get_exception(ExceptionVectors vector, ExceptionCodes code)
 
 u32 handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, unsigned int current_pc, bool is_branching);
 
-/*inline void 
-set_kernel_mode (COP0_Registers *cop0)
-{
-    u8 mode = cop0->status.KSU;
-    u32 ERL = cop0->status.ERL;
-    u32 EXL = cop0->status.EXL;
-   
-    if (ERL || EXL) {
-        cop0->status.KSU = __KERNEL_MODE;
-        return;
-    }
-   
-    switch (mode) {
-        case __KERNEL_MODE:         cop0->status.KSU = __KERNEL_MODE; break;
-        case __SUPERVISOR_MODE:     cop0->status.KSU = __SUPERVISOR_MODE; break;
-        case __USER_MODE:           cop0->status.KSU = __USER_MODE; break;
-    };
-}
-
-inline void 
-cop0_status_write (COP0_Status *s, u32 data) 
-{
-    s->IE       = (data >> 0) & 0x1;
-    s->EXL      = (data >> 1) & 0x1;
-    s->ERL      = (data >> 2) & 0x1;
-    s->KSU      = (data >> 3) & 0x1;
-    s->IM_2     = (data >> 10) & 0x1;
-    s->IM_3     = (data >> 11) & 0x1;
-    s->BEM      = (data >> 12) & 0x1;
-    s->IM_7     = (data >> 15) & 0x1;
-    s->EIE      = (data >> 16) & 0x1;
-    s->EDI      = (data >> 17) & 0x1;
-    s->CH       = (data >> 18) & 0x1;
-    s->BEV      = (data >> 22) & 0x1;
-    s->DEV      = (data >> 23) & 0x1;
-    s->CU       = (data >> 28) & 0xF;
-    s->value    = data;
-}
-
-inline void 
-cop0_cause_write (COP0_Cause *c, u32 data) 
-{
-    c->ex_code          = (data >> 2)  & 0x1F; 
-    c->int0_pending     = (data >> 10) & 0x1;
-    c->int1_pending     = (data >> 11) & 0x1;
-    c->timer_pending    = (data >> 15) & 0x1;
-    c->EXC2             = (data >> 16) & 0x3;
-    c->CE               = (data >> 28) & 0x3;
-    c->BD2              = (data >> 30) & 0x1;
-    c->BD               = (data >> 31) & 0x1;
-    c->value            = data;
-}
-
+/*
 inline void
 cop0_timer_compare_check(_R5900Core_ *ee)
 {

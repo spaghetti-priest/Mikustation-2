@@ -49,6 +49,6 @@ typedef struct _Elf32_Shdr_ {
 	u32	sh_entsize;
 } Elf32_Shdr;
 
-bool load_elf(R5900_Core *ee, const char *path);
-int read_bios(const char *filename, u8 *bios_memory);
+bool 	load_elf(R5900_Core *ee, const char *path);
+bool 	read_bios(const char *filename, u8 *bios_memory);
 #endif

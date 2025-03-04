@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/gif.h"
-#include "../include/ee/gs.h"
+#include "../include/gif.h"
+#include "../include/gs.h"
 #include "../include/common.h"
 #include <iostream>
 
@@ -42,6 +42,7 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 {
 	u32 bits_per_reg = 4;
 	u32 destination = (current_tag->REGS >> (bits_per_reg * current_tag->reg_count)) & 0xF;
+	u64 reg 		= 0;
 
 	if (current_tag->PRE == 1) {
 		gs_write_internal(0x00, current_tag->PRIM);
@@ -49,8 +50,6 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 		/* Idle Cylcle Here */
 	}
 
-	u64 reg = 0;
-	
 	switch(destination)
 	{
 		case PRIM: {
@@ -76,13 +75,13 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 		} break;
 		
 		case UV: {
-			reg |= (data.lo 		& 0x3FFF); // u
+			reg |= (data.lo 		& 0x3FFF); 		 // u
 			reg |= ((data.lo >> 32) & 0x3FFF) >> 16; // v
 			gs_write_internal(0x03, reg);
 		} break;
 
 		case XYZF: {
-			reg |= (data.lo 		& 0xFFFF); // x
+			reg |= (data.lo 		& 0xFFFF); 		   // x
 			reg |= ((data.lo >> 32) & 0xFFFF) 	>> 16; // y 
 			reg |= ((data.hi >> 4) 	& 0xFFFFFF) >> 32; // z
 			reg |= ((data.hi >> 36) & 0xFF)		>> 56; // f
@@ -94,9 +93,9 @@ gif_process_packed (GIF_Tag *current_tag, u128 data)
 		} break;
 
 		case XYZ: {
-			reg |= (data.lo 		& 0xFFFF); // x
+			reg |= (data.lo 		& 0xFFFF); 			 // x
 			reg |= ((data.lo >> 32) & 0xFFFF) 	  >> 16; // y 
-			reg |= ((data.hi >> 4) 	& 0xFFFFFFFF) >> 32; // z
+			reg |= (data.hi  		& 0xFFFFFFFF) >> 32; // z
 
 			bool ADC = (data.hi >> 47) & 0x1;
 
@@ -149,12 +148,17 @@ gif_select_mode (GIF_Tag *current_tag, u128 data)
 			}
 		break;
 
-		case REGLIST: 	gif_process_reglist(current_tag); break;
+		case REGLIST: 	
+			gif_process_reglist(current_tag); 
+		break;
 		
 		case IMAGE: 
-			gs_write_hwreg(data.lo);
-			gs_write_hwreg(data.hi);
-
+			gs_write_hwreg_software(data.lo);
+			gs_write_hwreg_software(data.hi);
+#if USE_HARDWARE
+			gs_write_hwreg_hardware(data.lo);
+			gs_write_hwreg_hardware(data.hi);
+#endif
 			current_tag->data_left--;
 			if (current_tag->data_left == 0) 
 				current_tag->is_tag = false;

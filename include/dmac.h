@@ -3,7 +3,7 @@
 #ifndef DMAC_H
 #define DMAC_H
 
-#include "../ps2types.h"
+#include "ps2types.h"
 
 #define DMAC_CHANNEL_COUNT 10
 enum Channels {
@@ -24,9 +24,9 @@ enum DMARegisters {
 union Dn_CHCR {
     struct {
         bool    dir;
-        bool unused;
-        u8      mode : 2;
-        u16     stack_pointer : 2;
+        bool    unused;
+        u8      mode            : 2;
+        u16     stack_pointer   : 2;
         bool    tag_transfer;
         bool    tag_interrupt;
         bool    start;
@@ -39,8 +39,8 @@ union Dn_CHCR {
 // Channel tag address
 union Dn_TADR {
     struct {
-        u32 address : 30;
-        bool memory_selection;
+        u32     address : 30;
+        bool    memory_selection;
     };
     u32 value;
 };
@@ -91,11 +91,11 @@ union D_STAT {
 
 union D_PCR {
     struct {
-        bool cop_control[10];
-        u16 unused : 6;
-        bool channel_dma_enable[10];
-        u16 unused2 : 5;
-        bool control_enable;
+        bool    cop_control[10];
+        u16     unused : 6;
+        bool    channel_dma_enable[10];
+        u16     unused2 : 5;
+        bool    control_enable;
     };
     u32 value;
 };
@@ -155,14 +155,14 @@ union D_ENABLER {
 
 union DMAtag {
     struct {
-        u16 quadword_count;
-        u16 unused0 : 10;
-        u8 priority_control : 2;
-        u8 tag_id : 3;
-        bool interrupt_request;
-        u32 address; // Lower 4 bits are 0
-        bool memory_selection; // memory or spr;
-        u64 data_to_transfer;
+        u16     quadword_count;
+        u16     unused0 : 10;
+        u8      priority_control : 2;
+        u8      tag_id : 3;
+        bool    interrupt_request;
+        u32     address; // Lower 4 bits are 0
+        bool    memory_selection; // memory or spr;
+        u64     data_to_transfer;
     };
     u128 value;
 };
@@ -175,7 +175,7 @@ typedef struct _DMAChannelRegisters_ {
     u32     save_tag0;
     u32     save_tag1;
     Dn_SADR scratchpad_address;
-    bool tag_end;
+    bool    tag_end;
 } DMA_Channel;
 
 typedef struct _DMAController_ {
@@ -191,9 +191,9 @@ typedef struct _DMAController_ {
     DMA_Channel       channels[10];
 } DMAC;
 
-void dmac_reset();
-void dmac_write(u32 address, u32 value);
-u32 dmac_read(u32 address);
-void dmac_cycle();
+void    dmac_reset();
+void    dmac_write(u32 address, u32 value);
+u32     dmac_read(u32 address);
+void    dmac_cycle();
 
 #endif

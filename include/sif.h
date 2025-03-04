@@ -17,5 +17,5 @@ struct Sif {
 
 
 void sif_write(u32 address, u32 value);
-u32 sif_read(u32 address);
+u32  sif_read(u32 address);
 #endif

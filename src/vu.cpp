@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "../include/ee/vu.h"
+#include "../include/vu.h"
 #include <iostream>
 
 void

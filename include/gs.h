@@ -3,9 +3,8 @@
 #ifndef GS_H
 #define GS_H
 
-#include <cstdint>
-#include "../ps2types.h"
-#include "../ps2.h"
+#include "ps2types.h"
+#include "ps2.h"
 /*
   00h     PRIM
   01h     RGBAQ
@@ -214,11 +213,12 @@ union TRXDIR {
 ********************************/	
 union TEX0 {
 	struct {
-		u16 base_pointer : 14; 
-		u8 buffer_width : 6; 
+		u16 base_pointer; 
+		// u8 buffer_width : 6; 
+		u16 buffer_width; 
 		u8 pixel_storage_format : 6; 
-		u8 texture_width : 4;
-		u8 texture_height : 4;
+		u16 texture_width;
+		u16 texture_height;
 		bool color_component;
 		u8 texture_function : 2;
 		u16 clut_base_pointer : 14;
@@ -764,29 +764,30 @@ typedef struct _GraphicsSynthesizer_ {
 	SYNCV syncv;
 } GraphicsSynthesizer;
 
-void gs_reset();
-void gs_shutdown();
+void 		gs_reset();
+void 		gs_shutdown();
 
-u32 gs_read_32_priviledged(u32 address);
-u64 gs_read_64_priviledged(u32 address);
-void gs_write_32_priviledged(u32 address, u32 value);
-void gs_write_64_priviledged(u32 address, u64 value);
+u32 		gs_read_32_priviledged(u32 address);
+u64 		gs_read_64_priviledged(u32 address);
+void 		gs_write_32_priviledged(u32 address, u32 value);
+void 		gs_write_64_priviledged(u32 address, u64 value);
 
-void gs_write_internal(u8 address, u64 value);
+void 		gs_write_internal(u8 address, u64 value);
 
-void gs_set_primitive(u64 prim_register);
-void gs_set_q (f32 value);
-void gs_set_rgbaq (u8 r, u8 g, u8 b, u8 a);
-void gs_set_st (f32 s, f32 t);
-void gs_set_uv (u32 u, u32 v);
-void gs_set_fog (u8 fog);
-void gs_set_xyzf2(s16 x, s16 y, u32 z, u8 f);
-void gs_set_xyzf3(s16 x, s16 y, u32 z, u8 f);
-void gs_set_xyz2(s16 x, s16 y, u32 z);
-void gs_set_xyz3(s16 x, s16 y, u32 z);
-void gs_set_crt(bool interlaced, s32 display_mode, bool ffmd);
-void gs_write_hwreg(u64 data);
+void 		gs_set_primitive(u64 prim_register);
+void 		gs_set_q (f32 value);
+void 		gs_set_rgbaq (u8 r, u8 g, u8 b, u8 a);
+void 		gs_set_st (f32 s, f32 t);
+void 		gs_set_uv (u32 u, u32 v);
+void 		gs_set_fog (u8 fog);
+void 		gs_set_xyzf2(s16 x, s16 y, u32 z, u8 f);
+void 		gs_set_xyzf3(s16 x, s16 y, u32 z, u8 f);
+void 		gs_set_xyz2(s16 x, s16 y, u32 z);
+void 		gs_set_xyz3(s16 x, s16 y, u32 z);
+void 		gs_set_crt(bool interlaced, s32 display_mode, bool ffmd);
+void 		gs_write_hwreg_software(u64 data);
+void 		gs_write_hwreg_hardware(u64 data);
 
-void gs_render_crt(SDL_Context *context);
+void 		gs_render_crt(SDL_Context *context);
 
 #endif
