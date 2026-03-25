@@ -45,11 +45,11 @@ intc_read (u32 address)
             return intc_handler.stat;
         } break;
 
-        case 0x1000f010:
-        {
-            //syslog("READ: INTC_MASK is [{:#x}]\n", intc_handler.mask);
-            return intc_handler.mask;
-        } break;
+      case 0x1000f010:
+      {
+      //syslog("READ: INTC_MASK is [{:#x}]\n", intc_handler.mask);
+         return intc_handler.mask;
+      } break;
 	}
 	return 0;
 }

@@ -1,22 +1,22 @@
 #ifndef BUS_H
 
-typedef struct Range 
+typedef struct Range
 {
-    uint32_t start;
-    uint32_t size;
-    
-    inline Range(uint32_t _start, uint32_t _size) : start(_start), size(_size) {}
-    // inline bool contains (uint32_t addr);
+   uint32_t start;
+   uint32_t size;
+
+   inline Range(uint32_t _start, uint32_t _size) : start(_start), size(_size) {}
+   inline bool contains (uint32_t addr);
 } Range;
 
-/*inline bool Range::contains (uint32_t addr) 
+inline bool Range::contains (uint32_t addr)
 {
-    uint32_t range  = start + size;
-    bool contains   = (addr >= start) && (addr < range);
+   uint32_t range  = start + size;
+   bool contains   = (addr >= start) && (addr < range);
 
-    return contains;
+   return contains;
 }
-*/
+
 Range BIOS              = Range(0x1FC00000, MEGABYTES(4));
 Range RDRAM             = Range(0x00000000, MEGABYTES(32));
 Range IO_REGISTERS      = Range(0x10000000, KILOBYTES(64));
@@ -33,9 +33,24 @@ Range PSX_RAM           = Range(0x00000000, MEGABYTES(2));
 Range PSX_IO_REGISTERS  = Range(0x1F800000, KILOBYTES(64));
 Range SPU2_REGISTERS    = Range(0x1F900000, KILOBYTES(1));
 
-uint8_t     ee_load_8  (uint32_t address); 
-uint16_t    ee_load_16 (uint32_t address); 
-uint32_t    ee_load_32 (uint32_t address); 
+static u8 *_bios_memory_;
+static u8 *_rdram_;
+
+static u8 *_vu0_code_memory_;
+static u8 *_vu0_data_memory_;
+static u8 *_vu1_code_memory_;
+static u8 *_vu1_data_memory_;
+
+static u8 *_iop_ram_;
+
+u32 MCH_RICM      = 0;
+u32 MCH_DRD       = 0;
+u8 _rdram_sdevid  = 0;
+
+
+uint8_t     ee_load_8  (uint32_t address);
+uint16_t    ee_load_16 (uint32_t address);
+uint32_t    ee_load_32 (uint32_t address);
 uint64_t    ee_load_64 (uint32_t address);
 //void      ee_load_128() {return;}
 

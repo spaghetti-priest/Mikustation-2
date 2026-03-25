@@ -46,7 +46,7 @@
 
 /********************************
  * GS Primitives
-********************************/		
+********************************/
 // typedef union PRIM PRIM;
 union PRIM {
 	struct {
@@ -90,7 +90,7 @@ union PRMODECONT {
 
 /********************************
  * GS Vertex Attributes
-********************************/	
+********************************/
 union RGBAQ {
 	struct {
 		u8 r;
@@ -133,13 +133,13 @@ union XYOFFSET {
 
 /********************************
  * GS Frame and Z Buffers
-********************************/	
+********************************/
 union FRAME {
 	struct {
-		u16 base_pointer : 9;		u8 unused0 : 7;
-		// u16 buffer_width : 6;		u8 unused1 : 2;
-		u16 buffer_width ;			u8 unused1 : 2;
-		u16 storage_format : 6;	u8 unused2 : 2;
+		u16 base_pointer : 9;	 u8 unused0 : 7;
+		// u16 buffer_width : 6; u8 unused1 : 2;
+		u16 buffer_width ;		 u8 unused1 : 2;
+		u16 storage_format : 6;	 u8 unused2 : 2;
 		u32 drawing_mask;
 	};
 	u64 value;
@@ -147,41 +147,41 @@ union FRAME {
 
 union ZBUF {
 	struct {
-		u16 base_pointer : 9;		u16 unused0 : 15;
-		u8 storage_format : 4;	u8 unused1 : 4;
-		bool z_value_mask;			u32 unused2 : 31;
+		u16 base_pointer : 9;  u16 unused0 : 15;
+		u8 storage_format : 4; u8 unused1 : 4;
+		bool z_value_mask;	  u32 unused2 : 31;
 	};
 	u64 value;
 };
 
 /********************************
  * GS Transfers
-********************************/	
+********************************/
 union BITBLTBUF {
 	struct {
-		u16 src_base_pointer : 14;	u8 unused0 : 3;
-		// u8 src_buffer_width : 6;		u8 unused1 : 3;
-		u8 src_buffer_width;			u8 unused1 : 3;
-		u8 src_storage_format : 6;	u8 unused2 : 3;
-		u16 dest_base_pointer : 14;	u8 unused3 : 3;
-		// u8 dest_buffer_width : 6;		u8 unused4 : 3;
-		u16 dest_buffer_width;		u8 unused4 : 3;
-		u8 dest_storage_format : 6;	u8 unused5 : 3;
+		u16 src_base_pointer : 14;	    u8 unused0 : 3;
+		// u8 src_buffer_width : 6;	 u8 unused1 : 3;
+		u8 src_buffer_width;			    u8 unused1 : 3;
+		u8 src_storage_format : 6;	    u8 unused2 : 3;
+		u16 dest_base_pointer : 14;	 u8 unused3 : 3;
+		// u8 dest_buffer_width : 6;	 u8 unused4 : 3;
+		u16 dest_buffer_width;		    u8 unused4 : 3;
+		u8 dest_storage_format : 6;    u8 unused5 : 3;
 	};
 	u64 value;
 };
 
 typedef struct HWREG {
-	u64 data;	
+	u64 data;
 } HWREG;
 
 union TRXPOS {
 	struct {
-		u16 src_x_coord : 11;		u8 unused0 : 6;
-		u16 src_y_coord : 11;		u8 unused1 : 6;
-		u16 dest_x_coord : 11;	u8 unused2 : 6;
+		u16 src_x_coord : 11;		     u8 unused0 : 6;
+		u16 src_y_coord : 11;		     u8 unused1 : 6;
+		u16 dest_x_coord : 11;	        u8 unused2 : 6;
 		u16 dest_y_coord : 11;
-		u8 transmission_direction : 2; u8 unused3 : 2;
+		u8 transmission_direction : 2;  u8 unused3 : 2;
 	};
 	u64 value;
 };
@@ -206,13 +206,13 @@ union TRXDIR {
 
 /********************************
  * GS Textures
-********************************/	
+********************************/
 union TEX0 {
 	struct {
-		u16 base_pointer; 
-		// u8 buffer_width : 6; 
-		u16 buffer_width; 
-		u8 pixel_storage_format : 6; 
+		u16 base_pointer;
+		// u8 buffer_width : 6;
+		u16 buffer_width;
+		u8 pixel_storage_format : 6;
 		u16 texture_width;
 		u16 texture_height;
 		bool color_component;
@@ -230,11 +230,11 @@ union TEX1 {
 	struct {
 		bool lod_method;
 		u8 mip_max_level : 3;
-		bool texture_mag; 
+		bool texture_mag;
 		u8 texture_min : 3;
 		bool MTBA;
 		u8 L : 2;
-		u16 K : 12; 
+		u16 K : 12;
 	};
 	u64 value;
 };
@@ -245,7 +245,7 @@ union TEX2 {
 		u8 pixel_storage_format : 6;
 		u16 unused1 : 12;
 		u16 clut_base_pointer : 14;
-		u8 clut_storage_format : 4; 
+		u8 clut_storage_format : 4;
 		bool clut_storage_mode;
 		u8 clut_entry_offset : 5;
 		u8 clut_load_control : 3;
@@ -330,7 +330,7 @@ typedef struct TEXFLUSH {
 
 /********************************
  * GS Fog
-********************************/	
+********************************/
 union FOG {
 	struct {
 		u64 unused : 56;
@@ -351,7 +351,7 @@ union FOGCOL {
 
 /********************************
  * GS Alpha Blending
-********************************/	
+********************************/
 union ALPHA {
 	struct {
 		u8 a : 2;
@@ -499,23 +499,23 @@ union PMODE {
 		bool is_circuit1;
 		bool is_circuit2;
 		u8 CRT : 3;
-		bool value_selection;	
-		bool output_selection;	
+		bool value_selection;
+		bool output_selection;
 		bool blending_selection;
-		u8 alpha_value;	
+		u8 alpha_value;
 		u16 unused;
 	};
 	u64 value;
 };
 
-// @@Note @Incomplete: No noted documentation on SMODE1 so this is just copied from PCSX2 
+// @@Note @Incomplete: No noted documentation on SMODE1 so this is just copied from PCSX2
 // https://github.com/PCSX2/pcsx2/blob/2d5faa627ff54f3fb2a69a43286181bee071a1c3/pcsx2/GS/GSRegs.h#L461
 union SMODE1 {
-	struct {
+	//struct {
 		//bool vertical_front;
 		//bool interlace_setting;
 		//u8 mode : 2;
-	};
+	//};
 	u64 value;
 };
 
@@ -670,116 +670,118 @@ typedef struct _Context_ {
 } Context;
 
 struct Transmission_Buffer {
-    u32 row;
-    u32 pitch;
-    u32 pixel_count;
-    u32 address;
+   u32 row;
+   u32 pitch;
+   u32 pixel_count;
+   u32 address;
 };
 
 struct Vertex {
-    XYZ pos;
-    RGBAQ col;
-    ST st;
-    UV uv;
-    f32 q;
-    u8 f;
+   XYZ pos;
+   RGBAQ col;
+   ST st;
+   UV uv;
+   f32 q;
+   u8 f;
 };
 
-struct Vertex_Queue {
-    // @Remove: std is slow, but remove once it works
-    std::vector<Vertex> queue;
-    u32 size;
+typedef struct VertexQueue VertexQueue;
+struct VertexQueue {
+   // @Remove: std is slow, but remove once it works
+   std::vector<Vertex> queue;
+   u32 size;
 };
 
 // @Remove: Unnecessary Global Variable
-static Vertex_Queue vertex_queue = {
-    .queue  = {},
-    .size   = 0,
+static VertexQueue vertex_queue = {
+   .queue  = {},
+   .size   = 0,
 };
 
-typedef struct _GraphicsSynthesizer_ {
-	u32 *vram;
-	CRT_MODE crt_mode;
-	Transmission_Buffer transmission_buffer;
+typedef struct GraphicsSynthesizer GraphicsSynthesizer;
+struct GraphicsSynthesizer {
+   u32 *vram;
+   CRT_MODE crt_mode;
+   Transmission_Buffer transmission_buffer;
 
-	Context context[2];
-	// GS Internal Registers
-  PRIM prim;
-  RGBAQ rgbaq;
-  ST st;
-  UV uv;
-  XYZF xyzf2; //@@Remove
-  XYZF xyzf3; //@@Remove
-  XYZ xyz2; //@@Remove
-  XYZ xyz3; //@@Remove
-  TEX0 tex0_1; //@@Remove
-  TEX0 tex0_2; //@@Remove
-  CLAMP clamp_1; //@@Remove
-  CLAMP clamp_2; //@@Remove
-  FOG fog;
-  TEX1 tex1_1;  //@@Remove
-  TEX1 tex1_2; //@@Remove
-  TEX2 tex2_1; //@@Remove
-  TEX2 tex2_2; //@@Remove
-  XYOFFSET xyoffset_1; //@@Remove
-  XYOFFSET xyoffset_2; //@@Remove
-  PRMODECONT prmodecont;
-  PRMODE prmode;
-  TEXCLUT texclut;
-  SCANMSK scanmsk;
-  MIPTBP1 miptbp1_1; //@@Remove
-  MIPTBP1 miptbp1_2; //@@Remove
-  MIPTBP2 miptbp2_1; //@@Remove
-  MIPTBP2 miptbp2_2; //@@Remove
-  TEXA texa;
-  FOGCOL fogcol;
-  TEXFLUSH texflush;
-  SCISSOR scissor_1; //@@Remove
-  SCISSOR scissor_2; //@@Remove
-  ALPHA alpha_1; //@@Remove
-  ALPHA alpha_2; //@@Remove
-  DIMX dimx;
-  DTHE dthe;
-  COLCLAMP colclamp;
-  TEST test_1; //@@Remove
-  TEST test_2; //@@Remove
-  PABE pabe;
-  FBA fba_1; //@@Remove
-  FBA FBA_2; //@@Remove
-  FRAME frame_1; //@@Remove
-  FRAME frame_2; //@@Remove
-  ZBUF zbuf_1; //@@Remove
-  ZBUF zbuf_2; //@@Remove
-  BITBLTBUF bitbltbuf;
-  TRXPOS trxpos; 
-  TRXREG trxreg;
-  TRXDIR trxdir;
-  HWREG hwreg;
-  SIGNAL signal;
-  FINISH finish;
-  LABEL label;
+   Context context[2];
+   // GS Internal Registers
+   PRIM prim;
+   RGBAQ rgbaq;
+   ST st;
+   UV uv;
+   XYZF xyzf2; //@@Remove
+   XYZF xyzf3; //@@Remove
+   XYZ xyz2; //@@Remove
+   XYZ xyz3; //@@Remove
+   TEX0 tex0_1; //@@Remove
+   TEX0 tex0_2; //@@Remove
+   CLAMP clamp_1; //@@Remove
+   CLAMP clamp_2; //@@Remove
+   FOG fog;
+   TEX1 tex1_1;  //@@Remove
+   TEX1 tex1_2; //@@Remove
+   TEX2 tex2_1; //@@Remove
+   TEX2 tex2_2; //@@Remove
+   XYOFFSET xyoffset_1; //@@Remove
+   XYOFFSET xyoffset_2; //@@Remove
+   PRMODECONT prmodecont;
+   PRMODE prmode;
+   TEXCLUT texclut;
+   SCANMSK scanmsk;
+   MIPTBP1 miptbp1_1; //@@Remove
+   MIPTBP1 miptbp1_2; //@@Remove
+   MIPTBP2 miptbp2_1; //@@Remove
+   MIPTBP2 miptbp2_2; //@@Remove
+   TEXA texa;
+   FOGCOL fogcol;
+   TEXFLUSH texflush;
+   SCISSOR scissor_1; //@@Remove
+   SCISSOR scissor_2; //@@Remove
+   ALPHA alpha_1; //@@Remove
+   ALPHA alpha_2; //@@Remove
+   DIMX dimx;
+   DTHE dthe;
+   COLCLAMP colclamp;
+   TEST test_1; //@@Remove
+   TEST test_2; //@@Remove
+   PABE pabe;
+   FBA fba_1; //@@Remove
+   FBA FBA_2; //@@Remove
+   FRAME frame_1; //@@Remove
+   FRAME frame_2; //@@Remove
+   ZBUF zbuf_1; //@@Remove
+   ZBUF zbuf_2; //@@Remove
+   BITBLTBUF bitbltbuf;
+   TRXPOS trxpos;
+   TRXREG trxreg;
+   TRXDIR trxdir;
+   HWREG hwreg;
+   SIGNAL signal;
+   FINISH finish;
+   LABEL label;
 
-	// EE Privileged Registers
-	PMODE 	 pmode;
-	DISPFB 	 dispfb1; 
-	DISPFB 	 dispfb2;
-	SMODE1 	 smode1;
-	SMODE2 	 smode2;
-	DISPLAY  display1;
-	DISPLAY  display2;
-	EXTDATA  extdata;
-	EXTBUF 	 extbuf;
-	EXTWRITE extwrite;
-	BGCOLOR  bgcolor;
-	CSR 	 	 csr;
-	IMR 	 	 imr;
-	BUSDIR 	 busdir;
-	SIGLBLID siglbid;
-	SRFSH srfsh;
-	SYNCH synch1;
-	SYNCH synch2;
-	SYNCV syncv;
-} GraphicsSynthesizer;
+   // EE Privileged Registers
+   PMODE 	 pmode;
+   DISPFB 	 dispfb1;
+   DISPFB 	 dispfb2;
+   SMODE1 	 smode1;
+   SMODE2 	 smode2;
+   DISPLAY  display1;
+   DISPLAY  display2;
+   EXTDATA  extdata;
+   EXTBUF 	 extbuf;
+   EXTWRITE extwrite;
+   BGCOLOR  bgcolor;
+   CSR 	 	 csr;
+   IMR 	 	 imr;
+   BUSDIR 	 busdir;
+   SIGLBLID siglbid;
+   SRFSH srfsh;
+   SYNCH synch1;
+   SYNCH synch2;
+   SYNCV syncv;
+};
 
 void 		gs_reset();
 void 		gs_shutdown();

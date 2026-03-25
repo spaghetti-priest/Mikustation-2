@@ -1,55 +1,58 @@
 #ifndef GIF_H
 
-// #include <queue>
-
-enum Data_Modes : u8 
+enum Data_Modes : u8
 {
-	PACKED 	= 0b00,
-	REGLIST = 0b01,
-	IMAGE 	= 0b10,
-	DISABLE = 0b11,
+	PACKED 	  = 0b00,
+	REGLIST    = 0b01,
+	IMAGE 	  = 0b10,
+	DISABLE    = 0b11,
 };
 
 enum Packing_Formats : u8
 {
 	_PRIM 	= 0x00,
 	_RGBAQ 	= 0x01,
-	_ST 	= 0x02,
-	_UV 	= 0x03,
+	_ST 	   = 0x02,
+	_UV 	   = 0x03,
 	_XYZF 	= 0x04,
-	_XYZ 	= 0x05,
-	_FOG 	= 0x0a,
-	_A_D 	= 0x0e,
+	_XYZ 	   = 0x05,
+	_FOG 	   = 0x0a,
+	_A_D 	   = 0x0e,
 };
 
-typedef struct GIFTag_t {
-	u16 	NLOOP : 15; // Data size
-	bool 	EOP;   		// End of packet
+typedef struct GIFTag_t
+{
+	u16 	NLOOP  : 15; // Data size
+	bool 	EOP;   		 // End of packet
 	u32 	unused : 29;
-	bool 	PRE;   		// PRIM field enable
-	u16 	PRIM : 11;  // data sent to prim of GS
-	u8 		FLG : 2;   	// Data format
-	u8 		NREGS;  	// Number of Register descriptors
-	u64 	REGS;   	// Register descriptor 
+	bool 	PRE;   		 // PRIM field enable
+	u16 	PRIM   : 11; // data sent to prim of GS
+	u8 	FLG    : 2;  // Data format
+	u8 	NREGS;  	    // Number of Register descriptors
+	u64 	REGS;   	    // Register descriptor
 
 	u32 	reg_count;
 	u32 	data_left;
-	
+
 	bool 	is_tag;
 } GIF_Tag;
 
 // @@Accuracy: Should go back and implement unused bits in these registers
 // Unncessarily did these in an hurry
-union GIF_CTRL {
-	struct {
+union GIF_CTRL
+{
+	struct
+	{
 		bool reset;
-		bool pause;		
+		bool pause;
 	};
 	u32 value;
 };
 
-union GIF_MODE {
-	struct {
+union GIF_MODE
+{
+	struct
+	{
 		bool mask;
 		bool unused;
 		bool intermittent_mode;
@@ -57,8 +60,10 @@ union GIF_MODE {
 	u32 value;
 };
 
-union GIF_STAT {
-	struct {
+union GIF_STAT
+{
+	struct
+	{
 		bool 	path3_mask; 		// PATH3 masked by GIF_MODE
 		bool 	vif1_mask; 			// PATH3 masked by VIF1 MASKP3
 		bool 	transfer_mode; // Intermittent mode
@@ -70,13 +75,15 @@ union GIF_STAT {
 		bool 	output; 			// Output path
 		u8 		active : 1; 		// Active path
 		bool 	direction; 			// Transfer direction
-		u8 		data_count : 4;   	// Data in GIF FIFO		
+		u8 		data_count : 4;   	// Data in GIF FIFO
 	};
 	u32 value;
 };
 
-union GIF_TAG0 {
-	struct {
+union GIF_TAG0
+{
+	struct
+	{
 		u16 NLOOP : 15;
 		bool EOP;
 		u16 tag;
@@ -84,8 +91,10 @@ union GIF_TAG0 {
 	u32 value;
 };
 
-union GIF_TAG1 {
-	struct {
+union GIF_TAG1
+{
+	struct
+	{
 		u16 tag : 14;
 		bool PRE;
 		u16 PRIM : 11;
@@ -95,15 +104,18 @@ union GIF_TAG1 {
 	u32 value;
 };
 
-typedef struct GIF_TAG2_t {
+typedef struct GIF_TAG2_t
+{
 	u32 value;
 } GIF_TAG2;
 
-typedef struct GIF_TAG3_t {
+typedef struct GIF_TAG3_t
+{
 	u32 value;
 } GIF_TAG3;
 
-union GIF_CNT {
+union GIF_CNT
+{
 	struct {
 		u16 loop_count;
 		u8 reg_count;
@@ -112,15 +124,18 @@ union GIF_CNT {
 	u32 value;
 };
 
-union GIF_P3CNT {
+union GIF_P3CNT
+{
 	struct {
 		u16 p3_count : 15;
 	};
 	u32 value;
 };
 
-union GIF_P3TAG {
-	struct {
+union GIF_P3TAG
+{
+	struct
+	{
 		u16 loop_count : 15;
 		bool EOP;
 	};

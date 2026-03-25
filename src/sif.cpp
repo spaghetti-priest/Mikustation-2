@@ -53,26 +53,26 @@ sif_write(u32 address, u32 value)
 u32 
 sif_read(u32 address) 
 {
-	switch(address)
-	{
-		case 0x1000F200:
-			syslog("SIF_READ: MSCOM\n");
-			return sif.mscom;
-		break; 
-		
-		case 0x1000F220: 
-			syslog("SIF_READ: MSFLG\n");
-			return sif.msflg;
-		break;
+   switch(address)
+   {
+      case 0x1000F200:
+   		syslog("SIF_READ: MSCOM\n");
+   		return sif.mscom;
+   	break; 
+   	
+   	case 0x1000F220: 
+   		syslog("SIF_READ: MSFLG\n");
+   		return sif.msflg;
+   	break;
 
-		case 0x1000F230: 
-			syslog("SIF_READ: SMFLG.\n");
-			return sif.smflg;
-		break;
+   	case 0x1000F230: 
+   		syslog("SIF_READ: SMFLG.\n");
+   		return sif.smflg;
+   	break;
 
-		default:
-			errlog("[ERROR]: Unrecognized address from sif_write [{:#08x}]\n", address);
-			return 0;
-		break;
-	}
+   	default:
+   		errlog("[ERROR]: Unrecognized address from sif_write [{:#08x}]\n", address);
+   		return 0;
+   	break;
+   }
 }

@@ -1,12 +1,9 @@
 #ifndef _IPU_H
-#define _IPU_H
-
-// #include "ps2types.h"
 
 union IPU_CMD {
 	struct {
 		u32 command_option : 28;
-		u8 	command_code : 4;
+		u8  command_code : 4;
 		u32 unused;
 	} write;
 
@@ -30,19 +27,19 @@ union IPU_TOP {
 
 union IPU_CTRL {
 	struct {
-		u8 		input_fifo_counter 	: 4;
-		u8 		output_fifo_counter : 4;
-		u8 		coded_block_pattern : 6;
+		u8 	input_fifo_counter 	: 4;
+		u8 	output_fifo_counter : 4;
+		u8 	coded_block_pattern : 6;
 		bool 	error_code_detected;
 		bool 	start_code_detected;
-		u8 		intra_dc_precision 	: 2;
-		u8 		unused0 			: 2;
+		u8 	intra_dc_precision 	: 2;
+		u8 	unused0 			: 2;
 		bool 	alternate_scan;
 		bool 	intra_vlc_format;
 		bool 	q_scale_step;
 		bool 	mpeg_bit_stream;
-		u8 		picture_type 		: 3;
-		u8 		unused1 			: 2;
+		u8 	picture_type 		: 3;
+		u8 	unused1 			: 2;
 		bool 	reset;
 		bool 	busy;
 	};
@@ -51,12 +48,12 @@ union IPU_CTRL {
 
 union IPU_BP {
 	struct {
-		u8 		bitstream_pointer 	: 7;
+		u8 	bitstream_pointer : 7;
 		bool 	unused0;
-		u8 		fifo_counter 		: 4;
-		u8  	unused1 			: 4;
-		u8 		fifo_pointer 		: 2;
-		u16 	unused3 			: 15;
+		u8 	fifo_counter 		: 4;
+		u8  	unused1 			   : 4;
+		u8 	fifo_pointer      : 2;
+		u16 	unused3 			   : 15;
 	};
 	u32 value;
 };
@@ -64,8 +61,8 @@ union IPU_BP {
 struct IPU {
 	IPU_CMD 	command;
 	IPU_TOP 	bitstream;
-	IPU_CTRL 	control;
-	IPU_BP 		bitposition;
+	IPU_CTRL control;
+	IPU_BP 	bitposition;
 };
 
 void 	ipu_reset();
@@ -76,4 +73,5 @@ u32 	ipu_read_32(u32 address);
 u64 	ipu_read_64(u32 address);
 void 	ipu_fifo_write();
 
+#define _IPU_H
 #endif

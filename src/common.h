@@ -10,36 +10,36 @@
 
 // Messy system I know....
 #define DISASM 0
-// #define NESSENTIAL_LOGS 1 
+#define NESSENTIAL_LOGS 1
 #define NINTERPRETER_LOGS 1
 
 #ifdef DISASM
-    #ifdef NESSENTIAL_LOGS
-        #define syslog(fmt, ...) (void)0
-    #else
-        #define syslog(...) fmt::print(__VA_ARGS__)
-    #endif
+   #ifdef NESSENTIAL_LOGS
+      #define syslog(fmt, ...) (void)0
+   #else
+       #define syslog(...) fmt::print(__VA_ARGS__)
+   #endif
 
-    #ifdef NINTERPRETER_LOGS
-        #define intlog(fmt, ...) (void)0
-    #else
-        #define intlog(...) fmt::print(__VA_ARGS__)
-    #endif
+   #ifdef NINTERPRETER_LOGS
+      #define intlog(fmt, ...) (void)0
+   #else
+      #define intlog(...) fmt::print(__VA_ARGS__)
+   #endif
 #endif
 
 #define errlog(...) fmt::print(fg(fmt::color::crimson) | fmt::emphasis::bold, __VA_ARGS__)
 
-/* 
+/*
 *   @@Incomplete: Create a safe malloc and free system here
 *   Also FIFO system here aswell?
 */
 typedef struct _FIFO
 {
-    int             entries;
-    unsigned int    current_size;
-    unsigned int    max_size;
-    void            *head;
-    void            *tail;
+   int             entries;
+   unsigned int    current_size;
+   unsigned int    max_size;
+   void            *head;
+   void            *tail;
 } Miku_Fifo;
 
 #define COMMON_H

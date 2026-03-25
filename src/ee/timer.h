@@ -8,7 +8,7 @@
 
 
 // From: https://github.com/ps2dev/ps2sdk/blob/master/ee/kernel/include/timer.h#L53
-#define EECLK 		   (294912000)
+#define EECLK 		     (294912000)
 #define BUSCLK         (147456000)
 #define BUSCLKBY16     (BUSCLK / 16)
 #define BUSCLKBY256    (BUSCLK / 256)
@@ -29,10 +29,10 @@ enum Timers {
 
 union Tn_MODE {
 	struct {
-		u8 		clock_selection : 2;
+		u8 	clock_selection : 2;
 		bool 	gate_function_enable;
 		bool 	gate_selection;
-		u8 		gate_mode : 2;
+		u8 	gate_mode : 2;
 		bool 	zero_return;
 		bool 	count_enable;
 		bool 	compare_interrupt;
