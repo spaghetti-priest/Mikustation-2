@@ -60,7 +60,7 @@ rem set INCLUDES= /I%EXTERN_DIR% /I%SDL2_DIR%\\include /I%FMT_DIR%\\include\\fmt
 set OUT_DIR=Debug
 set OUT_EXE=Mikustation-2
 
-set INCLUDES= /I%EXTERN_DIR% 
+set INCLUDES= /I%EXTERN_DIR% /I%IMGUI_DIR% /I%IMGUI_DIR%\\backends /I%SDL2_DIR%\\include
 set SOURCES=  %IMGUI_DIR%\\imgui.cpp src\\ps2.cpp %EXTERN_DIR%\\glad.c
 
 if not exist %OUT_DIR% mkdir %OUT_DIR%
