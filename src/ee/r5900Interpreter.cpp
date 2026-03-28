@@ -326,11 +326,11 @@ SYSCALL (R5900_Core *ee)
 
    switch(syscall)
    {
-      case 0x02: SetGsCrt((bool)param0, (s32)param1, (bool)param2);                                       break;
-      case 0x3C: InitMainThread((u32)param0, param1, (s32)param2, (char*)param3, (s32)param4, return_);   break;
-      case 0x3D: InitHeap(param0, (s32)param1, return_);                                                  break;
-      case 0x64: FlushCache();                                                                            break;
-      case 0x71: GsPutIMR((u64)param0);                                                                   break;
+      case 0x02: SetGsCrt((bool)param0, (intptr_t)param1, (bool)param2);                                                break;
+      case 0x3C: InitMainThread((uintptr_t)param0, param1, (intptr_t)param2, (char*)param3, (intptr_t)param4, return_); break;
+      case 0x3D: InitHeap(param0, (intptr_t)param1, return_);                                                           break;
+      case 0x64: FlushCache();                                                                                          break;
+      case 0x71: GsPutIMR((u64)param0);                                                                                 break;
       default:
       {
          errlog("Unknown Syscall: [%#x]\n", syscall);

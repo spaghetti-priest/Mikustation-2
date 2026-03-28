@@ -1200,7 +1200,7 @@ gs_write_64_priviledged (u32 address, u64 value)
    return;
 }
 
-static void
+void
 gs_write_internal (u8 address, u64 value)
 {
    switch(address)

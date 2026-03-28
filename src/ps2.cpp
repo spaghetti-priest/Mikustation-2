@@ -17,8 +17,8 @@ ___________________________________________________________
 // #define global_variable static
 // #define function static
 
-// #include <thread>
-//#include <typeinfo>
+#include <thread>
+#include <typeinfo>
 #include <assert.h>
 #include <cmath>
 #include <fstream>
@@ -44,12 +44,12 @@ ___________________________________________________________
 #include "imgui/backends/imgui_impl_sdl2.cpp"
 #include "imgui/backends/imgui_impl_opengl3.cpp"
 
-// #include "imgui.h"
+//#include "imgui.h"
 #include "imgui_internal.h"
 #include "imgui_draw.cpp"
 #include "imgui_tables.cpp"
 #include "imgui_widgets.cpp"
-// #include "imgui.cpp"
+//#include "imgui.cpp"
 
 #include "ps2types.h"
 #include "common.h"
@@ -224,7 +224,10 @@ main (int argc, char **argv)
    success = init_opengl(&main_context, screen_w, screen_h );
 #endif
 
+   printf("===========================================================================\n");
    printf("Mikustation 2: A Playstation 2 Emulator and Debugger\n");
+   printf("===========================================================================\n");
+
    printf("\n=========================\nInitializing System\n=========================\n");
    // @Incomplete: Create a Virtual Memmory map for the VM and map these mallocs to the virtual memory
    _bios_memory_       = (u8 *)malloc(sizeof(u8) * MEGABYTES(4));
@@ -251,9 +254,11 @@ main (int argc, char **argv)
    load_elf(&ee, elf_filename);
 
    // u64 begin_time = 0, end_time = 0, delta_time = 0;
-   while (running) {
+   while (running) 
+   {
       /* Emulator Step Through*/
-      while(SDL_PollEvent(&event)) {
+      while(SDL_PollEvent(&event)) 
+      {
 #if 1
          ImGui_ImplSDL2_ProcessEvent(&event);
          switch (event.type)
@@ -298,7 +303,8 @@ main (int argc, char **argv)
       *   @@Note: In dobiestation and chonkystation there is a random instruction limit in order to
       *   synch the ee and iop cycle rate by 1/8 it looks like an arbitrary number.
       */
-      while (instructions_run < 1000000) {
+      while (instructions_run < 1000000) 
+      {
          // backbuffer.pixels           = (u32*)malloc(sizeof(u32) * (screen_w * screen_h));
 
          /*

@@ -1,2 +1,2 @@
-#include "gs/gs.cpp"
-#include "gs/gl.cpp"
+#include "gs.cpp"
+#include "gl.cpp"

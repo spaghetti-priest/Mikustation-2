@@ -97,7 +97,8 @@ union COP0_Registers {
 };*/
 
 // @@Move: might move to ps2types.h
-enum ExceptionCodes {
+enum ExceptionCodes 
+{
    __INTERRUPT               = 0x0,  __TLB_MODIFIED            = 0x1,
    __TLB_REFILL              = 0x2,  __TLB_REFILL_STORE        = 0x3,
    __ADDRESS_ERROR           = 0x4,  __ADDRESS_ERROR_STORE     = 0x5,
@@ -107,22 +108,26 @@ enum ExceptionCodes {
    __OVER_FLOW               = 0xC,  __TRAP                    = 0xD,
 };
 
-enum ExceptionVectors {
+enum ExceptionVectors 
+{
    V_RESET_NMI = 0x000, V_TLB_REFILL   = 0x000,
    V_COUNTER   = 0x080, V_DEBUG        = 0x100,
    V_COMMON    = 0x180, V_INTERRUPT    = 0x200
 };
 
-enum Kernel_modes : u8 {
+enum Kernel_modes : u8 
+{
    __KERNEL_MODE     = 0,
    __SUPERVISOR_MODE = 1,
    __USER_MODE       = 2,
 };
 
-typedef struct _Exception_ {
+typedef struct Exception Exception;
+struct Exception 
+{
    ExceptionVectors vector;
    ExceptionCodes code;
-} Exception;
+};
 
 inline Exception 
 get_exception(ExceptionVectors vector, ExceptionCodes code)
@@ -133,7 +138,7 @@ get_exception(ExceptionVectors vector, ExceptionCodes code)
    return r;
 }
 
-u32 handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, unsigned int current_pc, bool is_branching);
+static u32 handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, unsigned int current_pc, bool is_branching);
 
 /*
 inline void

@@ -156,12 +156,12 @@ typedef struct GIF_t {
 	GIF_Tag tag[4]; // GIF_TAG 0-4
 } GIF;
 
-void 	gif_reset();
-u32  	gif_read (u32 address);
-void 	gif_write (u32 address, u32 value);
-void 	gif_process_path3(u128 data);
-void 	gif_fifo_write(u32 address);
-void 	gif_fifo_read(u32 address);
+static void 	gif_reset();
+static u32  	gif_read (u32 address);
+static void 	gif_write (u32 address, u32 value);
+static void 	gif_process_path3(u128 data);
+static void 	gif_fifo_write(u32 address);
+static void 	gif_fifo_read(u32 address);
 
 #define GIF_H
 #endif

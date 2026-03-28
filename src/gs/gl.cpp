@@ -226,7 +226,7 @@ window_to_raster_transform (V3 position)
 }
 
 int draw_calls = 0;
-typedef enum OpenGLPrimitiveTypes OpenGLPrimitiveTypes;
+// typedef enum OpenGLPrimitiveTypes OpenGLPrimitiveTypes;
 enum OpenGLPrimitiveTypes {
    PRIM_POINT,
 };

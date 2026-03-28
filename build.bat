@@ -29,7 +29,8 @@ if "%2"=="debug" 	   set debug=1 	&& echo -Debug mode
 if "%2"=="release"   set release=1 	&& echo -Release mode
 if "%2"=="" 		   set release=1 	&& echo No build Configuration specified: Using debug mode
 
-if "%1"=="" 		   set msvc=1 		&& echo No compiler specified: Using MSVC
+rem if "%1"=="" 		   set msvc=1 		&& echo No compiler specified: Using Clang
+if "%1"=="" 		   set clang=1 		&& echo No compiler specified: Using Clang
 if "%1"=="release" 	set msvc=1 		&& echo No compiler specified: Using MSVC with release mode
 
 if "%msvc%"=="1" 	   set clang=0 
@@ -52,7 +53,7 @@ set CLANG_LIBS=-L"%SDL2_DIR%\\lib\\x64" -lSDL2 -lSDL2main -lopengl32 -lshell32
 set VC_COMPILER_FLAGS=/nologo /EHsc /Zi /MD /utf-8 /std:c++20
 set VC_LINKER_FLAGS=/link %LIBS% /incremental:no /opt:ref /subsystem:console
 
-set CLANG_COMPILER_FLAGS=-fexceptions -g --std=c++20 -finput-charset=UTF-8
+set CLANG_COMPILER_FLAGS=-fexceptions -g --std=c++20 -finput-charset=UTF-8 -Wno-deprecated
 set CLANG_LINKER_FLAGS=%CLANG_LIBS% -Wl,/opt:ref -Wl,/subsystem:console
 
 ::---------------------------------------------------------------------------

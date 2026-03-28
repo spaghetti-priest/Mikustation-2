@@ -16,7 +16,8 @@ iop_output_to_console (u32 iop_pc)
    u32 pointer     = get_iop_register(5);
    u32 text_size   = get_iop_register(6);
 
-   while (text_size) {
+   while (text_size) 
+   {
       auto c = (char)_iop_ram_[pointer & 0x1FFFFF];
       //putc(c);
       value += c;
@@ -88,7 +89,8 @@ iop_load_32 (u32 address)
 void
 iop_store_8 (u32 address, u8 value)
 {
-   if (PSX_RAM.contains(address))  {
+   if (PSX_RAM.contains(address))  
+   {
       *(u8*)&_iop_ram_[address] = value;
       return;
    }
@@ -102,7 +104,8 @@ iop_store_8 (u32 address, u8 value)
 void
 iop_store_16 (u32 address, u16 value)
 {
-   if (PSX_RAM.contains(address)) {
+   if (PSX_RAM.contains(address)) 
+   {
       *(u16*)&_iop_ram_[address] = value;
       return;
    }
@@ -113,7 +116,8 @@ iop_store_16 (u32 address, u16 value)
 void
 iop_store_32 (u32 address, u32 value)
 {
-   switch (address) {
+   switch (address) 
+   {
       case 0x1f801010: return;    break; // BIOS ROM
       case 0x1f801020: return;    break; // COMMON DELAY
       case 0x1f801004: return;    break; // Expansion 2 Base Address
@@ -130,27 +134,32 @@ iop_store_32 (u32 address, u32 value)
    }
 
    u32 iop_pc = get_iop_pc();
-   if (iop_pc == 0x12C48 || iop_pc == 0x1420C || iop_pc == 0x1430C) {
+   if (iop_pc == 0x12C48 || iop_pc == 0x1420C || iop_pc == 0x1430C) 
+   {
       iop_output_to_console(iop_pc);
       return;
    }
 
-   if ((address >= 0x1F801080 && address <= 0x1F8010EF) || (address >= 0x1F801500 && address <= 0x1F80155F)) {
+   if ((address >= 0x1F801080 && address <= 0x1F8010EF) || (address >= 0x1F801500 && address <= 0x1F80155F)) 
+   {
       iop_dmac_write_32(address, value);
        return;
    }
 
-   if (address == 0x1D000010) {
+   if (address == 0x1D000010) 
+   {
       printf("WRITE: IOP->EE communication\n");
       return;
    }
 
-   if (PSX_RAM.contains(address))  {
+   if (PSX_RAM.contains(address))  
+   {
       *(u32*)&_iop_ram_[address] = value;
       return;
    }
 
-   if (address >= 0x1F808240 && address <= 0x1F80825F) {
+   if (address >= 0x1F808240 && address <= 0x1F80825F) 
+   {
       // SIO_SEND1/ SEND2 or Port 1/2 Control
       //printf("SIO registers address [%#x]\n", address);
       return;
@@ -299,7 +308,8 @@ ee_load_64 (u32 address)
    if (address >= 0x12000000 && address < 0x12002000)
       return gs_read_64_priviledged(address);
 
-   if (address == 0x10006000 || address == 0x10006008) {
+   if (address == 0x10006000 || address == 0x10006008) 
+   {
       gif_fifo_read(address);
       return 0;
    }
@@ -308,7 +318,8 @@ ee_load_64 (u32 address)
    return r;
 }
 
-u128 ee_load_128() {
+u128 ee_load_128() 
+{
    u128 r = {};
    return r;
 }
@@ -319,17 +330,20 @@ u128 ee_load_128() {
 void
 ee_store_8 (u32 address, u8 value)
 {
-   if (address < 0x10000000){
+   if (address < 0x10000000)
+   {
       *(u8*)&_rdram_[address & 0x01FFFFFF] = value;
       return;
    }
 
-   if (address == 0x1000f180) {
+   if (address == 0x1000f180) 
+   {
       output_to_console(value);
       return;
    };
 
-   if (address >= 0x1C000000 && address < 0x1C200000) {
+   if (address >= 0x1C000000 && address < 0x1C200000) 
+   {
       *(u8*)&_iop_ram_[address & 0x1FFFFF] = value;
       return;
    }
@@ -340,17 +354,20 @@ ee_store_8 (u32 address, u8 value)
 void
 ee_store_16 (u32 address, u16 value)
 {
-   if (address < 0x10000000) {
+   if (address < 0x10000000) 
+   {
       *(u16*)&_rdram_[address & 0x01FFFFFF] = value;
       return;
    }
 
-   if (address == 0x1000f180) {
+   if (address == 0x1000f180) 
+   {
       output_to_console(value);
       return;
    };
 
-   if (address >= 0x1C000000 && address < 0x1C200000) {
+   if (address >= 0x1C000000 && address < 0x1C200000) 
+   {
       *(u16*)&_iop_ram_[address & 0x1FFFFF] = value;
       return;
    }
@@ -362,7 +379,8 @@ void
 ee_store_32 (u32 address, u32 value)
 {
 
-    if (address < 0x10000000){
+    if (address < 0x10000000)
+    {
         *(u32*)&_rdram_[address & 0x01FFFFFF] = value;
         return;
     }
@@ -421,12 +439,14 @@ ee_store_32 (u32 address, u32 value)
         return;
     }
 
-   if (address >= 0x10008000 && address < 0x1000f000) {
+   if (address >= 0x10008000 && address < 0x1000f000) 
+   {
       dmac_write(address, value);
       return;
    }
 
-   if ((address >= 0x10003000) && (address <= 0x100030A0)) {
+   if ((address >= 0x10003000) && (address <= 0x100030A0)) 
+   {
       gif_write(address, value);
       return;
    }
@@ -434,22 +454,26 @@ ee_store_32 (u32 address, u32 value)
    //@@Note: Not sure what is this is
    if (address == 0x1000f500) return;
 
-   if (address >= 0x1000F200 && address <= 0x1000F260) {
+   if (address >= 0x1000F200 && address <= 0x1000F260) 
+   {
       sif_write(address, value);
       return;
    }
 
-   if (address >= 0x12000000 && address < 0x12002000) {
+   if (address >= 0x12000000 && address < 0x12002000) 
+   {
       gs_write_32_priviledged(address, value);
       return;
    }
 
-   if (address >= 0x10000000 && address <= 0x10001840) {
+   if (address >= 0x10000000 && address <= 0x10001840) 
+   {
       timer_write(address, value);
       return;
    }
 
-   if (address >= 0x1C000000 && address < 0x1C200000) {
+   if (address >= 0x1C000000 && address < 0x1C200000) 
+   {
       *(u32*)&_iop_ram_[address & 0x1FFFFF] = value;
       return;
    }
@@ -465,58 +489,68 @@ ee_store_64 (u32 address, u64 value)
       return;
    }
 
-   if (address >= 0x12000000 && address < 0x12002000) {
+   if (address >= 0x12000000 && address < 0x12002000) 
+   {
       gs_write_64_priviledged(address, value);
       return;
    }
 
    /* @@Move @@Incomplete: This is a 128 bit move this should be moved into a different function */
-   if (address == 0x10006000 || address == 0x10006008) {
+   if (address == 0x10006000 || address == 0x10006008) 
+   {
       gif_fifo_write(address);
       return;
    }
 
-   if (address ==  0x10007010 || address == 0x10007018) {
+   if (address ==  0x10007010 || address == 0x10007018) 
+   {
       ipu_fifo_write();
       return;
    }
 
-   if (VU1_CODE_MEMORY.contains(address)) {
+   if (VU1_CODE_MEMORY.contains(address)) 
+   {
       //@HACK
       *(u64*)&_vu1_code_memory_[address & 0x3FFF] = value;
       return;
    }
 
-   if (VU1_DATA_MEMORY.contains(address)) {
+   if (VU1_DATA_MEMORY.contains(address)) 
+   {
       //@HACK
       *(u64*)&_vu1_data_memory_[address & 0x3FFF] = value;
       return;
    }
 
-   if (VU0_CODE_MEMORY.contains(address)) {
+   if (VU0_CODE_MEMORY.contains(address)) 
+   {
       //@HACK
       *(u64*)&_vu0_code_memory_[address & 0x3FFF] = value;
       return;
    }
 
-   if (VU0_DATA_MEMORY.contains(address)) {
+   if (VU0_DATA_MEMORY.contains(address)) 
+   {
       //@HACK
       *(u64*)&_vu0_data_memory_[address & 0x3FFF] = value;
       return;
    }
 
    /* @@Move @@Incomplete: This is a 128 bit move this should be moved into a different function */
-   if (address == 0x10004000 || address == 0x10004008) {
+   if (address == 0x10004000 || address == 0x10004008) 
+   {
       printf("VIF0 FIFO Write \n");
       return;
    }
 
    /* @@Move @@Incomplete: This is a 128 bit move this should be moved into a different function */
-   if (address == 0x10005000 || address == 0x10005008){
+   if (address == 0x10005000 || address == 0x10005008)
+   {
       printf("VIF1 FIFO Write \n");
       return;
    }
 
    errlog("[ERROR]: Could not write store_memory64() value: [{:#09x}] to address: [{:#09x}] \n", value, address);
 }
+
 void ee_store_128 (u32 address, u128 value) {}

@@ -31,7 +31,7 @@ SetGsCrt (bool interlaced, int display_mode, bool ffmd)
 void
 InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root, void *return_)
 {
-   u32 stack_base = (u32)stack;
+   u32 stack_base = (u32)(uintptr_t)stack;
    //RDRAM start + RDRAM size which is 32 MB
    u32 rdram_size = 0x00000000 + (32 * 1024 * 1024);
    u32 stack_addr = 0;
@@ -49,7 +49,7 @@ InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root, void 
 
    Thread main_thread = {
       .status             = THREAD_RUN,
-      .stack              = (void*)stack_addr,
+      .stack              = (void*)(uintptr_t)stack_addr,
       .stack_size         = stack_size,
       .init_priority      = 0,
       .current_priority   = 0,
@@ -58,7 +58,7 @@ InitMainThread (u32 gp, void *stack, s32 stack_size, char *args, s32 root, void 
 
    threads.push_back(main_thread);
 
-   return_ = (void*)stack_addr;
+   return_ = (void*)(uintptr_t)stack_addr;
    syslog("InitMainThread \n");
 }
 
@@ -67,12 +67,12 @@ void
 InitHeap (void *heap, s32 heap_size, void *return_)
 {
    auto thread = &threads[0];
-   u32 heap_start = (u32)heap;
+   u32 heap_start = (u32)(uintptr_t)heap;
 
    if (heap_start == -1) {
       thread->heap_base = thread->stack;
    } else {
-      thread->heap_base = (void*)(heap_start + heap_size);
+      thread->heap_base = (void*)(intptr_t)(heap_start + heap_size);
    }
 
    return_ = thread->heap_base;
