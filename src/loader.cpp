@@ -45,7 +45,7 @@ load_elf(R5900_Core *ee, const char *path)
    }
 
    while (fread(&buf, sizeof(unsigned char), sizeof(unsigned char), f) == 1)
-      elf[addr++] = reinterpret_cast<uint8_t>(buf);
+      elf[addr++] = (uint8_t)reinterpret_cast<uintptr_t>((buf));
 
    fclose(f);
 

@@ -120,9 +120,9 @@ gs_reset ()
    // Software VRAM
    gs.vram = (u32*)malloc(sizeof(u32) * MEGABYTES(4));
    memset(gs.vram, 0, sizeof(u32) * MEGABYTES(4));
-// #if USE_HARDWARE
+   // #if USE_HARDWARE
    // Hardware VRAM
-   gl_init_vram();
+   // gl_init_vram();
 // #endif
 }
 
