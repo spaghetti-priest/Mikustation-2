@@ -170,6 +170,8 @@ typedef struct _R5900Core_ {
    u32 next_instruction;
 } R5900_Core;
 
+u64 dump_ee_register(R5900_Core *ee, int register_num);
+
 void r5900_cycle(R5900_Core *ee);
 void ee_reset(R5900_Core *ee);
 void r5900_shutdown();

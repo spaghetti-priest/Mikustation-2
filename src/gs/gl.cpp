@@ -1,21 +1,5 @@
-#include "../debugtools/debug_graphics.h"
-#include "../debugtools/debug_graphics.cpp"
-
-typedef struct Vram Vram;
-struct Vram {
-   u32 backbuffer;
-   u32 framebuffer;
-   u32 zbuffer;
-   u32 texture;
-   u32 clut;
-};
-
-typedef struct OpenGL OpenGL;
-struct OpenGL {
-   SDL_GLContext gl_context;
-   u32 screen_shader;
-   Vram vram;
-};
+// #include "../debugtools/debug_graphics.h"
+// #include "../debugtools/debug_graphics.cpp"
 
 /*
    -- OpenGL sprite clearing is weird
@@ -26,15 +10,14 @@ struct OpenGL {
 */
 
 // #define GL_CHECK(x) (if(x) printf("%"))
-OpenGL opengl = {0};
+// OpenGL opengl = {0};
 static unsigned int gl_setup_screen_shader ();
 
 // @Incomplete: The gl viewport is not synced with the backbuffer
 // that is provided with sdl_backbuffer
 bool
-init_opengl (SDL_Context *context, int screen_w, int screen_h)
+init_opengl (OpenGL *opengl, SDL_Context *context, int screen_w, int screen_h)
 {
-   memset(&opengl, 0, sizeof(OpenGL));
 
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
@@ -44,7 +27,7 @@ init_opengl (SDL_Context *context, int screen_w, int screen_h)
    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
- 	opengl.gl_context = SDL_GL_CreateContext(context->window);
+ 	opengl->gl_context = SDL_GL_CreateContext(context->window);
 
  	if (!gladLoadGLLoader((SDL_GL_GetProcAddress))) {
       printf("Failed to initialize OpenGL extensions loader");
@@ -72,16 +55,17 @@ init_opengl (SDL_Context *context, int screen_w, int screen_h)
    glClearColor(0.1, 0.1, 0.1, 1.0);
    glClear(GL_COLOR_BUFFER_BIT);
 
-   opengl.screen_shader = gl_setup_screen_shader();
+   opengl->screen_shader = gl_setup_screen_shader();
 
-   bool success = init_imgui_opengl(context->window, &opengl.gl_context);
+   bool success = init_imgui_opengl(context->window, &opengl->gl_context);
    return 1;
 }
 
 void
-gl_init_vram ()
+gl_init_vram (OpenGL *opengl)
 {
-   Vram *vram = &opengl.vram;
+   bool success = 0;
+   Vram *vram = &opengl->vram;
    glGenFramebuffers(1, &vram->framebuffer);
    glBindFramebuffer(GL_FRAMEBUFFER, vram->framebuffer);
 
@@ -110,6 +94,8 @@ gl_init_vram ()
 
    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+   success = true;
+   // return success;
    // @Temporary: This uniform is for input resolution
    //glUniform2fv(glGetUniformLocation(ID, name), 1, &value[0]);
 }
@@ -251,9 +237,9 @@ static GLPacketQueue packet_queue = {
 unsigned int VAO, VBO;
 
 static void
-gl_draw_point (V3 *position, V4 color)
+gl_draw_point (OpenGL *opengl, V3 *position, V4 color)
 {
-   OpenGL *gl = &opengl;
+   OpenGL *gl = opengl;
 
    position[0] = window_to_raster_transform(position[0]);
 
@@ -292,9 +278,9 @@ gl_draw_point (V3 *position, V4 color)
 }
 
 static void
-gl_draw_line (V3 *position, V4 color)
+gl_draw_line (OpenGL *opengl, V3 *position, V4 color)
 {
-   OpenGL *gl = &opengl;
+   OpenGL *gl = opengl;
    position[0] = window_to_raster_transform(position[0]);
    position[1] = window_to_raster_transform(position[1]);
 
@@ -327,10 +313,10 @@ gl_draw_line (V3 *position, V4 color)
 }
 
 static void
-gl_draw_sprite (V3 *position, V4 color)
+gl_draw_sprite (OpenGL *opengl, V3 *position, V4 color)
 {
 #if 1
-   OpenGL *gl = &opengl;
+   OpenGL *gl = opengl;
 
    position[0] = window_to_raster_transform(position[0]);
    position[1] = window_to_raster_transform(position[1]);
@@ -403,13 +389,13 @@ gl_swap_framebuffers(SDL_Window *window, SDL_Backbuffer *backbuffer)
 }
 
 static void
-gl_render_frame()
+gl_render_frame(OpenGL *opengl, R5900_Core *ee)
 {
-   OpenGL *gl = &opengl;
+   OpenGL *gl = opengl;
    Vram *vram = &gl->vram;
 
    glClear(GL_COLOR_BUFFER_BIT);
-   imgui_render_frame();
+   imgui_render_frame(ee);
 
    glBindFramebuffer(GL_FRAMEBUFFER, vram->backbuffer);
    glClearColor(0.1, 0.1, 0.1, 1.0);
@@ -441,10 +427,10 @@ gl_render_frame()
 }
 
 void
-shutdown_opengl ()
+shutdown_opengl (OpenGL *opengl)
 {
    glDeleteVertexArrays(1, &VAO);
    glDeleteBuffers(1, &VBO);
-   glDeleteProgram(opengl.screen_shader);
-	SDL_GL_DeleteContext(&opengl.gl_context);
+   glDeleteProgram(opengl->screen_shader);
+	SDL_GL_DeleteContext(&opengl->gl_context);
 }

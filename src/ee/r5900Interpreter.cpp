@@ -24,10 +24,19 @@ static u8 *_scratchpad_     = (u8 *)malloc(sizeof(u8) * KILOBYTES(16));
 
 //Range SCRATCHPAD = Range(0x70000000, KILOBYTES(16));
 
-void
-dump_all_ee_registers(R5900_Core *ee)
+
+u64
+dump_ee_register (R5900_Core *ee, int register_num)
 {
-   for (int i = 0; i < 32; ++i) {
+   // printf("EE Register [%d] contains [%u]\n", register_num, ee->reg.r[register_num].UD[0]);
+   return ee->reg.r[register_num].UD[0];
+}
+
+void
+dump_all_ee_registers (R5900_Core *ee)
+{
+   for (int i = 0; i < 32; ++i) 
+   {
       printf("EE Register [%d] contains [%llx]\n", i, ee->reg.r[i].UD[0]);
    }
 }
@@ -1299,7 +1308,8 @@ r5900_cycle(R5900_Core *ee)
    // @@Implemetation: Figure out the amount of CPU cycles per instruction
    if (ee->delay_slot > 0) ee->delay_slot -= 1;
 
-   if (ee->is_branching) {
+   if (ee->is_branching) 
+   {
       ee->is_branching     = false;
       ee->next_instruction = ee_core_load_32(ee->pc);
       ee_decode_and_execute(ee, ee->next_instruction);

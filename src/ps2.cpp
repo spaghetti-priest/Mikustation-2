@@ -69,6 +69,8 @@ ___________________________________________________________
 #include "vu.h"
 #include "vif.h"
 #include "gs/gs_inc.h"
+#include "debugtools/debug_graphics.h"
+
 
 #include "bus.cpp"
 #include "kernel.cpp"
@@ -85,7 +87,11 @@ ___________________________________________________________
 #include "vif.cpp"
 #include "gs/gs_inc.cpp"
 
+#include "debugtools/debug_graphics.cpp"
+
+
 alignas(16) R5900_Core ee = {};
+alignas(16) OpenGL opengl = {};
 
 u32
 check_interrupt (bool value, bool int0_priority, bool int1_priorirty)
@@ -206,7 +212,8 @@ main (int argc, char **argv)
 #if USE_SOFTWARE
    surface = SDL_GetWindowSurface(window);
 
-   if (!surface) {
+   if (!surface) 
+   {
       printf("[ERROR]: %s\n", SDL_GetError());
       return 0;
    }
@@ -219,9 +226,10 @@ main (int argc, char **argv)
    };
 
    bool success = false;
+   memset(&opengl, 0, sizeof(OpenGL));
 
 #ifdef USE_HARDWARE
-   success = init_opengl(&main_context, screen_w, screen_h );
+   success = init_opengl(&opengl, &main_context, screen_w, screen_h );
 #endif
 
    printf("===========================================================================\n");
@@ -241,6 +249,10 @@ main (int argc, char **argv)
    ee_reset(&ee);
    dmac_reset();
    gs_reset();
+   // #if USE_HARDWARE
+   // Hardware VRAM
+   gl_init_vram(&opengl);
+// #endif
    gif_reset();
    intc_reset();
    timer_reset();
@@ -250,7 +262,7 @@ main (int argc, char **argv)
    vu_reset();
    vif_reset();
 
-   //if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
+   // if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
    load_elf(&ee, elf_filename);
 
    // u64 begin_time = 0, end_time = 0, delta_time = 0;
@@ -288,7 +300,7 @@ main (int argc, char **argv)
 #endif
       }
 
-      instructions_run = 0;
+      // instructions_run = 0;
       // @Todo: When the backbuffer is resized the bb should retrieve
       // the new screen w and h
       SDL_Backbuffer backbuffer   = {};
@@ -303,8 +315,8 @@ main (int argc, char **argv)
       *   @@Note: In dobiestation and chonkystation there is a random instruction limit in order to
       *   synch the ee and iop cycle rate by 1/8 it looks like an arbitrary number.
       */
-      while (instructions_run < 1000000) 
-      {
+      // while (instructions_run < 1000000) 
+      // {
          // backbuffer.pixels           = (u32*)malloc(sizeof(u32) * (screen_w * screen_h));
 
          /*
@@ -318,20 +330,30 @@ main (int argc, char **argv)
          // if (instructions_run % 8 == 0) { iop_cycle(); }
          instructions_run++;
 
-         // if (intc_read(0x1000f010) & 0x4) {
+         // if (intc_read(0x1000f010) & 0x4) 
+         // {
+         
+         gl_render_frame(&opengl, &ee);
+         gl_swap_framebuffers(main_context.window, &backbuffer);
 
-         if (instructions_run == 975000) {
+         if (instructions_run == 975000) 
+         {
             // request_interrupt(INT_VB_ON);
             gs_render_crt(&main_context);
    #if USE_HARDWARE
-            gl_render_frame();
-            gl_swap_framebuffers(main_context.window, &backbuffer);
+            // gl_render_frame(&opengl, &ee);
+            // gl_swap_framebuffers(main_context.window, &backbuffer);
    #elif USE_SOFTWARE
             swap_framebuffers(main_context.window, &backbuffer, main_context.surface);
    #endif
          }
-            // request_interrupt(INT_VB_OFF);
+
+         if (instructions_run == 1000000)
+         {
+            instructions_run = 0;
          }
+            // request_interrupt(INT_VB_OFF);
+      // }
          free(backbuffer.pixels);
    }
 
@@ -339,7 +361,7 @@ main (int argc, char **argv)
    gs_shutdown();
 
 #ifdef USE_HARDWARE
-    shutdown_opengl();
+    shutdown_opengl(&opengl);
     imgui_shutdown();
 #endif
 

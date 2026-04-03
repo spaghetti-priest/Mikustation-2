@@ -120,10 +120,6 @@ gs_reset ()
    // Software VRAM
    gs.vram = (u32*)malloc(sizeof(u32) * MEGABYTES(4));
    memset(gs.vram, 0, sizeof(u32) * MEGABYTES(4));
-   // #if USE_HARDWARE
-   // Hardware VRAM
-   // gl_init_vram();
-// #endif
 }
 
 void
@@ -468,7 +464,7 @@ render_point_hardware (Vertex *vertex)
    // a v4 is good enough.
    color = pack_RGBA_to_v4(vertex->col.r, vertex->col.g, vertex->col.b, vertex->col.a);
 
-   gl_draw_point(&out_pos, color);
+   // gl_draw_point(&out_pos, color);
    printf("Render Point Hardware\n");
 }
 
@@ -555,7 +551,7 @@ render_line_hardware (std::vector<Vertex> vertices)
                         vertices[0].col.b,
                         vertices[0].col.a);
 
-   gl_draw_line(out_pos, color);
+   // gl_draw_line(out_pos, color);
    // printf("Render Line\n");
 
 }
@@ -747,7 +743,7 @@ render_sprite_hardware (std::vector<Vertex> vertices)
    out_pos[2] = convert_s32_to_f32_v3(vert3);
    out_pos[3] = convert_s32_to_f32_v3(vert4);
 
-   gl_draw_sprite(out_pos, color);
+   // gl_draw_sprite(out_pos, color);
 
    // @Incomplete: Check if pixels are top left
    // is_top_left();
