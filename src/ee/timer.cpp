@@ -18,6 +18,12 @@ timer_reset()
 	memset(&timers, 0, 4 * sizeof(Timer));
 }
 
+Timer 
+dump_ee_timer (int index)
+{
+   return timers[index];
+}
+
 u32
 timer_read (u32 address)
 {

@@ -46,7 +46,25 @@ imgui_end_frame()
    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool view_ee_registers = false;
+bool view_ee_registers     = false;
+bool view_ee_timers        = false;
+bool open_gpr_registers    = true;
+bool open_cop1_registers   = true;
+
+static const char *gpr_register_table[32] = {
+   "$r0", "$at", "$v0", "$v1", "$a0", "$a1", "$a2", "$a3",
+   "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7",
+   "$s0", "$s1", "$s2", "$s3", "$s4", "$s5", "$s6", "$s7",
+   "$t8", "$t9", "$k0", "$k1", "$gp", "$sp", "$fp", "$ra"
+};
+
+static const char *cop1_register_table[32] = {
+"$f0",  "$f1",  "$f2",  "$f3",  "$f4",  "$f5",  "$f6",  "$f7", 
+"$f8",  "$f9",  "$f10", "$f11", "$f12", "$f13", "$f14", "$f15", 
+"$f16", "$f17", "$f18", "$f19", "$f20", "$f21", "$f22", "$f23", 
+"$f24", "$f25", "$f26", "$f27", "$f28", "$f29", "$f30", "$f31" 
+};
+
 
 static void
 imgui_render_frame(R5900_Core *ee)
@@ -82,6 +100,15 @@ imgui_render_frame(R5900_Core *ee)
          if (ImGui::MenuItem("View VRAM")) {}
          ImGui::Separator();
          if (ImGui::MenuItem("View EE Instructions")) {}
+         if (ImGui::MenuItem("View EE Timers")) 
+         {
+            if (view_ee_timers == true) {
+               view_ee_timers = false;
+            } else {
+               view_ee_timers = true;
+            }            
+         }
+
          if (ImGui::MenuItem("View EE Registers")) 
          {
             if (view_ee_registers == true) {
@@ -96,57 +123,89 @@ imgui_render_frame(R5900_Core *ee)
    }
    ImGui::EndMainMenuBar();
    
+   const char* names[2] = { "GPR", "COP1" };
+   static ImGuiTabBarFlags tab_bar_flags =   ImGuiTabBarFlags_Reorderable | 
+                                             ImGuiTabBarFlags_DrawSelectedOverline;   
+
+   // @Incomplete: Add a refresh rate for the timer viewer 
    if (view_ee_registers == true)
    {
-      if (ImGui::Begin("EE Registers", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) 
+      ImGui::Begin("EE Registers");
+      if (ImGui::BeginTabBar("EE Register Tabs", tab_bar_flags))
       {
-         ImGui::Text("$r0: [%08x] \n", dump_ee_register(ee, 0));
-         ImGui::SameLine();
-         ImGui::Text("$at: [%08x] \n", dump_ee_register(ee, 1));
-         ImGui::Text("$v0: [%08x] \n", dump_ee_register(ee, 2));
-         ImGui::SameLine(); 
-         ImGui::Text("$v1: [%08x] \n", dump_ee_register(ee, 3));
-         ImGui::Text("$a0: [%08x] \n", dump_ee_register(ee, 4));
-         ImGui::SameLine(); 
-         ImGui::Text("$a1: [%08x] \n", dump_ee_register(ee, 5));
-         ImGui::Text("$a2: [%08x] \n", dump_ee_register(ee, 6));
-         ImGui::SameLine(); 
-         ImGui::Text("$a3: [%08x] \n", dump_ee_register(ee, 7));
-         ImGui::Text("$t0: [%08x] \n", dump_ee_register(ee, 8));
-         ImGui::SameLine(); 
-         ImGui::Text("$t1: [%08x] \n", dump_ee_register(ee, 9));
-         ImGui::Text("$t2: [%08x] \n", dump_ee_register(ee, 10));
-         ImGui::SameLine(); 
-         ImGui::Text("$t3: [%08x] \n", dump_ee_register(ee, 11));
-         ImGui::Text("$t4: [%08x] \n", dump_ee_register(ee, 12));
-         ImGui::SameLine(); 
-         ImGui::Text("$t5: [%08x] \n", dump_ee_register(ee, 13));
-         ImGui::Text("$t6: [%08x] \n", dump_ee_register(ee, 14));
-         ImGui::SameLine(); 
-         ImGui::Text("$t7: [%08x] \n", dump_ee_register(ee, 15));
-         ImGui::Text("$s0: [%08x] \n", dump_ee_register(ee, 16));
-         ImGui::SameLine(); 
-         ImGui::Text("$s1: [%08x] \n", dump_ee_register(ee, 17));
-         ImGui::Text("$s2: [%08x] \n", dump_ee_register(ee, 18));
-         ImGui::SameLine(); 
-         ImGui::Text("$s3: [%08x] \n", dump_ee_register(ee, 19));
-         ImGui::Text("$s4: [%08x] \n", dump_ee_register(ee, 20));
-         ImGui::SameLine(); 
-         ImGui::Text("$s5: [%08x] \n", dump_ee_register(ee, 21));
-         ImGui::Text("$s6: [%08x] \n", dump_ee_register(ee, 22));
-         ImGui::SameLine(); 
-         ImGui::Text("$s7: [%08x] \n", dump_ee_register(ee, 23));
-         ImGui::Text("$t8: [%08x] \n", dump_ee_register(ee, 24));
-         ImGui::SameLine(); 
-         ImGui::Text("$t9: [%08x] \n", dump_ee_register(ee, 25));
-         ImGui::Text("$k0: [%08x] \n", dump_ee_register(ee, 26));
-         ImGui::SameLine(); 
-         ImGui::Text("$k1: [%08x] \n", dump_ee_register(ee, 27));
-         ImGui::Text("$gp: [%08x] \n", dump_ee_register(ee, 28));
-         ImGui::SameLine(); 
-         ImGui::Text("$sp: [%08x] \n", dump_ee_register(ee, 29));
-         ImGui::Text("$fp: [%08x] \n", dump_ee_register(ee, 30));
-      } 
+         if (ImGui::BeginTabItem("GPR"))
+         {
+            ImGui::Text("%s: [%08x] \n", "$pc",  get_pc_register(ee));
+            ImGui::Text("%s: [%08x] \n", "$sa",  get_sa_register(ee));
+            ImGui::Text("%s: [%08x] \n", "$hi",  get_HI_register(ee));
+            ImGui::SameLine();
+            ImGui::Text("%s: [%08x] \n", "$lo",  get_LO_register(ee));
+            ImGui::Text("%s: [%08x] \n", "$hi1", get_HI1_register(ee));
+            ImGui::SameLine();
+            ImGui::Text("%s: [%08x] \n", "$lo1", get_LO1_register(ee));
+            ImGui::Separator();
+            
+            for (int i = 0; i < 32; ++i)
+            {
+               ImGui::Text("%s: [%08x] \n", gpr_register_table[i], dump_ee_register(ee, i));
+               ImGui::SameLine();
+               i++;
+               ImGui::Text("%s: [%08x] \n", gpr_register_table[i], dump_ee_register(ee, i));
+            }
+            ImGui::EndTabItem();
+         }
+         
+         if (ImGui::BeginTabItem("C0P1"))
+         {
+            for (int i = 0; i < 32; ++i)
+            {
+               // @Incomplete: Allow to view in float or hexadecimal
+               ImGui::Text("%s: [%f] \n", cop1_register_table[i], dump_cop1_register(i));
+               ImGui::SameLine();
+               i++;
+               ImGui::Text("%s: [%f] \n", cop1_register_table[i], dump_cop1_register(i));
+            }    
+            ImGui::EndTabItem();
+         }
+         ImGui::EndTabBar();
+      }
+      ImGui::End();
+   }
+
+   if (view_ee_timers == true)
+   {
+      ImGui::Begin("EE Timers");
+      {
+         for (int i = 0; i < 4; i++)
+         {
+            Timer r = dump_ee_timer(i);
+            ImGui::PushID(i);
+            if (ImGui::TreeNode("", "Timer %d", i))
+            {
+               ImGui::Separator();
+               ImGui::Text("%s: [%08x] \n", "Count", r.count.count);
+               ImGui::Separator();
+               ImGui::Text("%s: [%08x] \n", "Clock selection",        r.mode.clock_selection);
+               ImGui::Text("%s: [%08x] \n", "Gate function enable",   r.mode.gate_function_enable);
+               ImGui::Text("%s: [%08x] \n", "Gate selection",         r.mode.gate_selection);
+               ImGui::Text("%s: [%08x] \n", "Gate mode",              r.mode.gate_mode);
+               ImGui::Text("%s: [%08x] \n", "Zero return",            r.mode.zero_return);
+               ImGui::Text("%s: [%08x] \n", "Count enable",           r.mode.count_enable);
+               ImGui::Text("%s: [%08x] \n", "Compare interrupt",      r.mode.compare_interrupt);
+               ImGui::Text("%s: [%08x] \n", "Overflow interrupt",     r.mode.overflow_interrupt);
+               ImGui::Text("%s: [%08x] \n", "Equal flag",             r.mode.equal_flag);
+               ImGui::Text("%s: [%08x] \n", "Overflow flag",          r.mode.overflow_flag);
+               ImGui::Separator();
+               ImGui::Text("%s: [%08x] \n", "Compare", r.comp.compare);
+               ImGui::Separator();
+
+               if (i <= 1) ImGui::Text("%s: [%08x] \n", "Hold", r.hold.hold);
+
+               ImGui::TreePop();
+            }
+            ImGui::PopID();
+         }
+      }
       ImGui::End();
    }
 

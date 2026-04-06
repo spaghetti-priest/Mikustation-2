@@ -805,10 +805,12 @@ drawing_kick()
    */
    u16 queue_size = vertex_queue.size;
 
-   if (queue_size == 1) {
+   if (queue_size == 1) 
+   {
       switch(type)
       {
-         case _POINT: {
+         case _POINT: 
+         {
             // render_point_software(&vertex_queue.queue[0]);
             render_point_hardware(&vertex_queue.queue[0]);
             reset_vertex_queue(&vertex_queue);
@@ -816,16 +818,19 @@ drawing_kick()
       }
    }
 
-   if (queue_size == 2) {
+   if (queue_size == 2) 
+   {
       switch(type)
       {
-         case _LINE: {
+         case _LINE: 
+         {
             // render_line_software(vertex_queue.queue);
             render_line_hardware(vertex_queue.queue);
             reset_vertex_queue(&vertex_queue);
          } break;
 
-         case _SPRITE: {
+         case _SPRITE: 
+         {
             // render_sprite_software(vertex_queue.queue);
             render_sprite_hardware(vertex_queue.queue);
             reset_vertex_queue(&vertex_queue);
@@ -833,30 +838,36 @@ drawing_kick()
       }
    }
 
-   if (queue_size == 3) {
+   if (queue_size == 3) 
+   {
       switch(type)
       {
-         case _TRIANGLE: {
+         case _TRIANGLE: 
+         {
             render_triangle(vertex_queue.queue);
             reset_vertex_queue(&vertex_queue);
          } break;
       }
    }
 
-   if (queue_size >= 3) {
+   if (queue_size >= 3) 
+   {
       switch(type)
       {
-          case _LINESTRIP: {
+         case _LINESTRIP: 
+         {
             reset_vertex_queue(&vertex_queue);
-          } break;
+         } break;
 
-          case _TRIANGLESTRIP: {
+         case _TRIANGLESTRIP: 
+         {
             reset_vertex_queue(&vertex_queue);
-          } break;
+         } break;
 
-          case _TRIANGLEFAN: {
+         case _TRIANGLEFAN: 
+         {
             reset_vertex_queue(&vertex_queue);
-          } break;
+         } break;
       }
    }
 }

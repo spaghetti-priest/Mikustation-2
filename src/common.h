@@ -1,3 +1,5 @@
+// @Incomplete: Probably rename this to PS2UTILS or something
+
 #ifndef COMMON_H
 #if 0
 #include "fmt-10.2.1/include/fmt/format-inl.h"
@@ -7,6 +9,8 @@
 
 // #include "fmt-10.2.1/include/fmt/core.h"
 // #include "fmt-10.2.1/include/fmt/color.h"
+
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 // Messy system I know....
 #define DISASM 0

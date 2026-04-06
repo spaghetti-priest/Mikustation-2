@@ -22,13 +22,16 @@
 #define HBLNK_DTV480p  (31469)
 #define HBLNK_DTV1080i (33750)
 
-enum Timers {
+enum Timers 
+{
     TIMER_1 = 0x10000000, TIMER_2 = 0x10000800,
     TIMER_3 = 0x10001000, TIMER_4 = 0x10001800
 };
 
-union Tn_MODE {
-	struct {
+union Tn_MODE 
+{
+	struct 
+   {
 		u8 	clock_selection : 2;
 		bool 	gate_function_enable;
 		bool 	gate_selection;
@@ -44,31 +47,39 @@ union Tn_MODE {
 	u32 value;
 };
 
-union Tn_COUNT {
-	struct {
+union Tn_COUNT 
+{
+	struct 
+   {
 		u16 count;
 		u16 unused;
 	};
 	u32 value;
 };
 
-union Tn_COMP {
-	struct {
+union Tn_COMP 
+{
+	struct 
+   {
 		u16 compare;
 		u16 unused;
 	};
 	u32 value;
 };
 
-union Tn_HOLD {
-	struct {
+union Tn_HOLD 
+{
+	struct 
+   {
 		u16 hold;
 		uint16_t unused;
 	};
 	u32 value;
 };
 
-typedef struct _Timer_ {
+typedef struct Timer Timer; 
+struct Timer
+{
 	union Tn_MODE mode;
 	union Tn_COUNT count;
 	union Tn_COMP comp;
@@ -76,7 +87,7 @@ typedef struct _Timer_ {
 
 	u32 counter;
 	u32 prescaler;
-} Timer;
+};
 
 void 	timer_reset();
 u32 	timer_read(u32 address);

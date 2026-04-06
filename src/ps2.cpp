@@ -174,9 +174,9 @@ main (int argc, char **argv)
    }
 */
    // @Remove: For debug and iteration purposes. Just hardcode this into the program
-   // elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
-   elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
-   //elf_filename = "..\\Mikustation-2\\data\\cube\\cube.elf";
+   elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_01\\demo1.elf";
+   // elf_filename = "..\\Mikustation-2\\data\\ps2tut\\ps2tut_02a\\demo2a.elf";
+   // elf_filename = "..\\Mikustation-2\\data\\cube\\cube.elf";
    // const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph10000.bin";
    const char *bios_filename = "..\\Mikustation-2\\data\\bios\\scph39001.bin";
 
@@ -188,10 +188,13 @@ main (int argc, char **argv)
    bool left_down               = false;
    u32 instructions_run         = 0;
 
+   const int window_w = 1280;
+   const int window_h = 720;
    const int screen_w = 640;
    const int screen_h = 480;
 
-   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+   if (SDL_Init(SDL_INIT_VIDEO) != 0) 
+   {
      printf("Error: %s\n", SDL_GetError());
      return -1;
    }
@@ -206,8 +209,8 @@ main (int argc, char **argv)
    window = SDL_CreateWindow("Mikustation 2\n",
                            SDL_WINDOWPOS_UNDEFINED,
                            SDL_WINDOWPOS_UNDEFINED,
-                           screen_w,
-                           screen_h,
+                           window_w,
+                           window_h,
                            window_flags);
 #if USE_SOFTWARE
    surface = SDL_GetWindowSurface(window);
@@ -262,8 +265,8 @@ main (int argc, char **argv)
    vu_reset();
    vif_reset();
 
-   // if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
-   load_elf(&ee, elf_filename);
+   if (read_bios(bios_filename, _bios_memory_) != 1) return 0;
+   // load_elf(&ee, elf_filename);
 
    // u64 begin_time = 0, end_time = 0, delta_time = 0;
    while (running) 
@@ -275,7 +278,7 @@ main (int argc, char **argv)
          ImGui_ImplSDL2_ProcessEvent(&event);
          switch (event.type)
          {
-            //@Incomplete: This takes event control away from this event loop.
+            // @Incomplete: This takes event control away from this event loop.
             // There isnt any control right now. so anyways i am
             // leaving this note here when controls get implemented
             case SDL_QUIT:

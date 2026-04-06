@@ -15,7 +15,8 @@ dmac_reset ()
    printf("Resetting DMAC Controller\n");
 
    dmac.control.enable = true;
-   for (int i = 0; i < DMAC_CHANNEL_COUNT; ++i) {
+   for (int i = 0; i < DMAC_CHANNEL_COUNT; ++i) 
+   {
       dmac.interrupt_status.channel_status[i]     = 0;
       dmac.interrupt_status.channel_mask[i]       = 0;
       dmac.channels[i].control.value              = 0;
@@ -32,7 +33,8 @@ dmac_reset ()
 static void
 end_of_transfer()
 {
-   if (dmac.channels[2].quadword_count.quadwords == 0) {
+   if (dmac.channels[2].quadword_count.quadwords == 0) 
+   {
       dmac.channels[2].control.start = false;
       dmac.channels[2].control.value &= stop_dma_transfer;
 

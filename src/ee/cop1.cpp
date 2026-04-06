@@ -16,6 +16,12 @@ enum Instruction_Type
 	W_INSTR = 0x14,
 };
 
+f32
+dump_cop1_register(int reg_index)
+{
+   return cop1.fpr[reg_index].f;
+}
+
 void
 cop1_reset()
 {

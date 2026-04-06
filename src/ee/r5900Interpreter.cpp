@@ -41,6 +41,42 @@ dump_all_ee_registers (R5900_Core *ee)
    }
 }
 
+u32
+get_pc_register (R5900_Core *ee)
+{
+   return ee->pc;
+}
+
+u64
+get_HI_register (R5900_Core *ee)
+{
+   return ee->HI;
+}
+
+u64
+get_HI1_register (R5900_Core *ee)
+{
+   return ee->HI1;
+}
+
+u64
+get_LO_register (R5900_Core *ee)
+{
+   return ee->LO;
+}
+
+u64
+get_LO1_register (R5900_Core *ee)
+{
+   return ee->LO1;
+}
+
+u32
+get_sa_register (R5900_Core *ee)
+{
+   return ee->sa;
+}
+
 /*******************************************
  * Load Functions
 *******************************************/

@@ -13,10 +13,10 @@ handle_exception_level_1 (COP0_Registers *cop0, Exception *exc, u32 current_pc, 
 		exc->vector = V_COMMON;
 	} else if (is_branching) {
 		cop0->EPC 		= current_pc - 4;
-		cop0->cause.BD 	= 1;
+		cop0->cause.BD = 1;
 	} else {
 		cop0->EPC 		= current_pc;
-		cop0->cause.BD 	= 0;
+		cop0->cause.BD = 0;
 	}
 
 	// Set privilege mode to kernel mode
